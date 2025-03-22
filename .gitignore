@@ -1,0 +1,32 @@
+# ==========================
+# Ignore for NetBeans + Maven
+# ==========================
+
+# NetBeans project files
+nbproject/private/
+build/
+nbbuild/
+dist/
+.nb-gradle/
+.netbeans/
+*.orig
+
+# Maven target directory
+target/
+
+# Maven backup files
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# IDE-specific files
+*.iml
+.idea/
+*.swp
+.vscode/
