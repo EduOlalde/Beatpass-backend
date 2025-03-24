@@ -12,6 +12,9 @@
     <properties>
         <endorsed.dir>${project.build.directory}/endorsed</endorsed.dir>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <!-- Establecer versión de Java para compilación -->
+        <maven.compiler.source>21</maven.compiler.source> <!-- Java 21 -->
+        <maven.compiler.target>21</maven.compiler.target> <!-- Java 21 -->
     </properties>
     
     <dependencies>
@@ -21,6 +24,13 @@
             <version>7.0</version>
             <scope>provided</scope>
         </dependency>
+        
+        <!-- MySQL JDBC Driver (usando el viejo com.mysql.jdbc.Driver) -->
+        <dependency>
+            <groupId>mysql</groupId>
+            <artifactId>mysql-connector-java</artifactId>
+            <version>5.1.49</version>
+        </dependency>
     </dependencies>
 
     <build>
@@ -28,10 +38,10 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.1</version>
+                <version>3.10.1</version> <!-- Versión más reciente -->
                 <configuration>
-                    <source>1.7</source>
-                    <target>1.7</target>
+                    <source>21</source> <!-- Java 21 -->
+                    <target>21</target> <!-- Java 21 -->
                     <compilerArguments>
                         <endorseddirs>${endorsed.dir}</endorseddirs>
                     </compilerArguments>
@@ -40,7 +50,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-war-plugin</artifactId>
-                <version>2.3</version>
+                <version>3.3.1</version> <!-- Actualiza la versión del plugin WAR -->
                 <configuration>
                     <failOnMissingWebXml>false</failOnMissingWebXml>
                 </configuration>
@@ -48,7 +58,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-dependency-plugin</artifactId>
-                <version>2.6</version>
+                <version>3.1.0</version> <!-- Actualiza la versión del plugin de dependencias -->
                 <executions>
                     <execution>
                         <phase>validate</phase>
