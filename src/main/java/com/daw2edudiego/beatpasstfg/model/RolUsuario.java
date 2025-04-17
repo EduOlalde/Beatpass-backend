@@ -7,7 +7,7 @@ package com.daw2edudiego.beatpasstfg.model;
 /**
  * Roles posibles para los usuarios del sistema (Administradores o Promotores).
  */
-enum RolUsuario {
+public enum RolUsuario {
     ADMIN,
     PROMOTOR
 }

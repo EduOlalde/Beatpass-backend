@@ -7,7 +7,7 @@ package com.daw2edudiego.beatpasstfg.model;
 /**
  * Estados posibles para un festival.
  */
-enum EstadoFestival {
+public enum EstadoFestival {
     BORRADOR,
     PUBLICADO,
     CANCELADO,

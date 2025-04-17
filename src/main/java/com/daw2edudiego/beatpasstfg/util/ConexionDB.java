@@ -2,7 +2,7 @@
  * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
  * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
  */
-package com.daw2edudiego.beatpasstfg.utils;
+package com.daw2edudiego.beatpasstfg.util;
 
 import com.mysql.jdbc.Connection;
 import java.sql.DriverManager;
