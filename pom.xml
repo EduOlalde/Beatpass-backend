@@ -61,12 +61,6 @@
             <scope>provided</scope>
         </dependency>
         
-        <!-- MySQL JDBC Driver (usando el viejo com.mysql.jdbc.Driver) -->
-        <dependency>
-            <groupId>mysql</groupId>
-            <artifactId>mysql-connector-java</artifactId>
-            <version>5.1.49</version>
-        </dependency>
     </dependencies>
 
     <build>

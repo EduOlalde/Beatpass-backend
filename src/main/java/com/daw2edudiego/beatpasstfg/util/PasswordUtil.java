@@ -10,11 +10,7 @@ import org.slf4j.LoggerFactory;
 
 /**
  * Utilidad para manejar el hashing y verificación de contraseñas usando
- * jBCrypt. ¡Asegúrate de añadir la dependencia de jBCrypt a tu pom.xml!
- * <dependency>
- * <groupId>org.mindrot</groupId>
- * <artifactId>jbcrypt</artifactId>
- * <version>0.4</version> * </dependency>
+ * jBCrypt.
  */
 public class PasswordUtil {
 
