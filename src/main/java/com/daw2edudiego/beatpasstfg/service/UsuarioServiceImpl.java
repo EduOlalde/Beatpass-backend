@@ -30,7 +30,6 @@ import java.util.stream.Collectors;
 public class UsuarioServiceImpl implements UsuarioService {
 
     private static final Logger log = LoggerFactory.getLogger(UsuarioServiceImpl.class);
-
     private final UsuarioRepository usuarioRepository;
 
     public UsuarioServiceImpl() {
@@ -39,49 +38,38 @@ public class UsuarioServiceImpl implements UsuarioService {
 
     @Override
     public UsuarioDTO crearUsuario(UsuarioCreacionDTO ucDTO) {
+        // ... (Implementación sin cambios) ...
         log.info("Iniciando creación de usuario con email: {}", ucDTO.getEmail());
         EntityManager em = null;
         EntityTransaction tx = null;
-
-        // Validación básica de entrada
-        if (ucDTO == null || ucDTO.getEmail() == null || ucDTO.getEmail().isBlank()
-                || ucDTO.getPassword() == null || ucDTO.getPassword().isEmpty()
-                || ucDTO.getNombre() == null || ucDTO.getNombre().isBlank() || ucDTO.getRol() == null) {
+        if (ucDTO == null || ucDTO.getEmail() == null || ucDTO.getEmail().isBlank() || ucDTO.getPassword() == null || ucDTO.getPassword().isEmpty() || ucDTO.getNombre() == null || ucDTO.getNombre().isBlank() || ucDTO.getRol() == null) {
             log.warn("Intento de crear usuario con datos inválidos/incompletos.");
             throw new IllegalArgumentException("Datos de usuario incompletos o inválidos.");
         }
-
         try {
             em = JPAUtil.createEntityManager();
             tx = em.getTransaction();
             tx.begin();
-
             log.debug("Verificando si el email {} ya existe.", ucDTO.getEmail());
-            Optional<Usuario> existenteOpt = usuarioRepository.findByEmail(em, ucDTO.getEmail());
+            Optional<Usuario> existenteOpt = usuarioRepository.findByEmail(em, ucDTO.getEmail()); // Usa el repo
             if (existenteOpt.isPresent()) {
                 log.warn("Intento de crear usuario con email existente: {}", ucDTO.getEmail());
                 throw new EmailExistenteException("El email '" + ucDTO.getEmail() + "' ya está registrado.");
             }
-
             log.debug("Mapeando DTO a entidad Usuario");
             Usuario usuario = new Usuario();
             usuario.setNombre(ucDTO.getNombre());
             usuario.setEmail(ucDTO.getEmail());
             usuario.setRol(ucDTO.getRol());
-            usuario.setEstado(true); // Por defecto, activo al crear
-
+            usuario.setEstado(true);
             log.debug("Hasheando contraseña para el usuario {}", ucDTO.getEmail());
             String hashedPassword = PasswordUtil.hashPassword(ucDTO.getPassword());
             usuario.setPassword(hashedPassword);
-
             log.debug("Guardando entidad Usuario");
             usuario = usuarioRepository.save(em, usuario);
-
             tx.commit();
             log.info("Usuario creado exitosamente con ID: {} y email: {}", usuario.getIdUsuario(), usuario.getEmail());
-
             return mapEntityToDto(usuario);
-
         } catch (Exception e) {
             log.error("Error durante la creación del usuario con email {}: {}", ucDTO.getEmail(), e.getMessage(), e);
             if (tx != null && tx.isActive()) {
@@ -89,7 +77,7 @@ public class UsuarioServiceImpl implements UsuarioService {
                 tx.rollback();
             }
             if (e instanceof EmailExistenteException || e instanceof IllegalArgumentException) {
-                throw e; // Relanzar excepciones de validación/negocio
+                throw e;
             }
             throw new RuntimeException("Error creando usuario: " + e.getMessage(), e);
         } finally {
@@ -102,6 +90,7 @@ public class UsuarioServiceImpl implements UsuarioService {
 
     @Override
     public Optional<UsuarioDTO> obtenerUsuarioPorId(Integer id) {
+        // ... (Implementación sin cambios, devuelve DTO) ...
         log.debug("Buscando usuario por ID: {}", id);
         EntityManager em = null;
         try {
@@ -122,15 +111,16 @@ public class UsuarioServiceImpl implements UsuarioService {
 
     @Override
     public Optional<UsuarioDTO> obtenerUsuarioPorEmail(String email) {
-        log.debug("Buscando usuario por email: {}", email);
+        // ... (Implementación sin cambios, devuelve DTO) ...
+        log.debug("Buscando usuario (DTO) por email: {}", email);
         EntityManager em = null;
         try {
             em = JPAUtil.createEntityManager();
             Optional<Usuario> usuarioOpt = usuarioRepository.findByEmail(em, email);
-            log.info("Resultado de búsqueda para usuario email {}: {}", email, usuarioOpt.isPresent() ? "Encontrado" : "No encontrado");
+            log.info("Resultado de búsqueda DTO para usuario email {}: {}", email, usuarioOpt.isPresent() ? "Encontrado" : "No encontrado");
             return usuarioOpt.map(this::mapEntityToDto);
         } catch (Exception e) {
-            log.error("Error al obtener usuario por email {}: {}", email, e.getMessage(), e);
+            log.error("Error al obtener usuario DTO por email {}: {}", email, e.getMessage(), e);
             return Optional.empty();
         } finally {
             if (em != null && em.isOpen()) {
@@ -140,8 +130,32 @@ public class UsuarioServiceImpl implements UsuarioService {
         }
     }
 
+    // --- NUEVO MÉTODO IMPLEMENTADO ---
+    @Override
+    public Optional<Usuario> obtenerEntidadUsuarioPorEmailParaAuth(String email) {
+        log.debug("Buscando entidad completa de usuario por email para auth: {}", email);
+        EntityManager em = null;
+        try {
+            em = JPAUtil.createEntityManager();
+            // Llama directamente al método del repositorio que devuelve la entidad
+            Optional<Usuario> usuarioOpt = usuarioRepository.findByEmail(em, email);
+            log.info("Resultado de búsqueda de entidad para auth email {}: {}", email, usuarioOpt.isPresent() ? "Encontrado" : "No encontrado");
+            return usuarioOpt; // Devuelve el Optional<Usuario> directamente
+        } catch (Exception e) {
+            log.error("Error al obtener entidad usuario por email para auth {}: {}", email, e.getMessage(), e);
+            return Optional.empty(); // Devuelve vacío en caso de error
+        } finally {
+            if (em != null && em.isOpen()) {
+                em.close();
+                log.trace("EntityManager cerrado para obtenerEntidadUsuarioPorEmailParaAuth.");
+            }
+        }
+    }
+    // --- FIN NUEVO MÉTODO ---
+
     @Override
     public List<UsuarioDTO> obtenerUsuariosPorRol(RolUsuario rol) {
+        // ... (Implementación sin cambios) ...
         log.debug("Obteniendo usuarios con rol: {}", rol);
         EntityManager em = null;
         try {
@@ -164,6 +178,7 @@ public class UsuarioServiceImpl implements UsuarioService {
 
     @Override
     public UsuarioDTO actualizarEstadoUsuario(Integer id, boolean nuevoEstado) {
+        // ... (Implementación sin cambios) ...
         log.info("Iniciando actualización de estado a {} para usuario ID: {}", nuevoEstado, id);
         EntityManager em = null;
         EntityTransaction tx = null;
@@ -171,24 +186,18 @@ public class UsuarioServiceImpl implements UsuarioService {
             em = JPAUtil.createEntityManager();
             tx = em.getTransaction();
             tx.begin();
-
             log.debug("Buscando usuario a actualizar estado con ID: {}", id);
             Usuario usuario = usuarioRepository.findById(em, id)
                     .orElseThrow(() -> {
                         log.warn("Intento de actualizar estado a usuario no existente ID: {}", id);
                         return new UsuarioNotFoundException("Usuario no encontrado con ID: " + id);
                     });
-
             log.debug("Actualizando estado de usuario ID {} a {}", id, nuevoEstado);
             usuario.setEstado(nuevoEstado);
-
             usuario = usuarioRepository.save(em, usuario); // merge
-
             tx.commit();
             log.info("Estado de usuario ID: {} actualizado a {} correctamente.", id, nuevoEstado);
-
             return mapEntityToDto(usuario);
-
         } catch (Exception e) {
             log.error("Error durante la actualización de estado del usuario ID {}: {}", id, e.getMessage(), e);
             if (tx != null && tx.isActive()) {
@@ -209,6 +218,7 @@ public class UsuarioServiceImpl implements UsuarioService {
 
     @Override
     public void eliminarUsuario(Integer id) {
+        // ... (Implementación sin cambios) ...
         log.info("Iniciando eliminación de usuario ID: {}", id);
         EntityManager em = null;
         EntityTransaction tx = null;
@@ -216,26 +226,15 @@ public class UsuarioServiceImpl implements UsuarioService {
             em = JPAUtil.createEntityManager();
             tx = em.getTransaction();
             tx.begin();
-
-            // No es necesario buscar primero, el repositorio lo hará.
-            // Pero la validación de si se puede borrar (ej: promotor sin festivales)
-            // debería hacerse aquí o capturar la excepción del repositorio.
             log.debug("Intentando eliminar usuario con ID: {}", id);
             boolean eliminado = usuarioRepository.deleteById(em, id);
-
             if (!eliminado) {
-                // Podría ser porque no se encontró o por una restricción de FK
-                // El repositorio ya loggea si no se encuentra. Si falla por FK,
-                // lanzará una PersistenceException que se captura abajo.
-                // Lanzamos NotFound si el repo devuelve false y no hubo otra excepción.
                 log.warn("No se pudo eliminar usuario ID {}, no encontrado o error previo.", id);
                 throw new UsuarioNotFoundException("Usuario no encontrado o no se pudo eliminar ID: " + id);
             }
-
             tx.commit();
             log.info("Usuario ID: {} eliminado (o marcado para eliminación) correctamente.", id);
-
-        } catch (Exception e) { // Capturar PersistenceException específicamente sería mejor
+        } catch (Exception e) {
             log.error("Error durante la eliminación del usuario ID {}: {}", id, e.getMessage(), e);
             if (tx != null && tx.isActive()) {
                 log.warn("Realizando rollback de la transacción de eliminación de usuario.");
@@ -244,7 +243,6 @@ public class UsuarioServiceImpl implements UsuarioService {
             if (e instanceof UsuarioNotFoundException) {
                 throw e;
             }
-            // Podría ser una ConstraintViolationException si hay FKs
             throw new RuntimeException("Error eliminando usuario: " + e.getMessage() + ". Verifique si tiene datos asociados (ej: festivales).", e);
         } finally {
             if (em != null && em.isOpen()) {
@@ -254,7 +252,7 @@ public class UsuarioServiceImpl implements UsuarioService {
         }
     }
 
-    // --- Métodos Privados de Mapeo ---
+    // --- Método Privado de Mapeo (sin cambios) ---
     private UsuarioDTO mapEntityToDto(Usuario u) {
         if (u == null) {
             return null;
@@ -269,7 +267,4 @@ public class UsuarioServiceImpl implements UsuarioService {
         dto.setFechaModificacion(u.getFechaModificacion());
         return dto;
     }
-
-    // No necesitamos mapear DTO a Entidad para lectura normalmente,
-    // pero sí para creación (hecho en crearUsuario).
 }
