@@ -15,8 +15,8 @@ import com.daw2edudiego.beatpasstfg.repository.UsuarioRepository; // Necesario p
 import com.daw2edudiego.beatpasstfg.repository.UsuarioRepositoryImpl; // Implementación concreta
 import com.daw2edudiego.beatpasstfg.util.JPAUtil; // Utilidad para manejar EM y EMF
 
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.EntityTransaction;
+import javax.persistence.EntityManager;
+import javax.persistence.EntityTransaction;
 
 import java.time.LocalDate;
 import java.util.List;

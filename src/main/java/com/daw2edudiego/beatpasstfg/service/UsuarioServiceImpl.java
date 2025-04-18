@@ -15,8 +15,8 @@ import com.daw2edudiego.beatpasstfg.repository.UsuarioRepositoryImpl;
 import com.daw2edudiego.beatpasstfg.util.JPAUtil;
 import com.daw2edudiego.beatpasstfg.util.PasswordUtil;
 
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.EntityTransaction;
+import javax.persistence.EntityManager;
+import javax.persistence.EntityTransaction;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

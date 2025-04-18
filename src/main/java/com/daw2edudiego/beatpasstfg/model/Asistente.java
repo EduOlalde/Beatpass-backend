@@ -4,7 +4,7 @@
  */
 package com.daw2edudiego.beatpasstfg.model;
 
-import jakarta.persistence.*;
+import javax.persistence.*;
 import java.io.Serializable;
 import java.time.LocalDateTime;
 import java.util.HashSet;
