@@ -11,10 +11,10 @@ import com.daw2edudiego.beatpasstfg.model.RolUsuario; // Necesario para comproba
 import com.daw2edudiego.beatpasstfg.service.FestivalService;
 import com.daw2edudiego.beatpasstfg.service.FestivalServiceImpl;
 
-import javax.servlet.RequestDispatcher;
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServletRequest; // Necesario para forward/attributes
-import javax.servlet.http.HttpServletResponse; // Necesario para forward
+import jakarta.servlet.RequestDispatcher;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest; // Necesario para forward/attributes
+import jakarta.servlet.http.HttpServletResponse; // Necesario para forward
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.MediaType;
@@ -77,7 +77,7 @@ public class PromotorResource {
         request.setAttribute("idPromotorAutenticado", idPromotor); // Pasar ID por si la JSP lo necesita
 
         // Forward a la JSP
-        RequestDispatcher dispatcher = request.getRequestDispatcher("/WEB-INF/jsp/promotor/mis-festivales.jsp");
+        RequestDispatcher dispatcher = request.getRequestDispatcher("/promotor/mis-festivales.jsp");
         dispatcher.forward(request, response);
 
         // JAX-RS requiere devolver una Response, pero el forward ya ha manejado la respuesta.
@@ -103,7 +103,7 @@ public class PromotorResource {
         request.setAttribute("idPromotorAutenticado", idPromotor);
         request.setAttribute("estadosPosibles", EstadoFestival.values()); // Aunque no se use al crear, por consistencia del form
 
-        RequestDispatcher dispatcher = request.getRequestDispatcher("/WEB-INF/jsp/promotor/festival-detalle.jsp");
+        RequestDispatcher dispatcher = request.getRequestDispatcher("/promotor/festival-detalle.jsp");
         dispatcher.forward(request, response);
         return Response.ok().build();
     }
@@ -138,7 +138,7 @@ public class PromotorResource {
             request.setAttribute("idPromotorAutenticado", idPromotor);
             request.setAttribute("estadosPosibles", EstadoFestival.values());
 
-            RequestDispatcher dispatcher = request.getRequestDispatcher("/WEB-INF/jsp/promotor/festival-detalle.jsp");
+            RequestDispatcher dispatcher = request.getRequestDispatcher("/promotor/festival-detalle.jsp");
             dispatcher.forward(request, response);
             return Response.ok().build();
 
@@ -254,7 +254,7 @@ public class PromotorResource {
             request.setAttribute("festival", dto); // Devolver DTO con datos introducidos
             request.setAttribute("idPromotorAutenticado", idPromotor);
             request.setAttribute("estadosPosibles", EstadoFestival.values());
-            RequestDispatcher dispatcher = request.getRequestDispatcher("/WEB-INF/jsp/promotor/festival-detalle.jsp");
+            RequestDispatcher dispatcher = request.getRequestDispatcher("/promotor/festival-detalle.jsp");
             dispatcher.forward(request, response);
             return Response.ok().build(); // El forward ya manejó la respuesta
         } catch (WebApplicationException wae) {
@@ -265,7 +265,7 @@ public class PromotorResource {
             request.setAttribute("festival", dto);
             request.setAttribute("idPromotorAutenticado", idPromotor);
             request.setAttribute("estadosPosibles", EstadoFestival.values());
-            RequestDispatcher dispatcher = request.getRequestDispatcher("/WEB-INF/jsp/promotor/festival-detalle.jsp");
+            RequestDispatcher dispatcher = request.getRequestDispatcher("/promotor/festival-detalle.jsp");
             dispatcher.forward(request, response);
             return Response.ok().build();
         }

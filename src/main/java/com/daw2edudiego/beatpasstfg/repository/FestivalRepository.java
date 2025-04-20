@@ -6,7 +6,7 @@ package com.daw2edudiego.beatpasstfg.repository;
 
 import com.daw2edudiego.beatpasstfg.model.EstadoFestival;
 import com.daw2edudiego.beatpasstfg.model.Festival;
-import javax.persistence.EntityManager;
+import jakarta.persistence.EntityManager;
 
 import java.time.LocalDate;
 import java.util.List;

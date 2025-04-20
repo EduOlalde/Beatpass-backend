@@ -6,13 +6,13 @@ import com.daw2edudiego.beatpasstfg.service.UsuarioService;
 import com.daw2edudiego.beatpasstfg.service.UsuarioServiceImpl;
 import com.daw2edudiego.beatpasstfg.util.PasswordUtil; // Para verificar contraseña
 
-import javax.servlet.RequestDispatcher;
-import javax.servlet.ServletException;
-import javax.servlet.annotation.WebServlet;
-import javax.servlet.http.HttpServlet;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import javax.servlet.http.HttpSession;
+import jakarta.servlet.RequestDispatcher;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.annotation.WebServlet;
+import jakarta.servlet.http.HttpServlet;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -75,10 +75,10 @@ public class LoginServlet extends HttpServlet {
             return;
         }
 
-        // --- Lógica de Autenticación Real ---
+        // --- Lógica de Autenticación ---
         try {
             // 1. Obtener la entidad Usuario completa desde el servicio usando el método real
-            Optional<Usuario> usuarioOpt = usuarioService.obtenerEntidadUsuarioPorEmailParaAuth(email); // <-- LLAMADA REAL AL SERVICIO
+            Optional<Usuario> usuarioOpt = usuarioService.obtenerEntidadUsuarioPorEmailParaAuth(email);
 
             if (usuarioOpt.isPresent()) {
                 Usuario usuario = usuarioOpt.get();
@@ -111,15 +111,17 @@ public class LoginServlet extends HttpServlet {
                     // Redirigir al panel correspondiente según el rol
                     String targetUrl;
                     if (usuario.getRol() == RolUsuario.ADMIN) {
-                        log.debug("Redirigiendo ADMIN a su panel...");
-                        // Asegúrate de que esta ruta exista y sea manejada (probablemente por un AdminResource)
-                        targetUrl = contextPath + "/api/admin/dashboard"; // TODO: Crear este recurso/página admin
+                        log.debug("Redirigiendo ADMIN al listado de promotores...");
+                        // CAMBIADO: Apuntar a la ruta que lista promotores en AdminResource
+                        targetUrl = contextPath + "/api/admin/promotores/listar";
+                        // O si prefieres la ruta base del recurso admin que también lista:
+                        // targetUrl = contextPath + "/api/admin/promotores";
                     } else if (usuario.getRol() == RolUsuario.PROMOTOR) {
                         log.debug("Redirigiendo PROMOTOR a su panel...");
-                        targetUrl = contextPath + "/api/promotor/festivales"; // Ruta del PromotorResource (que muestra la lista)
+                        targetUrl = contextPath + "/api/promotor/festivales";
                     } else {
                         log.error("Rol desconocido o no permitido encontrado durante login: {}", usuario.getRol());
-                        session.invalidate(); // Invalidar sesión creada por seguridad
+                        session.invalidate();
                         setErrorAndForwardToLogin(request, response, "Rol de usuario no válido para la aplicación.");
                         return;
                     }
