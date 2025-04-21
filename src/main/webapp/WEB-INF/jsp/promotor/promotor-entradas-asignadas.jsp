@@ -13,7 +13,6 @@
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
         <style>
-            /* Estilos generales que NO usan @apply */
             body {
                 font-family: 'Inter', sans-serif;
             }
@@ -44,7 +43,7 @@
                 border-radius: 0.25rem;
                 font-size: 0.8rem;
             }
-            /* Las clases para inputs y botones link se aplicarán directamente */
+            /* Clases aplicadas directamente */
         </style>
     </head>
     <body class="bg-gray-100 text-gray-800">
@@ -135,13 +134,12 @@
                                             </td>
                                             <td class="px-4 py-4 whitespace-nowrap text-center text-sm">
                                             <%-- Acciones Condicionales --%>
-                                            <div class="flex flex-col items-center space-y-1 md:flex-row md:space-y-0 md:space-x-1">
+                                            <div class="flex flex-col items-center space-y-1 md:space-y-2"> <%-- Ajuste espacio vertical --%>
                                                 <c:if test="${empty ea.idAsistente and ea.estado == 'ACTIVA'}">
                                                     <%-- Formulario para Nominar por Email/Nombre --%>
                                                     <form action="${pageContext.request.contextPath}/api/promotor/entradas-asignadas/${ea.idEntradaAsignada}/nominar" method="post" class="inline-block"
                                                           onsubmit="return confirm('Nominar entrada ID ${ea.idEntradaAsignada} a ' + document.getElementById('emailAsistente_${ea.idEntradaAsignada}').value + '?');">
                                                         <div class="flex flex-col space-y-1 text-left">
-                                                            <%-- Aplicar clases directamente a los inputs --%>
                                                             <input type="email" id="emailAsistente_${ea.idEntradaAsignada}" name="emailAsistente" required placeholder="Email Asistente" title="Email del asistente"
                                                                    class="p-1 border border-gray-300 rounded-md shadow-sm text-xs focus:ring-indigo-500 focus:border-indigo-500 w-36">
                                                             <input type="text" name="nombreAsistente" required placeholder="Nombre Asistente" title="Nombre (obligatorio si es nuevo)"
@@ -152,15 +150,34 @@
                                                         </div>
                                                     </form>
                                                 </c:if>
-                                                <c:if test="${not empty ea.idAsistente and ea.estado == 'ACTIVA'}">
-                                                    <button type="button" class="text-yellow-600 hover:text-yellow-900 underline font-semibold p-0 bg-transparent shadow-none text-xs" onclick="alert('Modificar nominación entrada ID ${ea.idEntradaAsignada} - Pendiente');">Modificar</button>
-                                                </c:if>
-                                                <c:if test="${ea.estado == 'ACTIVA'}">
-                                                    <form action="${pageContext.request.contextPath}/api/promotor/entradas-asignadas/${ea.idEntradaAsignada}/cancelar" method="post" class="inline"
-                                                          onsubmit="return confirm('¿Estás seguro de CANCELAR la entrada ID ${ea.idEntradaAsignada}?');">
-                                                        <button type="submit" class="text-red-600 hover:text-red-900 underline font-semibold p-0 bg-transparent shadow-none text-xs" title="Cancelar Entrada">Cancelar</button>
+
+                                                <%-- *** NUEVO: Formulario para Asociar Pulsera *** --%>
+                                                <c:if test="${not empty ea.idAsistente and ea.estado == 'ACTIVA'}"> <%-- Solo si está nominada y activa --%>
+                                                    <%-- TODO: Necesitamos saber si YA tiene pulsera para no mostrar el form. Esto requeriría añadir info al DTO o hacer otra consulta.
+                                                             Por ahora, el servicio evitará la re-asociación, pero el form se mostrará siempre. --%>
+                                                    <form action="${pageContext.request.contextPath}/api/pos/asociar-pulsera" method="post" class="inline-block mt-1"
+                                                          onsubmit="return confirm('Asociar pulsera a entrada ID ${ea.idEntradaAsignada}?');">
+                                                        <input type="hidden" name="idEntradaAsignada" value="${ea.idEntradaAsignada}">
+                                                        <div class="flex items-center space-x-1">
+                                                            <input type="text" name="codigoUid" required placeholder="UID Pulsera" title="Introduce el UID de la pulsera NFC"
+                                                                   class="p-1 border border-gray-300 rounded-md shadow-sm text-xs focus:ring-indigo-500 focus:border-indigo-500 w-28">
+                                                            <button type="submit" class="text-green-600 hover:text-green-900 underline font-medium p-0 bg-transparent shadow-none text-xs" title="Asociar Pulsera">Asociar</button>
+                                                        </div>
                                                     </form>
                                                 </c:if>
+                                                <%-- ********************************************** --%>
+
+                                                <div class="flex justify-center space-x-2 mt-1"> <%-- Contenedor para otros botones --%>
+                                                    <c:if test="${not empty ea.idAsistente and ea.estado == 'ACTIVA'}">
+                                                        <button type="button" class="text-yellow-600 hover:text-yellow-900 underline font-semibold p-0 bg-transparent shadow-none text-xs" onclick="alert('Modificar nominación entrada ID ${ea.idEntradaAsignada} - Pendiente');">Modificar</button>
+                                                    </c:if>
+                                                    <c:if test="${ea.estado == 'ACTIVA'}">
+                                                        <form action="${pageContext.request.contextPath}/api/promotor/entradas-asignadas/${ea.idEntradaAsignada}/cancelar" method="post" class="inline"
+                                                              onsubmit="return confirm('¿Cancelar entrada ID ${ea.idEntradaAsignada}?');">
+                                                            <button type="submit" class="text-red-600 hover:text-red-900 underline font-semibold p-0 bg-transparent shadow-none text-xs" title="Cancelar Entrada">Cancelar</button>
+                                                        </form>
+                                                    </c:if>
+                                                </div>
                                             </div>
                                         </td>
                                     </tr>
@@ -170,7 +187,7 @@
                     </tbody>
                 </table>
             </div>
-            <p class="text-xs text-gray-500 mt-2 italic">Nota: Para nominar, introduce email y nombre del asistente. Si el email ya existe, se usará ese asistente; si no, se creará uno nuevo.</p>
+            <p class="text-xs text-gray-500 mt-2 italic">Nota: Para nominar, introduce email y nombre. Para asociar pulsera, introduce su UID (la entrada debe estar nominada).</p>
 
         </div>
 

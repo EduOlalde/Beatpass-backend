@@ -1,6 +1,5 @@
 package com.daw2edudiego.beatpasstfg.util;
 
-// Imports cambiados a javax.persistence.*
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityManagerFactory;
 import jakarta.persistence.Persistence;
@@ -9,8 +8,7 @@ import org.slf4j.LoggerFactory;
 
 /**
  * Clase de utilidad para gestionar el EntityManagerFactory de JPA. Sigue el
- * patrón Singleton para asegurar una única instancia del Factory. ¡CORREGIDO
- * para usar javax.persistence!
+ * patrón Singleton para asegurar una única instancia del Factory. 
  */
 public class JPAUtil {
 
