@@ -7,6 +7,7 @@
 package com.daw2edudiego.beatpasstfg.web;
 
 // ... (imports sin cambios relevantes, asegurarse de tener todos los necesarios) ...
+import com.daw2edudiego.beatpasstfg.dto.AsistenteDTO;
 import com.daw2edudiego.beatpasstfg.dto.EntradaAsignadaDTO;
 import com.daw2edudiego.beatpasstfg.dto.EntradaDTO;
 import com.daw2edudiego.beatpasstfg.dto.FestivalDTO;
@@ -53,6 +54,7 @@ public class PromotorResource {
     private final EntradaService entradaService;
     private final EntradaAsignadaService entradaAsignadaService;
     private final VentaService ventaService; // <-- Añadir VentaService
+    private final AsistenteService asistenteService;
 
     // Inyección de contexto JAX-RS
     @Context
@@ -68,7 +70,8 @@ public class PromotorResource {
         this.usuarioService = new UsuarioServiceImpl();
         this.entradaService = new EntradaServiceImpl();
         this.entradaAsignadaService = new EntradaAsignadaServiceImpl();
-        this.ventaService = new VentaServiceImpl(); // <-- Instanciar VentaService
+        this.ventaService = new VentaServiceImpl();
+        this.asistenteService = new AsistenteServiceImpl(); // <-- Instanciar
     }
 
     // --- Endpoints para Gestión de Festivales del Promotor ---
@@ -529,40 +532,57 @@ public class PromotorResource {
         }
     }
 
+    /**
+     * POST /api/promotor/entradas-asignadas/{idEntradaAsignada}/nominar Procesa
+     * la nominación de una entrada asignada a un asistente (buscado o creado
+     * por email). Espera email (obligatorio), nombre (obligatorio si crea) y
+     * telefono (opcional) del asistente.
+     */
     @POST
     @Path("/entradas-asignadas/{idEntradaAsignada}/nominar")
     @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
     public Response nominarEntrada(
             @PathParam("idEntradaAsignada") Integer idEntradaAsignada,
-            @FormParam("idAsistente") Integer idAsistente) {
-        // ... (sin cambios) ...
-        log.info("POST /promotor/entradas-asignadas/{}/nominar recibido para asistente ID {}", idEntradaAsignada, idAsistente);
+            @FormParam("emailAsistente") String emailAsistente, // <-- CAMBIO: Recibe email
+            @FormParam("nombreAsistente") String nombreAsistente, // <-- NUEVO: Recibe nombre
+            @FormParam("telefonoAsistente") String telefonoAsistente) { // <-- NUEVO: Recibe teléfono
+
+        log.info("POST /promotor/entradas-asignadas/{}/nominar recibido para asistente email {}", idEntradaAsignada, emailAsistente);
         Integer idPromotor = verificarAccesoPromotor(request);
-        if (idEntradaAsignada == null || idAsistente == null) {
-            throw new BadRequestException("Faltan parámetros.");
+
+        if (idEntradaAsignada == null || emailAsistente == null || emailAsistente.isBlank()) {
+            throw new BadRequestException("Faltan parámetros requeridos (idEntradaAsignada, emailAsistente).");
         }
+        // El nombre solo es obligatorio si el asistente no existe (lo valida el servicio)
+
         String mensajeFlash = null;
         String errorFlash = null;
-        Integer idFestival = null;
+        Integer idFestival = null; // Para redirigir
+
         try {
-            entradaAsignadaService.nominarEntrada(idEntradaAsignada, idAsistente, idPromotor);
-            mensajeFlash = "Entrada ID " + idEntradaAsignada + " nominada.";
+            // Llamar al servicio para nominar usando email, nombre, teléfono
+            entradaAsignadaService.nominarEntrada(idEntradaAsignada, emailAsistente, nombreAsistente, telefonoAsistente, idPromotor);
+            mensajeFlash = "Entrada ID " + idEntradaAsignada + " nominada correctamente al asistente con email " + emailAsistente + ".";
+
+            // Obtener el ID del festival para la redirección
             Optional<EntradaAsignadaDTO> optDto = entradaAsignadaService.obtenerEntradaAsignadaPorId(idEntradaAsignada, idPromotor);
             if (optDto.isPresent()) {
                 idFestival = optDto.get().getIdFestival();
             } else {
-                log.warn("No se pudo obtener DTO de entrada {} tras nominar.", idEntradaAsignada);
+                log.warn("No se pudo obtener DTO de entrada {} tras nominar para obtener idFestival.", idEntradaAsignada);
             }
-        } catch (EntradaAsignadaNotFoundException | AsistenteNotFoundException | UsuarioNotFoundException e) {
+
+        } catch (EntradaAsignadaNotFoundException | UsuarioNotFoundException | IllegalArgumentException e) { // IllegalArgument si falta nombre al crear
             errorFlash = e.getMessage();
-            log.warn("Error al nominar entrada ID {}: {}", idEntradaAsignada, e.getMessage());
+            log.warn("Error al nominar entrada ID {}: {}", idEntradaAsignada, errorFlash);
         } catch (SecurityException | IllegalStateException e) {
-            errorFlash = "No se pudo nominar: " + e.getMessage();
-            log.warn("Error negocio/seguridad al nominar entrada ID {}: {}", idEntradaAsignada, e.getMessage());
+            errorFlash = "No se pudo nominar la entrada: " + e.getMessage();
+            log.warn("Error de negocio/seguridad al nominar entrada ID {}: {}", idEntradaAsignada, errorFlash);
         } catch (Exception e) {
-            errorFlash = "Error interno.";
+            errorFlash = "Error interno inesperado al nominar la entrada.";
             log.error("Error interno al nominar entrada ID {}: {}", idEntradaAsignada, e.getMessage(), e);
         }
+
         HttpSession session = request.getSession(false);
         if (session != null) {
             if (mensajeFlash != null) {
@@ -572,12 +592,13 @@ public class PromotorResource {
                 session.setAttribute("error", errorFlash);
             }
         }
+
         URI redirectUri;
         if (idFestival != null) {
             redirectUri = uriInfo.getBaseUriBuilder().path(PromotorResource.class).path(PromotorResource.class, "listarEntradasAsignadas").resolveTemplate("idFestival", idFestival).build();
         } else {
             redirectUri = uriInfo.getBaseUriBuilder().path(PromotorResource.class).path("festivales").build();
-        }
+        } // Fallback
         return Response.seeOther(redirectUri).build();
     }
 
@@ -630,6 +651,51 @@ public class PromotorResource {
         }
         return Response.seeOther(redirectUri).build();
     }
+
+    // --- *** NUEVO ENDPOINT PARA LISTAR ASISTENTES POR FESTIVAL *** ---
+    /**
+     * GET /api/promotor/festivales/{idFestival}/asistentes Muestra la lista de
+     * asistentes únicos con entradas para un festival específico. Devuelve HTML
+     * (forward a JSP). Requiere rol PROMOTOR y ser dueño del festival.
+     */
+    @GET
+    @Path("/festivales/{idFestival}/asistentes")
+    @Produces(MediaType.TEXT_HTML)
+    public Response listarAsistentesPorFestival(@PathParam("idFestival") Integer idFestival) throws ServletException, IOException {
+        log.debug("GET /promotor/festivales/{}/asistentes recibido", idFestival);
+        Integer idPromotor = verificarAccesoPromotor(request); // Verifica sesión y rol
+        if (idFestival == null) {
+            throw new BadRequestException("ID de festival no válido.");
+        }
+
+        try {
+            // Obtener datos del festival para mostrar título y verificar propiedad (doble check)
+            FestivalDTO festival = festivalService.obtenerFestivalPorId(idFestival)
+                    .filter(f -> f.getIdPromotor().equals(idPromotor))
+                    .orElseThrow(() -> new ForbiddenException("Festival no encontrado o no pertenece a este promotor."));
+
+            // Obtener lista de asistentes DTOs para este festival
+            List<AsistenteDTO> listaAsistentes = asistenteService.obtenerAsistentesPorFestival(idFestival, idPromotor);
+
+            // Pasar datos al JSP
+            request.setAttribute("festival", festival);
+            request.setAttribute("asistentes", listaAsistentes);
+            request.setAttribute("idPromotorAutenticado", idPromotor);
+            mostrarMensajeFlash(request);
+
+            // Forward a un NUEVO JSP para mostrar esta lista
+            RequestDispatcher dispatcher = request.getRequestDispatcher("/WEB-INF/jsp/promotor/promotor-festival-asistentes.jsp"); // Crear este JSP
+            dispatcher.forward(request, response);
+            return Response.ok().build();
+
+        } catch (ForbiddenException | NotFoundException e) {
+            throw e; // Relanzar excepciones JAX-RS
+        } catch (Exception e) {
+            log.error("Error al listar asistentes para festival ID {}: {}", idFestival, e.getMessage(), e);
+            throw new InternalServerErrorException("Error al cargar los asistentes del festival.", e);
+        }
+    }
+    // --- *** FIN NUEVO ENDPOINT *** ---
 
     // --- *** NUEVO ENDPOINT PARA SIMULAR VENTA *** ---
     /**

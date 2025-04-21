@@ -53,6 +53,33 @@ public interface AsistenteService {
      */
     List<AsistenteDTO> buscarAsistentes(String searchTerm);
 
+    /**
+     * Actualiza los datos de un asistente existente. No permite cambiar el
+     * email.
+     *
+     * @param idAsistente ID del asistente a actualizar.
+     * @param asistenteDTO DTO con los nuevos datos (nombre, telefono).
+     * @return El DTO del asistente actualizado.
+     * @throws AsistenteNotFoundException si el asistente no existe.
+     * @throws IllegalArgumentException si los datos del DTO son inválidos.
+     * @throws RuntimeException si ocurre un error inesperado.
+     */
+    AsistenteDTO actualizarAsistente(Integer idAsistente, AsistenteDTO asistenteDTO);
+
+    /**
+     * Obtiene la lista de asistentes únicos que tienen entradas para un
+     * festival específico. Verifica que el promotor solicitante sea el dueño
+     * del festival.
+     *
+     * @param idFestival ID del festival.
+     * @param idPromotor ID del promotor que realiza la consulta.
+     * @return Lista de AsistenteDTO asociados al festival.
+     * @throws FestivalNotFoundException si el festival no existe.
+     * @throws SecurityException si el promotor no es dueño del festival.
+     * @throws RuntimeException si ocurre un error inesperado.
+     */
+    List<AsistenteDTO> obtenerAsistentesPorFestival(Integer idFestival, Integer idPromotor); 
+
     // Podrían añadirse métodos para actualizar o eliminar asistentes si fuera necesario.
     // AsistenteDTO actualizarAsistente(Integer idAsistente, AsistenteDTO asistenteDTO);
     // void eliminarAsistente(Integer idAsistente);

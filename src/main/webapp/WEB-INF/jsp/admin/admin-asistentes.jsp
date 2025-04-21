@@ -56,6 +56,9 @@
                 </form>
             </div>
 
+            <%-- TODO: Añadir botón para Crear Asistente --%>
+            <%-- <div class="mb-4 flex justify-end"> <a href="..." class="...">+ Añadir Asistente</a> </div> --%>
+
             <%-- Tabla de Asistentes --%>
             <div class="bg-white shadow-md rounded-lg overflow-x-auto">
                 <table class="min-w-full divide-y divide-gray-200">
@@ -97,8 +100,10 @@
                                             </c:if>
                                         </td>
                                         <td class="px-4 py-4 whitespace-nowrap text-center text-sm space-x-2">
-                                            <button type="button" class="text-indigo-600 hover:text-indigo-900 underline font-medium p-0 bg-transparent shadow-none text-xs" onclick="alert('Ver detalles Asistente ID ${a.idAsistente} - Pendiente');">Ver</button>
-                                            <button type="button" class="text-yellow-600 hover:text-yellow-900 underline font-semibold p-0 bg-transparent shadow-none text-xs" onclick="alert('Editar Asistente ID ${a.idAsistente} - Pendiente');">Editar</button>
+                                            <%-- Enlace Ver --%>
+                                            <a href="${pageContext.request.contextPath}/api/admin/asistentes/${a.idAsistente}" class="text-indigo-600 hover:text-indigo-900 underline font-medium p-0 bg-transparent shadow-none text-xs">Ver</a>
+                                            <%-- *** CAMBIO: Enlace Editar funcional *** --%>
+                                            <a href="${pageContext.request.contextPath}/api/admin/asistentes/${a.idAsistente}/editar" class="text-yellow-600 hover:text-yellow-900 underline font-semibold p-0 bg-transparent shadow-none text-xs">Editar</a>
                                         </td>
                                     </tr>
                                 </c:forEach>

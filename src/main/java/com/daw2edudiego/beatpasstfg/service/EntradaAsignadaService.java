@@ -13,23 +13,25 @@ import java.util.Optional;
 public interface EntradaAsignadaService {
 
     /**
-     * Asigna (nomina) una entrada específica a un asistente. Verifica permisos
-     * y estado de la entrada.
+     * Asigna (nomina) una entrada específica a un asistente, buscándolo o
+     * creándolo por email. Verifica permisos y estado de la entrada.
      *
      * @param idEntradaAsignada ID de la entrada a nominar.
-     * @param idAsistente ID del asistente al que se nomina la entrada.
-     * @param idPromotor ID del promotor que realiza la acción (para
-     * verificación de permisos).
+     * @param emailAsistente Email del asistente (obligatorio).
+     * @param nombreAsistente Nombre del asistente (obligatorio si se crea
+     * nuevo).
+     * @param telefonoAsistente Teléfono del asistente (opcional).
+     * @param idPromotor ID del promotor que realiza la acción.
      * @throws EntradaAsignadaNotFoundException si la entrada no existe.
-     * @throws AsistenteNotFoundException si el asistente no existe.
      * @throws UsuarioNotFoundException si el promotor no existe.
      * @throws SecurityException si el promotor no es dueño del festival
      * asociado.
      * @throws IllegalStateException si la entrada ya está nominada, usada o
      * cancelada.
+     * @throws IllegalArgumentException si falta email o nombre al crear.
      * @throws RuntimeException si ocurre un error inesperado.
      */
-    void nominarEntrada(Integer idEntradaAsignada, Integer idAsistente, Integer idPromotor);
+    void nominarEntrada(Integer idEntradaAsignada, String emailAsistente, String nombreAsistente, String telefonoAsistente, Integer idPromotor); // <-- PARÁMETROS CAMBIADOS
 
     /**
      * Obtiene la lista de DTOs de entradas asignadas para un festival
@@ -59,7 +61,7 @@ public interface EntradaAsignadaService {
      * @throws IllegalStateException si la entrada no está en estado ACTIVA.
      * @throws RuntimeException si ocurre un error inesperado.
      */
-    void cancelarEntrada(Integer idEntradaAsignada, Integer idPromotor); 
+    void cancelarEntrada(Integer idEntradaAsignada, Integer idPromotor);
 
     /**
      * Obtiene los detalles de una entrada asignada específica por su ID. Útil

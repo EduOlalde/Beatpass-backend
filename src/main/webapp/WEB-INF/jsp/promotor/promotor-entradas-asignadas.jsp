@@ -1,6 +1,6 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%@ taglib uri="jakarta.tags.core" prefix="c" %>
-<%@ taglib uri="jakarta.tags.fmt" prefix="fmt" %> <%-- Mantenemos la importación por si se usa en otro sitio --%>
+<%@ taglib uri="jakarta.tags.fmt" prefix="fmt" %>
 
 <!DOCTYPE html>
 <html lang="es">
@@ -13,6 +13,7 @@
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
         <style>
+            /* Estilos generales que NO usan @apply */
             body {
                 font-family: 'Inter', sans-serif;
             }
@@ -43,6 +44,7 @@
                 border-radius: 0.25rem;
                 font-size: 0.8rem;
             }
+            /* Las clases para inputs y botones link se aplicarán directamente */
         </style>
     </head>
     <body class="bg-gray-100 text-gray-800">
@@ -56,7 +58,7 @@
                     <c:if test="${not empty sessionScope.userName}">
                         <span class="text-sm text-gray-600">Hola, ${sessionScope.userName}</span>
                     </c:if>
-                    <a href="${pageContext.request.contextPath}/api/promotor/festivales" class="text-sm text-indigo-600 hover:underline">Mis Festivales</a>
+                    <a href="${pageContext.request.contextPath}/api/promotor/festivales" class="text-sm text-indigo-600 hover:underline font-medium">Mis Festivales</a>
                     <form action="${pageContext.request.contextPath}/logout" method="post" class="inline">
                         <button type="submit" class="text-sm text-gray-500 hover:text-red-600 underline">Cerrar Sesión</button>
                     </form>
@@ -85,11 +87,11 @@
                 <table class="min-w-full divide-y divide-gray-200">
                     <thead class="bg-gray-50">
                         <tr>
-                            <th scope="col" class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID Entrada</th>
-                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo Original</th>
-                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Código QR</th>
+                            <th scope="col" class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
+                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo</th>
+                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">QR</th>
                             <th scope="col" class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
-                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Asistente Nominado</th>
+                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Asistente</th>
                             <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha Nom.</th>
                             <th scope="col" class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
                         </tr>
@@ -125,34 +127,41 @@
                                                     ${ea.nombreAsistente} <br>
                                                     <span class="text-xs text-gray-500">${ea.emailAsistente}</span>
                                                 </c:when>
-                                                <c:otherwise> <span class="text-xs text-gray-500 italic">(Pendiente de nominar)</span> </c:otherwise>
+                                                <c:otherwise> <span class="text-xs text-gray-500 italic">(Pendiente)</span> </c:otherwise>
                                             </c:choose>
                                         </td>
                                         <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
-                                            <%-- *** CORRECCIÓN: Eliminar fmt:formatDate *** --%>
-                                            <c:if test="${not empty ea.fechaAsignacion}">
-                                                ${ea.fechaAsignacion} <%-- Mostrar formato por defecto de LocalDateTime --%>
-                                            </c:if>
-                                        </td>
-                                        <td class="px-4 py-4 whitespace-nowrap text-center text-sm space-x-1">
+                                            <c:if test="${not empty ea.fechaAsignacion}"> ${ea.fechaAsignacion} </c:if>
+                                            </td>
+                                            <td class="px-4 py-4 whitespace-nowrap text-center text-sm">
                                             <%-- Acciones Condicionales --%>
-                                            <c:if test="${empty ea.idAsistente and ea.estado == 'ACTIVA'}">
-                                                <form action="${pageContext.request.contextPath}/api/promotor/entradas-asignadas/${ea.idEntradaAsignada}/nominar" method="post" class="inline-flex items-center space-x-1"
-                                                      onsubmit="return document.getElementById('idAsistente_${ea.idEntradaAsignada}').value.trim() !== '';">
-                                                    <input type="number" id="idAsistente_${ea.idEntradaAsignada}" name="idAsistente" required min="1" placeholder="ID Asist." title="Introduce el ID del asistente"
-                                                           class="p-1 border border-gray-300 rounded-md shadow-sm text-sm w-20 focus:ring-indigo-500 focus:border-indigo-500">
-                                                    <button type="submit" class="text-indigo-600 hover:text-indigo-900 underline font-medium p-0 bg-transparent shadow-none text-sm" title="Nominar esta entrada">Nominar</button>
-                                                </form>
-                                            </c:if>
-                                            <c:if test="${not empty ea.idAsistente and ea.estado == 'ACTIVA'}">
-                                                <button type="button" class="text-yellow-600 hover:text-yellow-900 underline font-semibold p-0 bg-transparent shadow-none text-sm" onclick="alert('Modificar nominación entrada ID ${ea.idEntradaAsignada} - Pendiente');">Modificar</button>
-                                            </c:if>
-                                            <c:if test="${ea.estado == 'ACTIVA'}">
-                                                <form action="${pageContext.request.contextPath}/api/promotor/entradas-asignadas/${ea.idEntradaAsignada}/cancelar" method="post" class="inline"
-                                                      onsubmit="return confirm('¿Estás seguro de CANCELAR la entrada ID ${ea.idEntradaAsignada}? Esta acción no se puede deshacer y el stock se restaurará.');">
-                                                    <button type="submit" class="text-red-600 hover:text-red-900 underline font-semibold p-0 bg-transparent shadow-none text-sm" title="Cancelar Entrada">Cancelar</button>
-                                                </form>
-                                            </c:if>
+                                            <div class="flex flex-col items-center space-y-1 md:flex-row md:space-y-0 md:space-x-1">
+                                                <c:if test="${empty ea.idAsistente and ea.estado == 'ACTIVA'}">
+                                                    <%-- Formulario para Nominar por Email/Nombre --%>
+                                                    <form action="${pageContext.request.contextPath}/api/promotor/entradas-asignadas/${ea.idEntradaAsignada}/nominar" method="post" class="inline-block"
+                                                          onsubmit="return confirm('Nominar entrada ID ${ea.idEntradaAsignada} a ' + document.getElementById('emailAsistente_${ea.idEntradaAsignada}').value + '?');">
+                                                        <div class="flex flex-col space-y-1 text-left">
+                                                            <%-- Aplicar clases directamente a los inputs --%>
+                                                            <input type="email" id="emailAsistente_${ea.idEntradaAsignada}" name="emailAsistente" required placeholder="Email Asistente" title="Email del asistente"
+                                                                   class="p-1 border border-gray-300 rounded-md shadow-sm text-xs focus:ring-indigo-500 focus:border-indigo-500 w-36">
+                                                            <input type="text" name="nombreAsistente" required placeholder="Nombre Asistente" title="Nombre (obligatorio si es nuevo)"
+                                                                   class="p-1 border border-gray-300 rounded-md shadow-sm text-xs focus:ring-indigo-500 focus:border-indigo-500 w-36">
+                                                            <input type="tel" name="telefonoAsistente" placeholder="Teléfono (Opcional)" title="Teléfono (opcional)"
+                                                                   class="p-1 border border-gray-300 rounded-md shadow-sm text-xs focus:ring-indigo-500 focus:border-indigo-500 w-36">
+                                                            <button type="submit" class="w-full text-indigo-600 hover:text-indigo-900 underline font-medium p-0 bg-transparent shadow-none text-xs text-center" title="Nominar esta entrada">Confirmar Nominación</button>
+                                                        </div>
+                                                    </form>
+                                                </c:if>
+                                                <c:if test="${not empty ea.idAsistente and ea.estado == 'ACTIVA'}">
+                                                    <button type="button" class="text-yellow-600 hover:text-yellow-900 underline font-semibold p-0 bg-transparent shadow-none text-xs" onclick="alert('Modificar nominación entrada ID ${ea.idEntradaAsignada} - Pendiente');">Modificar</button>
+                                                </c:if>
+                                                <c:if test="${ea.estado == 'ACTIVA'}">
+                                                    <form action="${pageContext.request.contextPath}/api/promotor/entradas-asignadas/${ea.idEntradaAsignada}/cancelar" method="post" class="inline"
+                                                          onsubmit="return confirm('¿Estás seguro de CANCELAR la entrada ID ${ea.idEntradaAsignada}?');">
+                                                        <button type="submit" class="text-red-600 hover:text-red-900 underline font-semibold p-0 bg-transparent shadow-none text-xs" title="Cancelar Entrada">Cancelar</button>
+                                                    </form>
+                                                </c:if>
+                                            </div>
                                         </td>
                                     </tr>
                                 </c:forEach>
@@ -161,7 +170,7 @@
                     </tbody>
                 </table>
             </div>
-            <p class="text-xs text-gray-500 mt-2 italic">Nota: Para nominar una entrada, introduce el ID del asistente existente y pulsa "Nominar".</p>
+            <p class="text-xs text-gray-500 mt-2 italic">Nota: Para nominar, introduce email y nombre del asistente. Si el email ya existe, se usará ese asistente; si no, se creará uno nuevo.</p>
 
         </div>
 

@@ -5,6 +5,8 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.NoResultException;
 import jakarta.persistence.PersistenceException;
 import jakarta.persistence.TypedQuery;
+import java.util.Collections;
+import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -12,6 +14,7 @@ import java.util.Optional;
 
 /**
  * Implementación de AsistenteRepository usando JPA.
+ *
  * @author Eduardo Olalde
  */
 public class AsistenteRepositoryImpl implements AsistenteRepository {
@@ -76,6 +79,36 @@ public class AsistenteRepositoryImpl implements AsistenteRepository {
         } catch (Exception e) {
             log.error("Error buscando Asistente por email {}: {}", email, e.getMessage(), e);
             return Optional.empty();
+        }
+    }
+
+    @Override
+    public List<Asistente> findAsistentesByFestivalId(EntityManager em, Integer idFestival) { // <-- NUEVO MÉTODO
+        log.debug("Buscando Asistentes para Festival ID: {}", idFestival);
+        if (idFestival == null) {
+            return Collections.emptyList();
+        }
+        try {
+            // Consulta JPQL para obtener asistentes únicos asociados a entradas asignadas de un festival
+            String jpql = "SELECT DISTINCT a FROM Asistente a "
+                    + "JOIN a.entradasAsignadas ea "
+                    + // Asistente -> EntradaAsignada
+                    "JOIN ea.compraEntrada ce "
+                    + // EntradaAsignada -> CompraEntrada
+                    "JOIN ce.entrada e "
+                    + // CompraEntrada -> Entrada (tipo)
+                    "WHERE e.festival.idFestival = :festivalId "
+                    + // Filtrar por ID de Festival
+                    "ORDER BY a.nombre"; // Ordenar por nombre
+
+            TypedQuery<Asistente> query = em.createQuery(jpql, Asistente.class);
+            query.setParameter("festivalId", idFestival);
+            List<Asistente> asistentes = query.getResultList();
+            log.debug("Encontrados {} asistentes únicos para Festival ID: {}", asistentes.size(), idFestival);
+            return asistentes;
+        } catch (Exception e) {
+            log.error("Error buscando Asistentes para Festival ID {}: {}", idFestival, e.getMessage(), e);
+            return Collections.emptyList();
         }
     }
 }

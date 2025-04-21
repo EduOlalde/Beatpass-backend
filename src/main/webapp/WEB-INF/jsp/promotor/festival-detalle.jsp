@@ -90,7 +90,6 @@
                 </div>
             </c:if>
 
-
             <%-- Formulario Datos Generales Festival --%>
             <%-- ... (formulario sin cambios) ... --%>
             <form action="${pageContext.request.contextPath}/api/promotor/festivales/guardar" method="post" class="bg-white p-6 md:p-8 rounded-lg shadow-md space-y-4 mb-10">
@@ -172,6 +171,7 @@
                     </c:if>
                     <%-- Tabla de Tipos de Entrada Existentes --%>
                     <div class="bg-white p-4 md:p-6 rounded-lg shadow-md mb-6">
+                        <%-- ... (Tabla de tipos de entrada sin cambios) ... --%>
                         <h4 class="text-lg font-medium text-gray-800 mb-3">Entradas Definidas</h4>
                         <div class="overflow-x-auto">
                             <table class="min-w-full divide-y divide-gray-200">
@@ -197,11 +197,8 @@
                                                     <td class="px-4 py-2 whitespace-nowrap text-sm text-gray-600 text-right"><fmt:formatNumber value="${entrada.precio}" type="currency" currencySymbol="€" minFractionDigits="2" maxFractionDigits="2"/></td>
                                                     <td class="px-4 py-2 whitespace-nowrap text-sm text-gray-600 text-right">${entrada.stock}</td>
                                                     <td class="px-4 py-2 whitespace-nowrap text-center text-sm space-x-2">
-                                                        <%-- *** CAMBIO: Enlace Editar *** --%>
                                                         <a href="${pageContext.request.contextPath}/api/promotor/entradas/${entrada.idEntrada}/editar" class="text-indigo-600 hover:text-indigo-900 underline font-medium p-0 bg-transparent shadow-none text-xs">Editar</a>
-                                                        <%-- *** CAMBIO: Formulario Eliminar *** --%>
-                                                        <form action="${pageContext.request.contextPath}/api/promotor/entradas/${entrada.idEntrada}/eliminar" method="post" class="inline"
-                                                              onsubmit="return confirm('¿Estás seguro de ELIMINAR el tipo de entrada \'${entrada.tipo}\'? Si ya hay ventas, no se podrá eliminar.');">
+                                                        <form action="${pageContext.request.contextPath}/api/promotor/entradas/${entrada.idEntrada}/eliminar" method="post" class="inline" onsubmit="return confirm('¿Eliminar tipo entrada \'${entrada.tipo}\'?');">
                                                             <button type="submit" class="text-red-600 hover:text-red-900 underline font-semibold p-0 bg-transparent shadow-none text-xs">Eliminar</button>
                                                         </form>
                                                     </td>
@@ -244,15 +241,20 @@
                 </div>
 
                 <%-- Gestión de Entradas Vendidas/Asignadas --%>
-                <%-- ... (sin cambios) ... --%>
                 <div class="mt-10 pt-6 border-t border-gray-300">
                     <h3 class="text-xl font-semibold mb-4 text-gray-700">Gestión de Entradas Vendidas/Asignadas</h3>
                     <div class="bg-white p-6 rounded-lg shadow-md">
-                        <p class="text-gray-600 mb-4">Desde aquí podrás ver todas las entradas individuales que se han generado para este festival, nominarlas a asistentes y gestionarlas.</p>
+                        <p class="text-gray-600 mb-4">Ver todas las entradas individuales generadas, nominarlas y gestionarlas.</p>
                         <a href="${pageContext.request.contextPath}/api/promotor/festivales/${festival.idFestival}/entradas-asignadas"
                            class="font-bold py-2 px-4 rounded shadow transition duration-150 ease-in-out inline-flex items-center bg-blue-600 hover:bg-blue-700 text-white">
-                            Ver y Gestionar Entradas Asignadas
+                            Gestionar Entradas Asignadas
                         </a>
+                        <%-- *** NUEVO ENLACE: Listar Asistentes del Festival *** --%>
+                        <a href="${pageContext.request.contextPath}/api/promotor/festivales/${festival.idFestival}/asistentes"
+                           class="font-bold py-2 px-4 rounded shadow transition duration-150 ease-in-out inline-flex items-center bg-teal-600 hover:bg-teal-700 text-white ml-3">
+                            Ver Asistentes del Festival
+                        </a>
+                        <%-- ****************************************************** --%>
                     </div>
                 </div>
 

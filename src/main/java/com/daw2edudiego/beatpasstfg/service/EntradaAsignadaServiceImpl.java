@@ -28,56 +28,81 @@ public class EntradaAsignadaServiceImpl implements EntradaAsignadaService {
 
     // Inyección de dependencias
     private final EntradaAsignadaRepository entradaAsignadaRepository;
-    private final AsistenteRepository asistenteRepository;
+    // private final AsistenteRepository asistenteRepository; // Ya no se usa directamente aquí
     private final UsuarioRepository usuarioRepository;
     private final FestivalRepository festivalRepository;
-    private final EntradaRepository entradaRepository; // <-- Añadido para actualizar stock
+    private final EntradaRepository entradaRepository;
+    private final AsistenteService asistenteService; // <-- Añadido AsistenteService
 
     public EntradaAsignadaServiceImpl() {
         this.entradaAsignadaRepository = new EntradaAsignadaRepositoryImpl();
-        this.asistenteRepository = new AsistenteRepositoryImpl();
+        // this.asistenteRepository = new AsistenteRepositoryImpl(); // Ya no necesario
         this.usuarioRepository = new UsuarioRepositoryImpl();
         this.festivalRepository = new FestivalRepositoryImpl();
-        this.entradaRepository = new EntradaRepositoryImpl(); // <-- Instanciar
+        this.entradaRepository = new EntradaRepositoryImpl();
+        this.asistenteService = new AsistenteServiceImpl(); // <-- Instanciar
     }
 
     @Override
-    public void nominarEntrada(Integer idEntradaAsignada, Integer idAsistente, Integer idPromotor) {
-        // ... (código sin cambios) ...
-        log.info("Service: Nominando entrada ID {} a asistente ID {} por promotor ID {}",
-                idEntradaAsignada, idAsistente, idPromotor);
-        if (idEntradaAsignada == null || idAsistente == null || idPromotor == null) {
-            throw new IllegalArgumentException("IDs de entrada asignada, asistente y promotor son requeridos.");
+    public void nominarEntrada(Integer idEntradaAsignada, String emailAsistente, String nombreAsistente, String telefonoAsistente, Integer idPromotor) {
+        log.info("Service: Nominando entrada ID {} a asistente email {} por promotor ID {}",
+                idEntradaAsignada, emailAsistente, idPromotor);
+
+        if (idEntradaAsignada == null || emailAsistente == null || emailAsistente.isBlank() || idPromotor == null) {
+            throw new IllegalArgumentException("ID de entrada asignada, email de asistente y ID de promotor son requeridos.");
         }
+        // El nombre solo es obligatorio si se va a crear el asistente (lo valida el AsistenteService)
+
         EntityManager em = null;
         EntityTransaction tx = null;
         try {
             em = JPAUtil.createEntityManager();
             tx = em.getTransaction();
             tx.begin();
+
+            // 1. Buscar promotor
             Usuario promotor = usuarioRepository.findById(em, idPromotor)
                     .orElseThrow(() -> new UsuarioNotFoundException("Promotor no encontrado con ID: " + idPromotor));
+
+            // 2. Buscar Entrada Asignada
             EntradaAsignada entradaAsignada = entradaAsignadaRepository.findById(em, idEntradaAsignada)
                     .orElseThrow(() -> new EntradaAsignadaNotFoundException("Entrada asignada no encontrada con ID: " + idEntradaAsignada));
-            Festival festival = obtenerFestivalDesdeEntradaAsignada(entradaAsignada); // Usar helper
-            verificarPropiedadFestival(festival, idPromotor); // Usar helper
+
+            // 3. Verificar propiedad del festival
+            Festival festival = obtenerFestivalDesdeEntradaAsignada(entradaAsignada);
+            verificarPropiedadFestival(festival, idPromotor);
+
+            // 4. Verificar estado de la entrada
             if (entradaAsignada.getAsistente() != null) {
-                throw new IllegalStateException("La entrada ya está nominada a otro asistente.");
+                throw new IllegalStateException("La entrada ya está nominada al asistente: " + entradaAsignada.getAsistente().getEmail());
             }
             if (entradaAsignada.getEstado() != EstadoEntradaAsignada.ACTIVA) {
                 throw new IllegalStateException("Solo se pueden nominar entradas que estén en estado ACTIVA.");
             }
-            Asistente asistente = asistenteRepository.findById(em, idAsistente)
-                    .orElseThrow(() -> new AsistenteNotFoundException("Asistente no encontrado con ID: " + idAsistente));
+
+            // 5. Obtener o Crear Asistente por Email (usa su propia transacción interna si crea)
+            // Pasamos el EntityManager actual por si acaso, aunque el servicio podría obtener el suyo.
+            // Nota: obtenerOcrear maneja la transacción para la creación si es necesario.
+            // Si solo busca, no necesita tx activa aquí. Si crea, usa su propia tx.
+            // Para asegurar consistencia, podríamos envolver todo en una única tx grande,
+            // pero la implementación actual de obtenerOcrear ya lo hace robusto.
+            Asistente asistente = asistenteService.obtenerOcrearAsistentePorEmail(emailAsistente, nombreAsistente, telefonoAsistente);
+            // Si llegamos aquí, el asistente existe o se ha creado correctamente.
+
+            // 6. Realizar la asignación
             entradaAsignada.setAsistente(asistente);
             entradaAsignada.setFechaAsignacion(LocalDateTime.now());
+
+            // 7. Guardar la entrada actualizada
             entradaAsignadaRepository.save(em, entradaAsignada);
+
             tx.commit();
-            log.info("Entrada ID {} nominada exitosamente al asistente ID {} (Nombre: {})",
-                    idEntradaAsignada, idAsistente, asistente.getNombre());
+            log.info("Entrada ID {} nominada exitosamente al asistente ID {} (Email: {})",
+                    idEntradaAsignada, asistente.getIdAsistente(), asistente.getEmail());
+
         } catch (Exception e) {
             handleException(e, tx, "nominando entrada");
-            throw mapException(e);
+            throw mapException(e); // Relanzar excepción mapeada
         } finally {
             closeEntityManager(em);
         }

@@ -11,6 +11,7 @@ import com.daw2edudiego.beatpasstfg.dto.AsistenteDTO;
 import com.daw2edudiego.beatpasstfg.dto.FestivalDTO;
 import com.daw2edudiego.beatpasstfg.dto.UsuarioCreacionDTO;
 import com.daw2edudiego.beatpasstfg.dto.UsuarioDTO;
+import com.daw2edudiego.beatpasstfg.exception.AsistenteNotFoundException;
 import com.daw2edudiego.beatpasstfg.exception.EmailExistenteException;
 import com.daw2edudiego.beatpasstfg.exception.FestivalNotFoundException;
 import com.daw2edudiego.beatpasstfg.exception.UsuarioNotFoundException;
@@ -47,7 +48,7 @@ import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
 import java.util.Collections;
 import java.util.List;
-import java.util.Optional; // Necesario para Optional<UsuarioDTO>
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 /**
@@ -546,8 +547,151 @@ public class AdminResource {
         dispatcher.forward(request, response);
         return Response.ok().build();
     }
-    // --- *** FIN NUEVOS ENDPOINTS *** ---
 
+    /**
+     * GET /api/admin/asistentes/{idAsistente} Muestra la página de detalles de
+     * un asistente específico. Devuelve HTML (forward a JSP). Requiere rol
+     * ADMIN en sesión.
+     */
+    @GET
+    @Path("/asistentes/{idAsistente}")
+    @Produces(MediaType.TEXT_HTML)
+    public Response verDetalleAsistente(@PathParam("idAsistente") Integer idAsistente) throws ServletException, IOException {
+        log.debug("GET /admin/asistentes/{} recibido", idAsistente);
+        Integer idAdmin = verificarAccesoAdmin(request); // Verifica sesión y rol ADMIN
+
+        if (idAsistente == null) {
+            throw new BadRequestException("ID de Asistente no proporcionado.");
+        }
+
+        try {
+            // Obtener el DTO del asistente
+            AsistenteDTO asistente = asistenteService.obtenerAsistentePorId(idAsistente)
+                    .orElseThrow(() -> new NotFoundException("Asistente no encontrado con ID: " + idAsistente));
+
+            // Pasar datos al JSP
+            request.setAttribute("asistente", asistente);
+            request.setAttribute("idAdminAutenticado", idAdmin);
+            mostrarMensajeFlash(request); // Por si hay mensajes
+
+            // Forward al nuevo JSP de detalle
+            RequestDispatcher dispatcher = request.getRequestDispatcher("/WEB-INF/jsp/admin/admin-asistente-detalle.jsp"); // Crear este JSP
+            dispatcher.forward(request, response);
+            return Response.ok().build();
+
+        } catch (NotFoundException e) {
+            // Si el asistente no se encuentra, JAX-RS manejará NotFoundException (404)
+            log.warn("Asistente ID {} no encontrado.", idAsistente);
+            throw e;
+        } catch (Exception e) {
+            log.error("Error al obtener detalles del asistente ID {}: {}", idAsistente, e.getMessage(), e);
+            throw new InternalServerErrorException("Error interno al cargar los detalles del asistente.", e);
+        }
+    }
+
+    /**
+     * GET /api/admin/asistentes/{idAsistente}/editar Muestra el formulario para
+     * editar un asistente existente. Devuelve HTML (forward a JSP). Requiere
+     * rol ADMIN.
+     */
+    @GET
+    @Path("/asistentes/{idAsistente}/editar")
+    @Produces(MediaType.TEXT_HTML)
+    public Response mostrarFormularioEditarAsistente(@PathParam("idAsistente") Integer idAsistente) throws ServletException, IOException {
+        log.debug("GET /admin/asistentes/{}/editar recibido", idAsistente);
+        Integer idAdmin = verificarAccesoAdmin(request);
+        if (idAsistente == null) {
+            throw new BadRequestException("ID Asistente no válido.");
+        }
+
+        try {
+            AsistenteDTO asistente = asistenteService.obtenerAsistentePorId(idAsistente)
+                    .orElseThrow(() -> new NotFoundException("Asistente no encontrado con ID: " + idAsistente));
+
+            request.setAttribute("asistente", asistente);
+            request.setAttribute("idAdminAutenticado", idAdmin);
+            request.setAttribute("editMode", true); // Indicador para el JSP
+            mostrarMensajeFlash(request);
+
+            // Reutilizamos el JSP de detalle, que ahora será editable
+            RequestDispatcher dispatcher = request.getRequestDispatcher("/WEB-INF/jsp/admin/admin-asistente-detalle.jsp");
+            dispatcher.forward(request, response);
+            return Response.ok().build();
+
+        } catch (NotFoundException e) {
+            throw e;
+        } catch (Exception e) {
+            log.error("Error al mostrar formulario editar asistente ID {}: {}", idAsistente, e.getMessage(), e);
+            throw new InternalServerErrorException("Error al cargar datos del asistente.", e);
+        }
+    }
+
+    /**
+     * POST /api/admin/asistentes/{idAsistente}/actualizar Procesa la
+     * actualización de un asistente existente. Espera datos de formulario.
+     * Requiere rol ADMIN. Redirige a la lista de asistentes.
+     */
+    @POST
+    @Path("/asistentes/{idAsistente}/actualizar")
+    @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
+    public Response actualizarAsistente(
+            @PathParam("idAsistente") Integer idAsistente,
+            @FormParam("nombre") String nombre,
+            @FormParam("telefono") String telefono) throws ServletException, IOException { // No se actualiza email
+
+        log.info("POST /admin/asistentes/{}/actualizar recibido", idAsistente);
+        Integer idAdmin = verificarAccesoAdmin(request);
+        if (idAsistente == null) {
+            throw new BadRequestException("ID Asistente no válido.");
+        }
+
+        String mensajeFlash = null;
+        String errorFlash = null;
+        AsistenteDTO dto = new AsistenteDTO(); // Para posible reenvío al form
+
+        try {
+            // Validar y poblar DTO (solo campos editables)
+            if (nombre == null || nombre.isBlank()) {
+                throw new IllegalArgumentException("Nombre obligatorio.");
+            }
+            dto.setIdAsistente(idAsistente); // Necesario para el servicio
+            dto.setNombre(nombre);
+            dto.setTelefono(telefono); // Teléfono es opcional
+
+            // Llamar al servicio para actualizar
+            AsistenteDTO actualizado = asistenteService.actualizarAsistente(idAsistente, dto);
+            mensajeFlash = "Asistente '" + actualizado.getNombre() + "' (ID: " + idAsistente + ") actualizado con éxito.";
+
+        } catch (IllegalArgumentException | AsistenteNotFoundException e) {
+            errorFlash = "Error: " + e.getMessage();
+            log.warn("Error al actualizar asistente ID {}: {}", idAsistente, errorFlash);
+            // Poblar DTO para rellenar form (necesitaríamos el email original)
+            dto.setNombre(nombre);
+            dto.setTelefono(telefono);
+            // Podríamos volver a buscar el asistente para obtener el email y otros datos
+            // o pasar el DTO con error en sesión y que el GET /editar lo recoja.
+            // Por simplicidad ahora, solo ponemos mensaje de error.
+        } catch (Exception e) {
+            errorFlash = "Error interno inesperado al actualizar.";
+            log.error("Error interno al actualizar asistente ID {}: {}", idAsistente, e.getMessage(), e);
+        }
+
+        HttpSession session = request.getSession(false);
+        if (session != null) {
+            if (mensajeFlash != null) {
+                session.setAttribute("mensaje", mensajeFlash);
+            }
+            if (errorFlash != null) {
+                session.setAttribute("error", errorFlash);
+            }
+        }
+
+        // Redirigir a la lista de asistentes
+        URI listUri = uriInfo.getBaseUriBuilder().path(AdminResource.class).path(AdminResource.class, "listarAsistentes").build();
+        return Response.seeOther(listUri).build();
+    }
+
+    // --- *** FIN ENDPOINTS ASISTENTES *** ---
     // --- Método Auxiliar de Seguridad ---
     private Integer verificarAccesoAdmin(HttpServletRequest request) {
         // ... (sin cambios) ...

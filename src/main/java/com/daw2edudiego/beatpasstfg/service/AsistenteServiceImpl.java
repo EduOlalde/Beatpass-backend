@@ -2,13 +2,18 @@ package com.daw2edudiego.beatpasstfg.service;
 
 import com.daw2edudiego.beatpasstfg.dto.AsistenteDTO;
 import com.daw2edudiego.beatpasstfg.exception.AsistenteNotFoundException; // Importar
+import com.daw2edudiego.beatpasstfg.exception.FestivalNotFoundException;
 import com.daw2edudiego.beatpasstfg.model.Asistente;
+import com.daw2edudiego.beatpasstfg.model.Festival;
 import com.daw2edudiego.beatpasstfg.repository.AsistenteRepository;
 import com.daw2edudiego.beatpasstfg.repository.AsistenteRepositoryImpl;
+import com.daw2edudiego.beatpasstfg.repository.FestivalRepository;
+import com.daw2edudiego.beatpasstfg.repository.FestivalRepositoryImpl;
 import com.daw2edudiego.beatpasstfg.util.JPAUtil;
 
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityTransaction;
+import jakarta.persistence.PersistenceException;
 import jakarta.persistence.TypedQuery; // Para búsqueda por término
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,9 +31,11 @@ public class AsistenteServiceImpl implements AsistenteService {
     private static final Logger log = LoggerFactory.getLogger(AsistenteServiceImpl.class);
 
     private final AsistenteRepository asistenteRepository;
+    private final FestivalRepository festivalRepository; // <-- Añadido
 
     public AsistenteServiceImpl() {
         this.asistenteRepository = new AsistenteRepositoryImpl();
+        this.festivalRepository = new FestivalRepositoryImpl(); // <-- Instanciar
     }
 
     @Override
@@ -144,6 +151,112 @@ public class AsistenteServiceImpl implements AsistenteService {
         } catch (Exception e) {
             log.error("Error buscando asistentes con término '{}': {}", searchTerm, e.getMessage(), e);
             return Collections.emptyList();
+        } finally {
+            closeEntityManager(em);
+        }
+    }
+
+    @Override
+    public AsistenteDTO actualizarAsistente(Integer idAsistente, AsistenteDTO asistenteDTO) {
+        log.info("Service: Actualizando asistente ID {}", idAsistente);
+        if (idAsistente == null || asistenteDTO == null) {
+            throw new IllegalArgumentException("ID de asistente y DTO son requeridos.");
+        }
+        // Validar datos básicos del DTO (ej: nombre no vacío)
+        if (asistenteDTO.getNombre() == null || asistenteDTO.getNombre().isBlank()) {
+            throw new IllegalArgumentException("El nombre del asistente no puede estar vacío.");
+        }
+
+        EntityManager em = null;
+        EntityTransaction tx = null;
+        try {
+            em = JPAUtil.createEntityManager();
+            tx = em.getTransaction();
+            tx.begin();
+
+            // Buscar el asistente existente
+            Asistente asistente = asistenteRepository.findById(em, idAsistente)
+                    .orElseThrow(() -> new AsistenteNotFoundException("Asistente no encontrado con ID: " + idAsistente));
+
+            // Actualizar solo los campos permitidos (nombre, teléfono)
+            // NO actualizar email (suele ser identificador único) ni fechaCreacion
+            asistente.setNombre(asistenteDTO.getNombre());
+            asistente.setTelefono(asistenteDTO.getTelefono());
+            // fechaModificacion se actualiza automáticamente por la BD
+
+            // Guardar (merge)
+            asistente = asistenteRepository.save(em, asistente);
+
+            tx.commit();
+            log.info("Asistente ID {} actualizado correctamente.", idAsistente);
+            return mapEntityToDto(asistente);
+
+        } catch (Exception e) {
+            log.error("Error actualizando asistente ID {}: {}", idAsistente, e.getMessage(), e);
+            if (tx != null && tx.isActive()) {
+                try {
+                    tx.rollback();
+                } catch (Exception rbEx) {
+                    log.error("Error rollback: {}", rbEx.getMessage());
+                }
+            }
+            if (e instanceof AsistenteNotFoundException || e instanceof IllegalArgumentException || e instanceof PersistenceException) {
+                throw (RuntimeException) e;
+            }
+            throw new RuntimeException("Error inesperado actualizando asistente: " + e.getMessage(), e);
+        } finally {
+            closeEntityManager(em);
+        }
+    }
+
+    @Override
+    public List<AsistenteDTO> obtenerAsistentesPorFestival(Integer idFestival, Integer idPromotor) {
+        log.debug("Service: Obteniendo asistentes para festival ID {} por promotor ID {}", idFestival, idPromotor);
+        if (idFestival == null || idPromotor == null) {
+            throw new IllegalArgumentException("ID de festival y ID de promotor son requeridos.");
+        }
+
+        EntityManager em = null;
+        // No se necesita tx para lectura, pero la usamos por consistencia y posible lazy loading futuro
+        EntityTransaction tx = null;
+        try {
+            em = JPAUtil.createEntityManager();
+            tx = em.getTransaction();
+            tx.begin();
+
+            // 1. Verificar que el festival existe y pertenece al promotor
+            Festival festival = festivalRepository.findById(em, idFestival)
+                    .orElseThrow(() -> new FestivalNotFoundException("Festival no encontrado con ID: " + idFestival));
+
+            if (festival.getPromotor() == null || !festival.getPromotor().getIdUsuario().equals(idPromotor)) {
+                log.warn("Intento no autorizado por promotor ID {} para ver asistentes de festival ID {}", idPromotor, idFestival);
+                throw new SecurityException("No tiene permiso para ver los asistentes de este festival.");
+            }
+            log.debug("Permiso verificado para promotor {} sobre festival {}", idPromotor, idFestival);
+
+            // 2. Obtener los asistentes usando el método del repositorio
+            List<Asistente> asistentes = asistenteRepository.findAsistentesByFestivalId(em, idFestival);
+
+            tx.commit(); // Commit (aunque sea lectura)
+
+            // 3. Mapear a DTOs
+            return asistentes.stream()
+                    .map(this::mapEntityToDto)
+                    .collect(Collectors.toList());
+
+        } catch (Exception e) {
+            log.error("Error obteniendo asistentes para festival ID {}: {}", idFestival, e.getMessage(), e);
+            if (tx != null && tx.isActive()) {
+                try {
+                    tx.rollback();
+                } catch (Exception rbEx) {
+                    log.error("Error rollback: {}", rbEx.getMessage());
+                }
+            }
+            if (e instanceof FestivalNotFoundException || e instanceof SecurityException) {
+                throw (RuntimeException) e;
+            }
+            throw new RuntimeException("Error inesperado obteniendo asistentes: " + e.getMessage(), e);
         } finally {
             closeEntityManager(em);
         }
