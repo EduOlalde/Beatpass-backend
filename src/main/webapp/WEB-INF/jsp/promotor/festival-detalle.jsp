@@ -21,7 +21,7 @@
             textarea {
                 min-height: 8rem;
             }
-            /* Clases para .badge definidas aquí porque no usan @apply */
+            /* Clases para badges definidas aquí porque no usan @apply */
             .badge {
                 padding: 0.1em 0.6em;
                 border-radius: 9999px;
@@ -53,7 +53,7 @@
 
         <div class="container mx-auto p-4 md:p-8 max-w-4xl">
 
-            <%-- Cabecera del Panel de Promotor --%>
+            <%-- Cabecera --%>
             <header class="flex flex-col sm:flex-row justify-between items-center mb-6 pb-4 border-b border-gray-300">
                 <h1 class="text-3xl font-bold text-indigo-700 mb-4 sm:mb-0">
                     ${esNuevo ? 'Crear Nuevo Festival' : 'Editar Festival'}
@@ -77,14 +77,13 @@
                     <a href="${pageContext.request.contextPath}/api/promotor/festivales" class="text-indigo-600 hover:text-indigo-800 text-sm">&larr; Volver a Mis Festivales</a>
             </div>
 
-            <%-- Mensaje de error general del formulario del festival --%>
+            <%-- Mensajes --%>
             <c:if test="${not empty requestScope.error and empty requestScope.errorEntrada}">
                 <div class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-4 rounded-md shadow-sm" role="alert">
                     <p class="font-bold">Error al guardar festival:</p>
                     <p>${requestScope.error}</p>
                 </div>
             </c:if>
-            <%-- Mensaje de éxito general --%>
             <c:if test="${not empty requestScope.mensajeExito}">
                 <div class="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 mb-4 rounded-md shadow-sm" role="alert">
                     <p>${requestScope.mensajeExito}</p>
@@ -96,19 +95,16 @@
             <form action="${pageContext.request.contextPath}/api/promotor/festivales/guardar" method="post" class="bg-white p-6 md:p-8 rounded-lg shadow-md space-y-4 mb-10">
                 <input type="hidden" name="idFestival" value="${festival.idFestival}">
                 <h3 class="text-lg font-semibold text-gray-600 border-b pb-2 mb-4">Datos Generales del Festival</h3>
-
+                <%-- Campos del formulario... (nombre, desc, fechas, etc.) --%>
                 <div>
-                    <%-- Aplicar clases directamente a label --%>
                     <label for="nombre" class="block text-sm font-medium text-gray-700 mb-1">
-                        Nombre del Festival <span class="text-red-500 ml-1">*</span> <%-- Clase para asterisco --%>
+                        Nombre del Festival <span class="text-red-500 ml-1">*</span>
                     </label>
-                    <%-- Aplicar clases directamente a input --%>
                     <input type="text" id="nombre" name="nombre" value="${festival.nombre}" required maxlength="100"
                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-500 focus:ring-opacity-50 sm:text-sm">
                 </div>
                 <div>
                     <label for="descripcion" class="block text-sm font-medium text-gray-700 mb-1">Descripción</label>
-                    <%-- Aplicar clases directamente a textarea --%>
                     <textarea id="descripcion" name="descripcion" rows="4"
                               class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-500 focus:ring-opacity-50 sm:text-sm">${festival.descripcion}</textarea>
                 </div>
@@ -148,15 +144,14 @@
                 <c:if test="${not esNuevo}">
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Estado Actual</label>
-                        <%-- Aplicar clases directamente al párrafo --%>
                         <p class="mt-1 block w-full rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm font-medium text-gray-700">
-                            <span class="badge ..."> ${festival.estado} </span>
+                            <span class="badge ..."> ${festival.estado} </span> <%-- Clases de badge definidas en <style> --%>
                         </p>
                         <p class="mt-1 text-xs text-gray-500">El estado solo puede ser modificado por un administrador.</p>
                     </div>
                 </c:if>
                 <div class="mt-6 flex justify-end space-x-3 pt-4 border-t border-gray-200">
-                    <%-- Aplicar clases directamente a los botones --%>
+                    <%-- Botones con clases aplicadas directamente --%>
                     <a href="${pageContext.request.contextPath}/api/promotor/festivales"
                        class="font-bold py-2 px-4 rounded shadow transition duration-150 ease-in-out inline-flex items-center bg-gray-200 hover:bg-gray-300 text-gray-800"> Cancelar </a>
                     <button type="submit" class="font-bold py-2 px-4 rounded shadow transition duration-150 ease-in-out inline-flex items-center bg-indigo-600 hover:bg-indigo-700 text-white">
@@ -165,11 +160,10 @@
                 </div>
             </form>
 
-            <%-- Sección para gestionar Tipos de Entrada (solo si se está editando) --%>
+            <%-- Sección Tipos de Entrada (solo si se está editando) --%>
             <c:if test="${not esNuevo}">
                 <div class="mt-10 pt-6 border-t border-gray-300">
                     <h3 class="text-xl font-semibold mb-4 text-gray-700">Tipos de Entrada</h3>
-
                     <%-- Mensaje de error específico para añadir entrada --%>
                     <c:if test="${not empty requestScope.error and not empty requestScope.errorEntrada}">
                         <div class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-4 rounded-md shadow-sm" role="alert">
@@ -177,7 +171,6 @@
                             <p>${requestScope.error}</p>
                         </div>
                     </c:if>
-
                     <%-- Tabla de Tipos de Entrada Existentes --%>
                     <div class="bg-white p-4 md:p-6 rounded-lg shadow-md mb-6">
                         <h4 class="text-lg font-medium text-gray-800 mb-3">Entradas Definidas</h4>
@@ -202,12 +195,10 @@
                                                 <tr>
                                                     <td class="px-4 py-2 whitespace-nowrap text-sm font-medium text-gray-900">${entrada.tipo}</td>
                                                     <td class="px-4 py-2 text-sm text-gray-600">${entrada.descripcion}</td>
-                                                    <td class="px-4 py-2 whitespace-nowrap text-sm text-gray-600 text-right">
-                                                        <fmt:formatNumber value="${entrada.precio}" type="currency" currencySymbol="€" minFractionDigits="2" maxFractionDigits="2"/>
-                                                    </td>
+                                                    <td class="px-4 py-2 whitespace-nowrap text-sm text-gray-600 text-right"><fmt:formatNumber value="${entrada.precio}" type="currency" currencySymbol="€" minFractionDigits="2" maxFractionDigits="2"/></td>
                                                     <td class="px-4 py-2 whitespace-nowrap text-sm text-gray-600 text-right">${entrada.stock}</td>
                                                     <td class="px-4 py-2 whitespace-nowrap text-center text-sm space-x-2">
-                                                        <%-- Aplicar clases directamente a botones link --%>
+                                                        <%-- Botones link con clases aplicadas directamente --%>
                                                         <button type="button" class="text-indigo-600 hover:text-indigo-900 underline font-medium p-0 bg-transparent shadow-none text-xs" onclick="alert('Editar entrada ID ${entrada.idEntrada} - Pendiente');">Editar</button>
                                                         <button type="button" class="text-red-600 hover:text-red-900 underline font-semibold p-0 bg-transparent shadow-none text-xs" onclick="alert('Eliminar entrada ID ${entrada.idEntrada} - Pendiente');">Eliminar</button>
                                                     </td>
@@ -219,7 +210,6 @@
                             </table>
                         </div>
                     </div>
-
                     <%-- Formulario para Añadir Nuevo Tipo de Entrada --%>
                     <div class="bg-white p-4 md:p-6 rounded-lg shadow-md">
                         <h4 class="text-lg font-medium text-gray-800 mb-3 border-b pb-2">Añadir Nuevo Tipo de Entrada</h4>
@@ -227,35 +217,79 @@
                             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                                 <div>
                                     <label for="tipoEntrada" class="block text-sm font-medium text-gray-700 mb-1">Tipo <span class="text-red-500 ml-1">*</span></label>
-                                    <input type="text" id="tipoEntrada" name="tipo" value="${nuevaEntrada.tipo}" required maxlength="50"
-                                           class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-500 focus:ring-opacity-50 sm:text-sm" placeholder="Ej: General">
+                                    <input type="text" id="tipoEntrada" name="tipo" value="${nuevaEntrada.tipo}" required maxlength="50" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-500 focus:ring-opacity-50 sm:text-sm" placeholder="Ej: General">
                                 </div>
                                 <div>
                                     <label for="precioEntrada" class="block text-sm font-medium text-gray-700 mb-1">Precio (€) <span class="text-red-500 ml-1">*</span></label>
-                                    <input type="number" id="precioEntrada" name="precio" value="${nuevaEntrada.precio}" required min="0" step="0.01"
-                                           class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-500 focus:ring-opacity-50 sm:text-sm" placeholder="Ej: 25.50">
+                                    <input type="number" id="precioEntrada" name="precio" value="${nuevaEntrada.precio}" required min="0" step="0.01" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-500 focus:ring-opacity-50 sm:text-sm" placeholder="Ej: 25.50">
                                 </div>
                                 <div>
                                     <label for="stockEntrada" class="block text-sm font-medium text-gray-700 mb-1">Stock <span class="text-red-500 ml-1">*</span></label>
-                                    <input type="number" id="stockEntrada" name="stock" value="${nuevaEntrada.stock}" required min="0" step="1"
-                                           class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-500 focus:ring-opacity-50 sm:text-sm" placeholder="Ej: 1000">
+                                    <input type="number" id="stockEntrada" name="stock" value="${nuevaEntrada.stock}" required min="0" step="1" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-500 focus:ring-opacity-50 sm:text-sm" placeholder="Ej: 1000">
                                 </div>
                             </div>
                             <div>
                                 <label for="descEntrada" class="block text-sm font-medium text-gray-700 mb-1">Descripción (Opcional)</label>
-                                <textarea id="descEntrada" name="descripcion" rows="2"
-                                          class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-500 focus:ring-opacity-50 sm:text-sm"
-                                          placeholder="Detalles sobre este tipo de entrada...">${nuevaEntrada.descripcion}</textarea>
+                                <textarea id="descEntrada" name="descripcion" rows="2" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-500 focus:ring-opacity-50 sm:text-sm" placeholder="Detalles sobre este tipo de entrada...">${nuevaEntrada.descripcion}</textarea>
                             </div>
                             <div class="flex justify-end pt-2">
-                                <%-- Aplicar clases directamente al botón --%>
-                                <button type="submit" class="font-bold py-1 px-3 text-sm rounded shadow transition duration-150 ease-in-out inline-flex items-center bg-green-500 hover:bg-green-600 text-white"> <%-- btn btn-success btn-sm --%>
-                                    Añadir Tipo de Entrada
+                                <%-- Botón con clases aplicadas directamente --%>
+                                <button type="submit" class="font-bold py-1 px-3 text-sm rounded shadow transition duration-150 ease-in-out inline-flex items-center bg-green-500 hover:bg-green-600 text-white"> Añadir Tipo de Entrada </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <%-- Gestión de Entradas Vendidas/Asignadas --%>
+                <div class="mt-10 pt-6 border-t border-gray-300">
+                    <h3 class="text-xl font-semibold mb-4 text-gray-700">Gestión de Entradas Vendidas/Asignadas</h3>
+                    <div class="bg-white p-6 rounded-lg shadow-md">
+                        <p class="text-gray-600 mb-4">Desde aquí podrás ver todas las entradas individuales que se han generado para este festival, nominarlas a asistentes y gestionarlas.</p>
+                        <%-- Botón con clases aplicadas directamente --%>
+                        <a href="${pageContext.request.contextPath}/api/promotor/festivales/${festival.idFestival}/entradas-asignadas"
+                           class="font-bold py-2 px-4 rounded shadow transition duration-150 ease-in-out inline-flex items-center bg-blue-600 hover:bg-blue-700 text-white">
+                            Ver y Gestionar Entradas Asignadas
+                        </a>
+                    </div>
+                </div>
+
+                <%-- Simular Venta (Pruebas) --%>
+                <div class="mt-10 pt-6 border-t border-gray-300">
+                    <h3 class="text-xl font-semibold mb-4 text-yellow-700">Simular Venta (SOLO PRUEBAS)</h3>
+                    <div class="bg-yellow-50 p-6 rounded-lg shadow-md border border-yellow-300">
+                        <p class="text-sm text-yellow-800 mb-4">Utiliza este formulario para simular la venta de entradas y probar la generación de Entradas Asignadas y QRs. Necesitas un ID de Asistente válido existente en la base de datos.</p>
+                        <form action="${pageContext.request.contextPath}/api/promotor/festivales/${festival.idFestival}/simular-venta" method="post" class="space-y-3">
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div>
+                                    <label for="simIdEntrada" class="block text-sm font-medium text-gray-700 mb-1">ID Tipo Entrada <span class="text-red-500 ml-1">*</span></label>
+                                    <select id="simIdEntrada" name="idEntrada" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-500 focus:ring-opacity-50 sm:text-sm">
+                                        <option value="">-- Selecciona Tipo --</option>
+                                        <c:forEach var="t" items="${tiposEntrada}">
+                                            <option value="${t.idEntrada}">${t.tipo} (Stock: ${t.stock})</option>
+                                        </c:forEach>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label for="simIdAsistente" class="block text-sm font-medium text-gray-700 mb-1">ID Asistente <span class="text-red-500 ml-1">*</span></label>
+                                    <input type="number" id="simIdAsistente" name="idAsistente" required min="1"
+                                           class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-500 focus:ring-opacity-50 sm:text-sm" placeholder="ID Asistente existente">
+                                </div>
+                                <div>
+                                    <label for="simCantidad" class="block text-sm font-medium text-gray-700 mb-1">Cantidad <span class="text-red-500 ml-1">*</span></label>
+                                    <input type="number" id="simCantidad" name="cantidad" required min="1" step="1" value="1"
+                                           class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-500 focus:ring-opacity-50 sm:text-sm">
+                                </div>
+                            </div>
+                            <div class="flex justify-end pt-2">
+                                <%-- Botón con clases aplicadas directamente --%>
+                                <button type="submit" class="font-bold py-2 px-4 rounded shadow transition duration-150 ease-in-out inline-flex items-center bg-yellow-500 hover:bg-yellow-600 text-white">
+                                    Simular Venta
                                 </button>
                             </div>
                         </form>
                     </div>
                 </div>
+
             </c:if> <%-- Fin del bloque c:if test="${not esNuevo}" --%>
 
         </div> <%-- Fin container --%>

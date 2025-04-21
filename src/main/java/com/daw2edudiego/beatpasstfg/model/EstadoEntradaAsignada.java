@@ -7,7 +7,7 @@ package com.daw2edudiego.beatpasstfg.model;
 /**
  * Estados posibles para una entrada asignada (individual).
  */
-enum EstadoEntradaAsignada {
+public enum EstadoEntradaAsignada {
     ACTIVA,
     USADA,
     CANCELADA
