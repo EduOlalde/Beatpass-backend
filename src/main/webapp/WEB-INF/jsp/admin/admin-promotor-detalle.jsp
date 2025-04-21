@@ -24,7 +24,7 @@
 
             <%-- Incluir Menú Admin Común --%>
             <jsp:include page="/WEB-INF/jsp/admin/_admin_menu.jsp">
-                <jsp:param name="activePage" value="promotores"/> <%-- Pertenece a la sección promotores --%>
+                <jsp:param name="activePage" value="promotores"/> 
             </jsp:include>
 
             <h2 class="text-2xl font-semibold text-gray-700 mb-5">

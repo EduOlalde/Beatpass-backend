@@ -16,6 +16,7 @@ import com.daw2edudiego.beatpasstfg.web.PromotorResource;
 
 import com.daw2edudiego.beatpasstfg.security.AuthenticationFilter;
 import com.daw2edudiego.beatpasstfg.web.AdminResource;
+import com.daw2edudiego.beatpasstfg.web.PuntoVentaResource;
 
 @ApplicationPath("/api") // Ruta base API REST
 public class ApplicationConfig extends Application {
@@ -31,6 +32,7 @@ public class ApplicationConfig extends Application {
         // Recurso para el panel de promotor (que usa JSPs)
         resources.add(PromotorResource.class);
         resources.add(AdminResource.class);
+        resources.add(PuntoVentaResource.class);
 
         // Filtros y otros Providers
         resources.add(AuthenticationFilter.class);

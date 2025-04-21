@@ -13,6 +13,7 @@
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
         <style>
+            /* Estilos generales que NO usan @apply */
             body {
                 font-family: 'Inter', sans-serif;
             }
@@ -61,7 +62,6 @@
             </div>
 
             <%-- Mensajes flash --%>
-            <%-- ... (código sin cambios) ... --%>
             <c:if test="${not empty requestScope.mensajeExito}">
                 <div class="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 mb-4 rounded-md shadow-sm" role="alert">
                     <p class="font-bold">Éxito</p> <p>${requestScope.mensajeExito}</p>
@@ -74,7 +74,6 @@
             </c:if>
 
             <%-- Filtro por estado --%>
-            <%-- ... (código sin cambios) ... --%>
             <div class="mb-4 bg-white p-4 rounded shadow-sm">
                 <form action="${pageContext.request.contextPath}/api/admin/festivales/listar-todos" method="get" class="flex items-end space-x-3">
                     <div>
@@ -95,7 +94,6 @@
 
 
             <%-- Tabla de Festivales --%>
-            <%-- ... (código sin cambios) ... --%>
             <div class="bg-white shadow-md rounded-lg overflow-x-auto">
                 <table class="min-w-full divide-y divide-gray-200">
                     <thead class="bg-gray-50">
@@ -111,7 +109,7 @@
                     <tbody class="bg-white divide-y divide-gray-200">
                         <c:choose>
                             <c:when test="${empty festivales}">
-                                <tr> <td colspan="6" class="px-6 py-4 text-center text-sm text-gray-500">
+                                <tr> <td colspan="6" class="px-6 py-4 text-center text-sm text-gray-500 italic">
                                         <c:choose>
                                             <c:when test="${not empty requestScope.estadoFiltro}">No hay festivales con estado '${requestScope.estadoFiltro}'.</c:when>
                                             <c:otherwise>No hay festivales registrados.</c:otherwise>
@@ -133,9 +131,18 @@
                                             </td>
                                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500"> ${f.fechaInicio} - ${f.fechaFin} </td>
                                         <td class="px-6 py-4 whitespace-nowrap text-center">
-                                            <span class="badge ..."> ${f.estado} </span> <%-- Clases de badge definidas en <style> --%>
+                                            <span class="badge
+                                                  <c:choose>
+                                                      <c:when test="${f.estado == 'PUBLICADO'}">badge-publicado</c:when>
+                                                      <c:when test="${f.estado == 'BORRADOR'}">badge-borrador</c:when>
+                                                      <c:when test="${f.estado == 'CANCELADO'}">badge-cancelado</c:when>
+                                                      <c:when test="${f.estado == 'FINALIZADO'}">badge-finalizado</c:when>
+                                                      <c:otherwise>bg-gray-100 text-gray-800</c:otherwise>
+                                                  </c:choose>
+                                                  "> ${f.estado} </span>
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap text-center text-sm font-medium space-x-2">
+                                            <%-- Acciones de cambio de estado --%>
                                             <c:if test="${f.estado == 'BORRADOR'}">
                                                 <form action="${pageContext.request.contextPath}/api/admin/festivales/confirmar" method="post" class="inline" onsubmit="return confirm('Confirmar y publicar \'${f.nombre}\'?');">
                                                     <input type="hidden" name="idFestival" value="${f.idFestival}">
@@ -154,6 +161,8 @@
                                                     <button type="submit" class="text-gray-600 hover:text-gray-900 underline font-semibold" title="Marcar como Finalizado">Finalizar</button>
                                                 </form>
                                             </c:if>
+                                            <%-- Enlace a pulseras --%>
+                                            <a href="${pageContext.request.contextPath}/api/admin/festivales/${f.idFestival}/pulseras" class="text-blue-600 hover:text-blue-900 underline font-semibold" title="Ver Pulseras NFC Asociadas">Pulseras</a>
                                         </td>
                                     </tr>
                                 </c:forEach>

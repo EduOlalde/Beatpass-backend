@@ -11,6 +11,7 @@ import com.daw2edudiego.beatpasstfg.dto.AsistenteDTO;
 import com.daw2edudiego.beatpasstfg.dto.EntradaAsignadaDTO;
 import com.daw2edudiego.beatpasstfg.dto.EntradaDTO;
 import com.daw2edudiego.beatpasstfg.dto.FestivalDTO;
+import com.daw2edudiego.beatpasstfg.dto.PulseraNFCDTO;
 import com.daw2edudiego.beatpasstfg.exception.*;
 import com.daw2edudiego.beatpasstfg.model.EstadoFestival;
 import com.daw2edudiego.beatpasstfg.model.RolUsuario;
@@ -53,8 +54,9 @@ public class PromotorResource {
     private final UsuarioService usuarioService;
     private final EntradaService entradaService;
     private final EntradaAsignadaService entradaAsignadaService;
-    private final VentaService ventaService; // <-- Añadir VentaService
+    private final VentaService ventaService;
     private final AsistenteService asistenteService;
+    private final PulseraNFCService pulseraNFCService;
 
     // Inyección de contexto JAX-RS
     @Context
@@ -71,7 +73,8 @@ public class PromotorResource {
         this.entradaService = new EntradaServiceImpl();
         this.entradaAsignadaService = new EntradaAsignadaServiceImpl();
         this.ventaService = new VentaServiceImpl();
-        this.asistenteService = new AsistenteServiceImpl(); // <-- Instanciar
+        this.asistenteService = new AsistenteServiceImpl();
+        this.pulseraNFCService = new PulseraNFCServiceImpl();
     }
 
     // --- Endpoints para Gestión de Festivales del Promotor ---
@@ -835,6 +838,56 @@ public class PromotorResource {
             return redirectBackToChangePasswordForm();
         }
     }
+
+    // --- *** NUEVO ENDPOINT PARA LISTAR PULSERAS POR FESTIVAL *** ---
+    /**
+     * GET /api/promotor/festivales/{idFestival}/pulseras Muestra la lista de
+     * pulseras NFC asociadas a un festival específico del promotor. Devuelve
+     * HTML (forward a JSP). Requiere rol PROMOTOR y ser dueño del festival.
+     */
+    @GET
+    @Path("/festivales/{idFestival}/pulseras")
+    @Produces(MediaType.TEXT_HTML)
+    public Response listarPulserasPorFestivalPromotor(@PathParam("idFestival") Integer idFestival) throws ServletException, IOException {
+        log.debug("GET /promotor/festivales/{}/pulseras recibido", idFestival);
+        Integer idPromotor = verificarAccesoPromotor(request); // Verifica sesión y rol
+        if (idFestival == null) {
+            throw new BadRequestException("ID de festival no válido.");
+        }
+
+        try {
+            // Obtener datos del festival para título y verificar propiedad
+            FestivalDTO festival = festivalService.obtenerFestivalPorId(idFestival)
+                    .filter(f -> f.getIdPromotor().equals(idPromotor))
+                    .orElseThrow(() -> new ForbiddenException("Festival no encontrado o no pertenece a este promotor."));
+
+            // Obtener lista de pulseras DTOs para este festival (servicio verifica permiso de nuevo)
+            List<PulseraNFCDTO> listaPulseras = pulseraNFCService.obtenerPulserasPorFestival(idFestival, idPromotor);
+
+            // Pasar datos al JSP
+            request.setAttribute("festival", festival);
+            request.setAttribute("pulseras", listaPulseras);
+            request.setAttribute("idPromotorAutenticado", idPromotor);
+            mostrarMensajeFlash(request);
+
+            // Forward a un NUEVO JSP de promotor para mostrar esta lista
+            RequestDispatcher dispatcher = request.getRequestDispatcher("/WEB-INF/jsp/promotor/promotor-festival-pulseras.jsp"); // Crear este JSP
+            dispatcher.forward(request, response);
+            return Response.ok().build();
+
+        } catch (ForbiddenException | NotFoundException e) {
+            throw e; // Relanzar excepciones JAX-RS
+        } catch (Exception e) {
+            log.error("Error al listar pulseras para festival ID {}: {}", idFestival, e.getMessage(), e);
+            HttpSession session = request.getSession(false);
+            if (session != null) {
+                session.setAttribute("error", "Error al cargar las pulseras del festival.");
+            }
+            URI detailUri = uriInfo.getBaseUriBuilder().path(PromotorResource.class).path(PromotorResource.class, "mostrarFormularioEditar").resolveTemplate("id", idFestival).build();
+            return Response.seeOther(detailUri).build();
+        }
+    }
+    // --- *** FIN NUEVO ENDPOINT PULSERAS *** ---
 
     // --- Métodos Auxiliares (sin cambios relevantes) ---
     // ... (redirectBackToChangePasswordForm, determineDashboardUrlFromRole, verificarAccesoPromotor, forwardToPromotorFestivalFormWithError, mostrarMensajeFlash) ...

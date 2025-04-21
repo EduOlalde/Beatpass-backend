@@ -5,7 +5,6 @@
 <!DOCTYPE html>
 <html lang="es">
     <head>
-        <%-- ... (head sin cambios) ... --%>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <c:set var="esNuevo" value="${empty festival.idFestival or festival.idFestival == 0}"/>
@@ -15,12 +14,14 @@
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
         <style>
+            /* Estilos generales que NO usan @apply */
             body {
                 font-family: 'Inter', sans-serif;
             }
             textarea {
                 min-height: 8rem;
             }
+            /* Clases para badges */
             .badge {
                 padding: 0.1em 0.6em;
                 border-radius: 9999px;
@@ -45,6 +46,7 @@
                 background-color: #E5E7EB;
                 color: #374151;
             }
+            /* Clases aplicadas directamente en HTML */
         </style>
     </head>
     <body class="bg-gray-100 text-gray-800">
@@ -52,7 +54,6 @@
         <div class="container mx-auto p-4 md:p-8 max-w-4xl">
 
             <%-- Cabecera --%>
-            <%-- ... (sin cambios) ... --%>
             <header class="flex flex-col sm:flex-row justify-between items-center mb-6 pb-4 border-b border-gray-300">
                 <h1 class="text-3xl font-bold text-indigo-700 mb-4 sm:mb-0">
                     ${esNuevo ? 'Crear Nuevo Festival' : 'Editar Festival'}
@@ -77,7 +78,6 @@
             </div>
 
             <%-- Mensajes --%>
-            <%-- ... (sin cambios) ... --%>
             <c:if test="${not empty requestScope.error and empty requestScope.errorEntrada}">
                 <div class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-4 rounded-md shadow-sm" role="alert">
                     <p class="font-bold">Error al guardar festival:</p>
@@ -90,8 +90,8 @@
                 </div>
             </c:if>
 
+
             <%-- Formulario Datos Generales Festival --%>
-            <%-- ... (formulario sin cambios) ... --%>
             <form action="${pageContext.request.contextPath}/api/promotor/festivales/guardar" method="post" class="bg-white p-6 md:p-8 rounded-lg shadow-md space-y-4 mb-10">
                 <input type="hidden" name="idFestival" value="${festival.idFestival}">
                 <h3 class="text-lg font-semibold text-gray-600 border-b pb-2 mb-4">Datos Generales del Festival</h3>
@@ -144,7 +144,15 @@
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Estado Actual</label>
                         <p class="mt-1 block w-full rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm font-medium text-gray-700">
-                            <span class="badge ..."> ${festival.estado} </span>
+                            <span class="badge
+                                  <c:choose>
+                                      <c:when test="${festival.estado == 'PUBLICADO'}">badge-publicado</c:when>
+                                      <c:when test="${festival.estado == 'BORRADOR'}">badge-borrador</c:when>
+                                      <c:when test="${festival.estado == 'CANCELADO'}">badge-cancelado</c:when>
+                                      <c:when test="${festival.estado == 'FINALIZADO'}">badge-finalizado</c:when>
+                                      <c:otherwise>bg-gray-100 text-gray-800</c:otherwise>
+                                  </c:choose>
+                                  "> ${festival.estado} </span>
                         </p>
                         <p class="mt-1 text-xs text-gray-500">El estado solo puede ser modificado por un administrador.</p>
                     </div>
@@ -171,7 +179,6 @@
                     </c:if>
                     <%-- Tabla de Tipos de Entrada Existentes --%>
                     <div class="bg-white p-4 md:p-6 rounded-lg shadow-md mb-6">
-                        <%-- ... (Tabla de tipos de entrada sin cambios) ... --%>
                         <h4 class="text-lg font-medium text-gray-800 mb-3">Entradas Definidas</h4>
                         <div class="overflow-x-auto">
                             <table class="min-w-full divide-y divide-gray-200">
@@ -212,7 +219,6 @@
                     </div>
                     <%-- Formulario para Añadir Nuevo Tipo de Entrada --%>
                     <div class="bg-white p-4 md:p-6 rounded-lg shadow-md">
-                        <%-- ... (Formulario añadir sin cambios) ... --%>
                         <h4 class="text-lg font-medium text-gray-800 mb-3 border-b pb-2">Añadir Nuevo Tipo de Entrada</h4>
                         <form action="${pageContext.request.contextPath}/api/promotor/festivales/${festival.idFestival}/entradas" method="post" class="space-y-3">
                             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -240,26 +246,35 @@
                     </div>
                 </div>
 
-                <%-- Gestión de Entradas Vendidas/Asignadas --%>
+                <%-- Gestión de Entradas Vendidas/Asignadas y Asistentes --%>
                 <div class="mt-10 pt-6 border-t border-gray-300">
-                    <h3 class="text-xl font-semibold mb-4 text-gray-700">Gestión de Entradas Vendidas/Asignadas</h3>
-                    <div class="bg-white p-6 rounded-lg shadow-md">
-                        <p class="text-gray-600 mb-4">Ver todas las entradas individuales generadas, nominarlas y gestionarlas.</p>
-                        <a href="${pageContext.request.contextPath}/api/promotor/festivales/${festival.idFestival}/entradas-asignadas"
-                           class="font-bold py-2 px-4 rounded shadow transition duration-150 ease-in-out inline-flex items-center bg-blue-600 hover:bg-blue-700 text-white">
-                            Gestionar Entradas Asignadas
-                        </a>
-                        <%-- *** NUEVO ENLACE: Listar Asistentes del Festival *** --%>
-                        <a href="${pageContext.request.contextPath}/api/promotor/festivales/${festival.idFestival}/asistentes"
-                           class="font-bold py-2 px-4 rounded shadow transition duration-150 ease-in-out inline-flex items-center bg-teal-600 hover:bg-teal-700 text-white ml-3">
-                            Ver Asistentes del Festival
-                        </a>
-                        <%-- ****************************************************** --%>
+                    <h3 class="text-xl font-semibold mb-4 text-gray-700">Gestión de Entradas y Asistentes</h3>
+                    <div class="bg-white p-6 rounded-lg shadow-md grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div class="md:col-span-1">
+                            <p class="text-gray-600 mb-2 text-sm">Ver/gestionar entradas individuales generadas y nominarlas.</p>
+                            <a href="${pageContext.request.contextPath}/api/promotor/festivales/${festival.idFestival}/entradas-asignadas"
+                               class="font-bold py-2 px-4 rounded shadow transition duration-150 ease-in-out inline-flex items-center bg-blue-600 hover:bg-blue-700 text-white text-sm w-full justify-center">
+                                Gestionar Entradas
+                            </a>
+                        </div>
+                        <div class="md:col-span-1">
+                            <p class="text-gray-600 mb-2 text-sm">Consultar asistentes con entradas para este festival.</p>
+                            <a href="${pageContext.request.contextPath}/api/promotor/festivales/${festival.idFestival}/asistentes"
+                               class="font-bold py-2 px-4 rounded shadow transition duration-150 ease-in-out inline-flex items-center bg-teal-600 hover:bg-teal-700 text-white text-sm w-full justify-center">
+                                Ver Asistentes
+                            </a>
+                        </div>
+                        <div class="md:col-span-1">
+                            <p class="text-gray-600 mb-2 text-sm">Consultar pulseras NFC asociadas a entradas de este festival.</p>
+                            <a href="${pageContext.request.contextPath}/api/promotor/festivales/${festival.idFestival}/pulseras"
+                               class="font-bold py-2 px-4 rounded shadow transition duration-150 ease-in-out inline-flex items-center bg-orange-600 hover:bg-orange-700 text-white text-sm w-full justify-center">
+                                Ver Pulseras NFC
+                            </a>
+                        </div>
                     </div>
                 </div>
 
                 <%-- Simular Venta (Pruebas) --%>
-                <%-- ... (sin cambios) ... --%>
                 <div class="mt-10 pt-6 border-t border-gray-300">
                     <h3 class="text-xl font-semibold mb-4 text-yellow-700">Simular Venta (SOLO PRUEBAS)</h3>
                     <div class="bg-yellow-50 p-6 rounded-lg shadow-md border border-yellow-300">

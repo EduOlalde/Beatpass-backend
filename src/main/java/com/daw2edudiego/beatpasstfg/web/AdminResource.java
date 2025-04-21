@@ -9,6 +9,7 @@ package com.daw2edudiego.beatpasstfg.web;
 // Imports DTOs, Excepciones, Modelo, Servicios
 import com.daw2edudiego.beatpasstfg.dto.AsistenteDTO;
 import com.daw2edudiego.beatpasstfg.dto.FestivalDTO;
+import com.daw2edudiego.beatpasstfg.dto.PulseraNFCDTO;
 import com.daw2edudiego.beatpasstfg.dto.UsuarioCreacionDTO;
 import com.daw2edudiego.beatpasstfg.dto.UsuarioDTO;
 import com.daw2edudiego.beatpasstfg.exception.AsistenteNotFoundException;
@@ -21,6 +22,8 @@ import com.daw2edudiego.beatpasstfg.service.AsistenteService;
 import com.daw2edudiego.beatpasstfg.service.AsistenteServiceImpl;
 import com.daw2edudiego.beatpasstfg.service.FestivalService;
 import com.daw2edudiego.beatpasstfg.service.FestivalServiceImpl;
+import com.daw2edudiego.beatpasstfg.service.PulseraNFCService;
+import com.daw2edudiego.beatpasstfg.service.PulseraNFCServiceImpl;
 import com.daw2edudiego.beatpasstfg.service.UsuarioService;
 import com.daw2edudiego.beatpasstfg.service.UsuarioServiceImpl;
 
@@ -66,7 +69,8 @@ public class AdminResource {
     // Inyección de dependencias (manual)
     private final UsuarioService usuarioService;
     private final FestivalService festivalService;
-    private final AsistenteService asistenteService; // Nuevo servicio
+    private final AsistenteService asistenteService;
+    private final PulseraNFCService pulseraNFCService;
 
     // Inyección de contexto JAX-RS
     @Context
@@ -80,7 +84,8 @@ public class AdminResource {
     public AdminResource() {
         this.usuarioService = new UsuarioServiceImpl();
         this.festivalService = new FestivalServiceImpl();
-        this.asistenteService = new AsistenteServiceImpl(); // Instanciar
+        this.asistenteService = new AsistenteServiceImpl();
+        this.pulseraNFCService = new PulseraNFCServiceImpl();
     }
 
     // --- Endpoints para Gestión de Promotores por Admin ---
@@ -692,6 +697,50 @@ public class AdminResource {
     }
 
     // --- *** FIN ENDPOINTS ASISTENTES *** ---
+    // --- *** NUEVOS ENDPOINTS PARA GESTIÓN DE PULSERAS NFC POR ADMIN *** ---
+    /**
+     * GET /api/admin/festivales/{idFestival}/pulseras Lista todas las pulseras
+     * NFC asociadas a un festival específico. Devuelve HTML (forward a JSP).
+     * Requiere rol ADMIN.
+     */
+    @GET
+    @Path("/festivales/{idFestival}/pulseras")
+    @Produces(MediaType.TEXT_HTML)
+    public Response listarPulserasPorFestivalAdmin(@PathParam("idFestival") Integer idFestival) throws ServletException, IOException {
+        log.debug("GET /admin/festivales/{}/pulseras recibido", idFestival);
+        Integer idAdmin = verificarAccesoAdmin(request); // Verifica sesión y rol ADMIN
+        if (idFestival == null) {
+            throw new BadRequestException("ID de festival no válido.");
+        }
+
+        try {
+            // Obtener datos del festival para título
+            FestivalDTO festival = festivalService.obtenerFestivalPorId(idFestival)
+                    .orElseThrow(() -> new NotFoundException("Festival no encontrado con ID: " + idFestival));
+
+            // Obtener lista de pulseras DTOs para este festival
+            List<PulseraNFCDTO> listaPulseras = pulseraNFCService.obtenerPulserasPorFestival(idFestival, idAdmin);
+
+            // Pasar datos al JSP
+            request.setAttribute("festival", festival);
+            request.setAttribute("pulseras", listaPulseras);
+            request.setAttribute("idAdminAutenticado", idAdmin);
+            mostrarMensajeFlash(request);
+
+            // Forward al nuevo JSP de admin para pulseras
+            RequestDispatcher dispatcher = request.getRequestDispatcher("/WEB-INF/jsp/admin/admin-festival-pulseras.jsp"); // Crear este JSP
+            dispatcher.forward(request, response);
+            return Response.ok().build();
+
+        } catch (NotFoundException e) {
+            throw e;
+        } catch (Exception e) {
+            log.error("Error al listar pulseras para festival ID {}: {}", idFestival, e.getMessage(), e);
+            throw new InternalServerErrorException("Error al cargar las pulseras del festival.", e);
+        }
+    }
+    // --- *** FIN NUEVOS ENDPOINTS PULSERAS *** ---
+
     // --- Método Auxiliar de Seguridad ---
     private Integer verificarAccesoAdmin(HttpServletRequest request) {
         // ... (sin cambios) ...
