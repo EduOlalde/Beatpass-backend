@@ -7,6 +7,7 @@
 package com.daw2edudiego.beatpasstfg.web;
 
 // Imports DTOs, Excepciones, Modelo, Servicios
+import com.daw2edudiego.beatpasstfg.dto.AsistenteDTO;
 import com.daw2edudiego.beatpasstfg.dto.FestivalDTO;
 import com.daw2edudiego.beatpasstfg.dto.UsuarioCreacionDTO;
 import com.daw2edudiego.beatpasstfg.dto.UsuarioDTO;
@@ -15,6 +16,8 @@ import com.daw2edudiego.beatpasstfg.exception.FestivalNotFoundException;
 import com.daw2edudiego.beatpasstfg.exception.UsuarioNotFoundException;
 import com.daw2edudiego.beatpasstfg.model.RolUsuario;
 import com.daw2edudiego.beatpasstfg.model.EstadoFestival;
+import com.daw2edudiego.beatpasstfg.service.AsistenteService;
+import com.daw2edudiego.beatpasstfg.service.AsistenteServiceImpl;
 import com.daw2edudiego.beatpasstfg.service.FestivalService;
 import com.daw2edudiego.beatpasstfg.service.FestivalServiceImpl;
 import com.daw2edudiego.beatpasstfg.service.UsuarioService;
@@ -42,6 +45,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional; // Necesario para Optional<UsuarioDTO>
 import java.util.stream.Collectors;
@@ -58,9 +62,12 @@ public class AdminResource {
 
     private static final Logger log = LoggerFactory.getLogger(AdminResource.class);
 
+    // Inyección de dependencias (manual)
     private final UsuarioService usuarioService;
     private final FestivalService festivalService;
+    private final AsistenteService asistenteService; // Nuevo servicio
 
+    // Inyección de contexto JAX-RS
     @Context
     private UriInfo uriInfo;
     @Context
@@ -68,9 +75,11 @@ public class AdminResource {
     @Context
     private HttpServletResponse response;
 
+    // Constructor: instancia los servicios
     public AdminResource() {
         this.usuarioService = new UsuarioServiceImpl();
         this.festivalService = new FestivalServiceImpl();
+        this.asistenteService = new AsistenteServiceImpl(); // Instanciar
     }
 
     // --- Endpoints para Gestión de Promotores por Admin ---
@@ -498,6 +507,46 @@ public class AdminResource {
         log.debug("Redirigiendo a: {}", listUri);
         return Response.seeOther(listUri).build();
     }
+
+    // --- *** NUEVOS ENDPOINTS PARA GESTIÓN DE ASISTENTES POR ADMIN *** ---
+    /**
+     * GET /api/admin/asistentes Lista todos los asistentes registrados.
+     * Devuelve HTML (forward a JSP). Requiere rol ADMIN en sesión.
+     */
+    @GET
+    @Path("/asistentes")
+    @Produces(MediaType.TEXT_HTML)
+    public Response listarAsistentes(@QueryParam("buscar") String searchTerm) throws ServletException, IOException {
+        log.debug("GET /admin/asistentes recibido. Término búsqueda: '{}'", searchTerm);
+        Integer idAdmin = verificarAccesoAdmin(request); // Verifica sesión y rol ADMIN
+
+        List<AsistenteDTO> listaAsistentes;
+        try {
+            if (searchTerm != null && !searchTerm.isBlank()) {
+                log.debug("Buscando asistentes con término: {}", searchTerm);
+                listaAsistentes = asistenteService.buscarAsistentes(searchTerm);
+            } else {
+                log.debug("Obteniendo todos los asistentes.");
+                listaAsistentes = asistenteService.obtenerTodosLosAsistentes();
+            }
+        } catch (Exception e) {
+            log.error("Error obteniendo lista de asistentes para admin: {}", e.getMessage(), e);
+            request.setAttribute("error", "Error crítico al cargar la lista de asistentes.");
+            listaAsistentes = Collections.emptyList(); // Lista vacía en caso de error
+        }
+
+        // Pasar datos al JSP
+        request.setAttribute("asistentes", listaAsistentes);
+        request.setAttribute("idAdminAutenticado", idAdmin);
+        request.setAttribute("searchTerm", searchTerm); // Para repoblar campo búsqueda
+        mostrarMensajeFlash(request); // Por si hay mensajes de acciones futuras
+
+        // Forward al nuevo JSP
+        RequestDispatcher dispatcher = request.getRequestDispatcher("/WEB-INF/jsp/admin/admin-asistentes.jsp"); // Crear este JSP
+        dispatcher.forward(request, response);
+        return Response.ok().build();
+    }
+    // --- *** FIN NUEVOS ENDPOINTS *** ---
 
     // --- Método Auxiliar de Seguridad ---
     private Integer verificarAccesoAdmin(HttpServletRequest request) {

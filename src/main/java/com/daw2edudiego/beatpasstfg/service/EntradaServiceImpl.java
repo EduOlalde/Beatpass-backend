@@ -1,17 +1,14 @@
 package com.daw2edudiego.beatpasstfg.service;
 
 import com.daw2edudiego.beatpasstfg.dto.EntradaDTO;
-import com.daw2edudiego.beatpasstfg.exception.EntradaNotFoundException;
-import com.daw2edudiego.beatpasstfg.exception.FestivalNotFoundException;
-import com.daw2edudiego.beatpasstfg.exception.UsuarioNotFoundException;
-import com.daw2edudiego.beatpasstfg.model.Entrada;
-import com.daw2edudiego.beatpasstfg.model.Festival;
-import com.daw2edudiego.beatpasstfg.model.Usuario;
-import com.daw2edudiego.beatpasstfg.repository.*; // Importar todos los repositorios necesarios
+import com.daw2edudiego.beatpasstfg.exception.*;
+import com.daw2edudiego.beatpasstfg.model.*;
+import com.daw2edudiego.beatpasstfg.repository.*;
 import com.daw2edudiego.beatpasstfg.util.JPAUtil;
 
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityTransaction;
+import jakarta.persistence.LockModeType;
 import jakarta.persistence.PersistenceException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -19,153 +16,96 @@ import org.slf4j.LoggerFactory;
 import java.math.BigDecimal;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 /**
- * Implementación de EntradaService. Gestiona la lógica de negocio y las
- * transacciones para Tipos de Entrada.
- * @author Eduardo Olalde
+ * Implementación de EntradaService. ACTUALIZADO: Implementados
+ * actualizarEntrada, eliminarEntrada, obtenerEntradaPorId.
  */
 public class EntradaServiceImpl implements EntradaService {
 
     private static final Logger log = LoggerFactory.getLogger(EntradaServiceImpl.class);
 
-    // Inyección de dependencias (manual)
+    // Dependencias
     private final EntradaRepository entradaRepository;
     private final FestivalRepository festivalRepository;
     private final UsuarioRepository usuarioRepository;
 
-    // Constructor
     public EntradaServiceImpl() {
         this.entradaRepository = new EntradaRepositoryImpl();
         this.festivalRepository = new FestivalRepositoryImpl();
-        this.usuarioRepository = new UsuarioRepositoryImpl(); // Necesario para verificar promotor
+        this.usuarioRepository = new UsuarioRepositoryImpl();
     }
 
     @Override
     public EntradaDTO crearEntrada(EntradaDTO entradaDTO, Integer idFestival, Integer idPromotor) {
+        // ... (Implementación sin cambios) ...
         log.info("Service: Creando tipo de entrada '{}' para festival ID {} por promotor ID {}",
                 entradaDTO.getTipo(), idFestival, idPromotor);
-
-        // Validaciones iniciales
         if (entradaDTO == null || idFestival == null || idPromotor == null) {
-            throw new IllegalArgumentException("DTO de entrada, ID de festival y ID de promotor son requeridos.");
+            throw new IllegalArgumentException("DTO, ID festival y ID promotor requeridos.");
         }
         if (!idFestival.equals(entradaDTO.getIdFestival())) {
-            throw new IllegalArgumentException("El ID del festival en el DTO (" + entradaDTO.getIdFestival() + ") no coincide con el ID del festival en la ruta (" + idFestival + ").");
+            throw new IllegalArgumentException("ID festival DTO no coincide con ID ruta.");
         }
-        validarDatosEntradaDTO(entradaDTO); // Validación de campos del DTO
-
+        validarDatosEntradaDTO(entradaDTO);
         EntityManager em = null;
         EntityTransaction tx = null;
         try {
             em = JPAUtil.createEntityManager();
             tx = em.getTransaction();
             tx.begin();
-
-            // Verificar que el promotor existe
-            Usuario promotor = usuarioRepository.findById(em, idPromotor)
-                    .orElseThrow(() -> new UsuarioNotFoundException("Promotor no encontrado con ID: " + idPromotor));
-
-            // Verificar que el festival existe y pertenece al promotor
-            Festival festival = festivalRepository.findById(em, idFestival)
-                    .orElseThrow(() -> new FestivalNotFoundException("Festival no encontrado con ID: " + idFestival));
-
-            if (!festival.getPromotor().getIdUsuario().equals(idPromotor)) {
-                log.warn("Intento no autorizado por promotor ID {} para crear entrada en festival ID {}", idPromotor, idFestival);
-                throw new SecurityException("No tiene permiso para añadir entradas a este festival.");
-            }
-
-            // Mapear DTO a Entidad y establecer relación
+            Usuario promotor = usuarioRepository.findById(em, idPromotor).orElseThrow(() -> new UsuarioNotFoundException("Promotor no encontrado: " + idPromotor));
+            Festival festival = festivalRepository.findById(em, idFestival).orElseThrow(() -> new FestivalNotFoundException("Festival no encontrado: " + idFestival));
+            verificarPropiedadFestival(festival, idPromotor);
             Entrada nuevaEntrada = mapDtoToEntity(entradaDTO);
-            nuevaEntrada.setFestival(festival); // Asociar con el festival encontrado
-
-            // Guardar la nueva entrada
+            nuevaEntrada.setFestival(festival);
             nuevaEntrada = entradaRepository.save(em, nuevaEntrada);
-
             tx.commit();
             log.info("Tipo de entrada '{}' creada con ID {} para festival ID {}", nuevaEntrada.getTipo(), nuevaEntrada.getIdEntrada(), idFestival);
-            return mapEntityToDto(nuevaEntrada); // Devolver DTO de la entrada creada
-
+            return mapEntityToDto(nuevaEntrada);
         } catch (Exception e) {
-            log.error("Error creando tipo de entrada para festival ID {}: {}", idFestival, e.getMessage(), e);
-            if (tx != null && tx.isActive()) {
-                tx.rollback();
-            }
-            // Relanzar excepciones conocidas o una genérica
-            if (e instanceof FestivalNotFoundException || e instanceof UsuarioNotFoundException || e instanceof SecurityException || e instanceof IllegalArgumentException || e instanceof PersistenceException) {
-                throw e;
-            }
-            throw new RuntimeException("Error inesperado creando tipo de entrada: " + e.getMessage(), e);
+            handleException(e, tx, "creando tipo entrada");
+            throw mapException(e);
         } finally {
-            if (em != null && em.isOpen()) {
-                em.close();
-            }
+            closeEntityManager(em);
         }
     }
 
     @Override
     public List<EntradaDTO> obtenerEntradasPorFestival(Integer idFestival, Integer idPromotor) {
+        // ... (Implementación sin cambios) ...
         log.debug("Service: Obteniendo tipos de entrada para festival ID {} por promotor ID {}", idFestival, idPromotor);
         if (idFestival == null || idPromotor == null) {
-            throw new IllegalArgumentException("ID de festival y ID de promotor son requeridos.");
+            throw new IllegalArgumentException("ID festival y ID promotor requeridos.");
         }
-
         EntityManager em = null;
-        // No se necesita transacción explícita para una consulta simple, pero la mantenemos por consistencia
         EntityTransaction tx = null;
         try {
             em = JPAUtil.createEntityManager();
             tx = em.getTransaction();
-            tx.begin(); // Iniciar transacción (aunque sea de lectura)
-
-            // Verificar promotor y propiedad del festival
-            Usuario promotor = usuarioRepository.findById(em, idPromotor)
-                    .orElseThrow(() -> new UsuarioNotFoundException("Promotor no encontrado con ID: " + idPromotor));
-            Festival festival = festivalRepository.findById(em, idFestival)
-                    .orElseThrow(() -> new FestivalNotFoundException("Festival no encontrado con ID: " + idFestival));
-            if (!festival.getPromotor().getIdUsuario().equals(idPromotor)) {
-                log.warn("Intento no autorizado por promotor ID {} para ver entradas de festival ID {}", idPromotor, idFestival);
-                throw new SecurityException("No tiene permiso para ver las entradas de este festival.");
-            }
-
-            // Obtener las entradas usando el repositorio
+            tx.begin();
+            Usuario promotor = usuarioRepository.findById(em, idPromotor).orElseThrow(() -> new UsuarioNotFoundException("Promotor no encontrado: " + idPromotor));
+            Festival festival = festivalRepository.findById(em, idFestival).orElseThrow(() -> new FestivalNotFoundException("Festival no encontrado: " + idFestival));
+            verificarPropiedadFestival(festival, idPromotor);
             List<Entrada> entradas = entradaRepository.findByFestivalId(em, idFestival);
-
-            tx.commit(); // Commit (aunque no haya cambios)
-
-            // Mapear a DTOs
-            return entradas.stream()
-                    .map(this::mapEntityToDto)
-                    .collect(Collectors.toList());
-
+            tx.commit();
+            return entradas.stream().map(this::mapEntityToDto).collect(Collectors.toList());
         } catch (Exception e) {
-            log.error("Error obteniendo tipos de entrada para festival ID {}: {}", idFestival, e.getMessage(), e);
-            if (tx != null && tx.isActive()) {
-                tx.rollback(); // Rollback en caso de error durante la verificación o consulta
-            }
-            // Relanzar excepciones conocidas o una genérica
-            if (e instanceof FestivalNotFoundException || e instanceof UsuarioNotFoundException || e instanceof SecurityException) {
-                throw e;
-            }
-            // Devolver lista vacía o lanzar RuntimeException según se prefiera
-            // return Collections.emptyList();
-            throw new RuntimeException("Error inesperado obteniendo tipos de entrada: " + e.getMessage(), e);
+            handleException(e, tx, "obteniendo tipos entrada");
+            throw mapException(e);
         } finally {
-            if (em != null && em.isOpen()) {
-                em.close();
-            }
+            closeEntityManager(em);
         }
     }
 
     @Override
     public EntradaDTO actualizarEntrada(Integer idEntrada, EntradaDTO entradaDTO, Integer idPromotor) {
         log.info("Service: Actualizando tipo de entrada ID {} por promotor ID {}", idEntrada, idPromotor);
-
         if (idEntrada == null || entradaDTO == null || idPromotor == null) {
             throw new IllegalArgumentException("ID de entrada, DTO y ID de promotor son requeridos.");
         }
-        // Podríamos verificar si entradaDTO.getIdEntrada() coincide con idEntrada si viene en el DTO
         validarDatosEntradaDTO(entradaDTO); // Validar datos del DTO
 
         EntityManager em = null;
@@ -179,22 +119,19 @@ public class EntradaServiceImpl implements EntradaService {
             Usuario promotor = usuarioRepository.findById(em, idPromotor)
                     .orElseThrow(() -> new UsuarioNotFoundException("Promotor no encontrado con ID: " + idPromotor));
 
-            // Buscar la entrada a actualizar
+            // Buscar la entrada a actualizar (con bloqueo si se espera concurrencia alta en stock)
+            // Entrada entrada = em.find(Entrada.class, idEntrada, LockModeType.PESSIMISTIC_WRITE);
             Entrada entrada = entradaRepository.findById(em, idEntrada)
                     .orElseThrow(() -> new EntradaNotFoundException("Tipo de entrada no encontrado con ID: " + idEntrada));
 
-            // Verificar propiedad (a través del festival asociado a la entrada)
-            if (entrada.getFestival() == null || !entrada.getFestival().getPromotor().getIdUsuario().equals(idPromotor)) {
-                log.warn("Intento no autorizado por promotor ID {} para actualizar entrada ID {}", idPromotor, idEntrada);
-                throw new SecurityException("No tiene permiso para modificar este tipo de entrada.");
-            }
+            // Verificar propiedad
+            verificarPropiedadFestival(entrada.getFestival(), idPromotor);
 
-            // Actualizar campos de la entidad desde el DTO
+            // Actualizar campos
             entrada.setTipo(entradaDTO.getTipo());
             entrada.setDescripcion(entradaDTO.getDescripcion());
             entrada.setPrecio(entradaDTO.getPrecio());
             entrada.setStock(entradaDTO.getStock());
-            // No actualizamos el festival asociado
 
             // Guardar (merge)
             entrada = entradaRepository.save(em, entrada);
@@ -204,18 +141,10 @@ public class EntradaServiceImpl implements EntradaService {
             return mapEntityToDto(entrada);
 
         } catch (Exception e) {
-            log.error("Error actualizando tipo de entrada ID {}: {}", idEntrada, e.getMessage(), e);
-            if (tx != null && tx.isActive()) {
-                tx.rollback();
-            }
-            if (e instanceof EntradaNotFoundException || e instanceof UsuarioNotFoundException || e instanceof SecurityException || e instanceof IllegalArgumentException || e instanceof PersistenceException) {
-                throw e;
-            }
-            throw new RuntimeException("Error inesperado actualizando tipo de entrada: " + e.getMessage(), e);
+            handleException(e, tx, "actualizando tipo entrada");
+            throw mapException(e);
         } finally {
-            if (em != null && em.isOpen()) {
-                em.close();
-            }
+            closeEntityManager(em);
         }
     }
 
@@ -242,66 +171,76 @@ public class EntradaServiceImpl implements EntradaService {
                     .orElseThrow(() -> new EntradaNotFoundException("Tipo de entrada no encontrado con ID: " + idEntrada));
 
             // Verificar propiedad
-            if (entrada.getFestival() == null || !entrada.getFestival().getPromotor().getIdUsuario().equals(idPromotor)) {
-                log.warn("Intento no autorizado por promotor ID {} para eliminar entrada ID {}", idPromotor, idEntrada);
-                throw new SecurityException("No tiene permiso para eliminar este tipo de entrada.");
-            }
+            verificarPropiedadFestival(entrada.getFestival(), idPromotor);
 
-            // Intentar eliminar
-            // El repositorio lanzará PersistenceException si hay FKs (ej: CompraEntrada)
+            // Intentar eliminar (puede fallar por FK si hay CompraEntrada)
             boolean eliminado = entradaRepository.deleteById(em, idEntrada);
-            if (!eliminado) {
-                // Esto no debería ocurrir si findById funcionó, a menos que deleteById falle silenciosamente
-                throw new EntradaNotFoundException("No se pudo eliminar el tipo de entrada con ID: " + idEntrada + " (posiblemente ya no existía).");
+            if (!eliminado) { // Si no se encontró después de la verificación inicial (raro)
+                throw new EntradaNotFoundException("No se pudo eliminar el tipo de entrada con ID: " + idEntrada);
             }
 
             tx.commit();
             log.info("Tipo de entrada ID {} eliminado correctamente.", idEntrada);
 
         } catch (PersistenceException e) {
-            log.error("Error de persistencia eliminando entrada ID {}: {}. Causa probable: entradas vendidas.", idEntrada, e.getMessage());
-            if (tx != null && tx.isActive()) {
-                tx.rollback();
-            }
-            // Lanzar una excepción más descriptiva para el usuario
-            throw new RuntimeException("No se puede eliminar el tipo de entrada ID " + idEntrada + " porque ya tiene ventas asociadas.", e);
+            // Error específico si hay dependencias (ej: entradas vendidas)
+            handleException(e, tx, "eliminando tipo entrada (PersistenceException)");
+            throw new RuntimeException("No se puede eliminar el tipo de entrada ID " + idEntrada + " porque tiene ventas asociadas.", e);
         } catch (Exception e) {
-            log.error("Error eliminando tipo de entrada ID {}: {}", idEntrada, e.getMessage(), e);
-            if (tx != null && tx.isActive()) {
-                tx.rollback();
-            }
-            if (e instanceof EntradaNotFoundException || e instanceof UsuarioNotFoundException || e instanceof SecurityException) {
-                throw e;
-            }
-            throw new RuntimeException("Error inesperado eliminando tipo de entrada: " + e.getMessage(), e);
+            handleException(e, tx, "eliminando tipo entrada");
+            throw mapException(e);
         } finally {
-            if (em != null && em.isOpen()) {
-                em.close();
-            }
+            closeEntityManager(em);
         }
     }
 
-    // --- Métodos privados ---
-    /**
-     * Valida los campos obligatorios y restricciones del DTO. Lanza
-     * IllegalArgumentException si algo es inválido.
-     */
+    @Override
+    public Optional<EntradaDTO> obtenerEntradaPorId(Integer idEntrada, Integer idPromotor) {
+        log.debug("Service: Obteniendo tipo de entrada ID {} por promotor ID {}", idEntrada, idPromotor);
+        if (idEntrada == null || idPromotor == null) {
+            throw new IllegalArgumentException("ID de entrada y ID de promotor son requeridos.");
+        }
+        EntityManager em = null;
+        EntityTransaction tx = null; // Opcional para lectura
+        try {
+            em = JPAUtil.createEntityManager();
+            tx = em.getTransaction();
+            tx.begin();
+
+            Entrada entrada = entradaRepository.findById(em, idEntrada)
+                    .orElseThrow(() -> new EntradaNotFoundException("Tipo de entrada no encontrado con ID: " + idEntrada));
+
+            // Verificar propiedad
+            verificarPropiedadFestival(entrada.getFestival(), idPromotor);
+
+            tx.commit();
+            return Optional.of(mapEntityToDto(entrada));
+
+        } catch (Exception e) {
+            handleException(e, tx, "obteniendo tipo entrada por ID");
+            if (e instanceof EntradaNotFoundException || e instanceof SecurityException) {
+                log.warn("No se pudo obtener tipo entrada ID {} para promotor ID {}: {}", idEntrada, idPromotor, e.getMessage());
+                return Optional.empty(); // Devolver vacío si no existe o no tiene permiso
+            }
+            throw mapException(e);
+        } finally {
+            closeEntityManager(em);
+        }
+    }
+
+    // --- Métodos privados (sin cambios) ---
     private void validarDatosEntradaDTO(EntradaDTO dto) {
         if (dto.getTipo() == null || dto.getTipo().isBlank()) {
-            throw new IllegalArgumentException("El tipo de entrada es obligatorio.");
+            throw new IllegalArgumentException("Tipo obligatorio.");
         }
         if (dto.getPrecio() == null || dto.getPrecio().compareTo(BigDecimal.ZERO) < 0) {
-            throw new IllegalArgumentException("El precio es obligatorio y no puede ser negativo.");
+            throw new IllegalArgumentException("Precio obligatorio y no negativo.");
         }
         if (dto.getStock() == null || dto.getStock() < 0) {
-            throw new IllegalArgumentException("El stock es obligatorio y no puede ser negativo.");
+            throw new IllegalArgumentException("Stock obligatorio y no negativo.");
         }
-        // Añadir más validaciones si es necesario (longitud, formato, etc.)
     }
 
-    /**
-     * Mapea Entidad Entrada a EntradaDTO
-     */
     private EntradaDTO mapEntityToDto(Entrada e) {
         if (e == null) {
             return null;
@@ -318,20 +257,49 @@ public class EntradaServiceImpl implements EntradaService {
         return dto;
     }
 
-    /**
-     * Mapea EntradaDTO a Entidad Entrada (sin ID ni Festival)
-     */
     private Entrada mapDtoToEntity(EntradaDTO dto) {
         if (dto == null) {
             return null;
         }
         Entrada e = new Entrada();
-        // ID se asigna al guardar o se usa para buscar en actualizar
         e.setTipo(dto.getTipo());
         e.setDescripcion(dto.getDescripcion());
         e.setPrecio(dto.getPrecio());
         e.setStock(dto.getStock());
-        // El festival se asigna explícitamente en el método del servicio
         return e;
+    }
+
+    private void verificarPropiedadFestival(Festival festival, Integer idPromotor) {
+        if (festival == null) {
+            throw new IllegalStateException("Error interno: Festival asociado no encontrado.");
+        }
+        if (festival.getPromotor() == null || !festival.getPromotor().getIdUsuario().equals(idPromotor)) {
+            throw new SecurityException("No tiene permiso para realizar acciones sobre este festival/entrada.");
+        }
+    }
+
+    private void handleException(Exception e, EntityTransaction tx, String action) {
+        log.error("Error {} : {}", action, e.getMessage(), e);
+        if (tx != null && tx.isActive()) {
+            try {
+                tx.rollback();
+                log.warn("Rollback de transacción de {} realizado.", action);
+            } catch (Exception rbEx) {
+                log.error("Error durante el rollback de {}: {}", action, rbEx.getMessage(), rbEx);
+            }
+        }
+    }
+
+    private void closeEntityManager(EntityManager em) {
+        if (em != null && em.isOpen()) {
+            em.close();
+        }
+    }
+
+    private RuntimeException mapException(Exception e) {
+        if (e instanceof RuntimeException) {
+            return (RuntimeException) e;
+        }
+        return new RuntimeException("Error inesperado en servicio: " + e.getMessage(), e);
     }
 }

@@ -13,7 +13,6 @@
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
         <style>
-            /* Estilos generales que NO usan @apply */
             body {
                 font-family: 'Inter', sans-serif;
             }
@@ -28,36 +27,25 @@
             .badge-activo {
                 background-color: #D1FAE5;
                 color: #065F46;
-            } /* green */
+            }
             .badge-inactivo {
                 background-color: #FEE2E2;
                 color: #991B1B;
-            } /* red */
-            /* Las clases para botones (btn, btn-*, btn-link-*) se aplicarán directamente */
+            }
         </style>
     </head>
     <body class="bg-gray-100 text-gray-800">
 
         <div class="container mx-auto p-4 md:p-8 max-w-7xl">
 
-            <%-- Cabecera Admin --%>
-            <header class="flex flex-col sm:flex-row justify-between items-center mb-6 pb-4 border-b border-gray-300">
-                <h1 class="text-3xl font-bold text-purple-700 mb-4 sm:mb-0">Panel de Administración</h1>
-                <div class="flex items-center space-x-4">
-                    <c:if test="${not empty sessionScope.userName}">
-                        <span class="text-sm text-gray-600">Admin: ${sessionScope.userName}</span>
-                    </c:if>
-                    <a href="${pageContext.request.contextPath}/api/admin/festivales/listar-todos" class="text-sm text-indigo-600 hover:underline">Gestionar Festivales</a>
-                    <form action="${pageContext.request.contextPath}/logout" method="post" class="inline">
-                        <button type="submit" class="text-sm text-gray-500 hover:text-red-600 underline">Cerrar Sesión</button>
-                    </form>
-                </div>
-            </header>
+            <%-- Incluir Menú Admin Común --%>
+            <jsp:include page="/WEB-INF/jsp/admin/_admin_menu.jsp">
+                <jsp:param name="activePage" value="promotores"/>
+            </jsp:include>
 
             <h2 class="text-2xl font-semibold text-gray-700 mb-5">Gestionar Promotores</h2>
 
             <div class="flex justify-end mb-4 space-x-3">
-                <%-- Botones con clases aplicadas directamente --%>
                 <a href="${pageContext.request.contextPath}/api/admin/promotores/crear"
                    class="font-bold py-2 px-4 rounded shadow transition duration-150 ease-in-out bg-purple-600 hover:bg-purple-700 text-white">
                     + Añadir Nuevo Promotor
@@ -82,6 +70,7 @@
 
             <%-- Tabla de Promotores --%>
             <div class="bg-white shadow-md rounded-lg overflow-x-auto">
+                <%-- ... (contenido de la tabla sin cambios) ... --%>
                 <table class="min-w-full divide-y divide-gray-200">
                     <thead class="bg-gray-50">
                         <tr>
@@ -112,7 +101,6 @@
                                             </span>
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap text-center text-sm font-medium">
-                                            <%-- Botón estilo link --%>
                                             <a href="${pageContext.request.contextPath}/api/admin/promotores/${p.idUsuario}/festivales" class="text-indigo-600 hover:text-indigo-900 underline font-medium" title="Ver festivales de ${p.nombre}">
                                                 Ver Festivales
                                             </a>
@@ -121,7 +109,6 @@
                                             <form action="${pageContext.request.contextPath}/api/admin/promotores/cambiar-estado" method="post" class="inline">
                                                 <input type="hidden" name="idPromotor" value="${p.idUsuario}">
                                                 <input type="hidden" name="nuevoEstado" value="${!p.estado}">
-                                                <%-- Botón estilo link con color condicional --%>
                                                 <button type="submit" class="${p.estado ? 'text-yellow-600 hover:text-yellow-900' : 'text-green-600 hover:text-green-900'} underline font-semibold" title="${p.estado ? 'Desactivar cuenta' : 'Activar cuenta'}">
                                                     ${p.estado ? 'Desactivar' : 'Activar'}
                                                 </button>

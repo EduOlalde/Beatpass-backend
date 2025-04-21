@@ -13,7 +13,6 @@
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
         <style>
-            /* Estilos generales que NO usan @apply */
             body {
                 font-family: 'Inter', sans-serif;
             }
@@ -41,27 +40,16 @@
                 background-color: #E5E7EB;
                 color: #374151;
             }
-            /* Las clases para botones link se aplicarán directamente */
         </style>
     </head>
     <body class="bg-gray-100 text-gray-800">
 
         <div class="container mx-auto p-4 md:p-8 max-w-7xl">
 
-            <%-- Cabecera Admin --%>
-            <header class="flex flex-col sm:flex-row justify-between items-center mb-6 pb-4 border-b border-gray-300">
-                <h1 class="text-3xl font-bold text-purple-700 mb-4 sm:mb-0">Panel de Administración</h1>
-                <div class="flex items-center space-x-4">
-                    <c:if test="${not empty sessionScope.userName}">
-                        <span class="text-sm text-gray-600">Admin: ${sessionScope.userName}</span>
-                    </c:if>
-                    <a href="${pageContext.request.contextPath}/api/admin/promotores/listar" class="text-sm text-indigo-600 hover:underline">Gestionar Promotores</a>
-                    <a href="${pageContext.request.contextPath}/api/admin/festivales/listar-todos" class="text-sm text-indigo-600 hover:underline">Gestionar Festivales</a>
-                    <form action="${pageContext.request.contextPath}/logout" method="post" class="inline">
-                        <button type="submit" class="text-sm text-gray-500 hover:text-red-600 underline">Cerrar Sesión</button>
-                    </form>
-                </div>
-            </header>
+            <%-- Incluir Menú Admin Común --%>
+            <jsp:include page="/WEB-INF/jsp/admin/_admin_menu.jsp">
+                <jsp:param name="activePage" value="promotores"/>
+            </jsp:include>
 
             <div class="mb-4">
                 <a href="${pageContext.request.contextPath}/api/admin/promotores/listar" class="text-indigo-600 hover:text-indigo-800 text-sm">&larr; Volver a la lista de Promotores</a>
@@ -72,6 +60,7 @@
             </h2>
 
             <%-- Tabla de Festivales del Promotor --%>
+            <%-- ... (código sin cambios) ... --%>
             <div class="bg-white shadow-md rounded-lg overflow-x-auto">
                 <table class="min-w-full divide-y divide-gray-200">
                     <thead class="bg-gray-50">
@@ -97,21 +86,12 @@
                                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500"> ${f.fechaInicio} - ${f.fechaFin} </td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${f.ubicacion}</td>
                                         <td class="px-6 py-4 whitespace-nowrap text-center">
-                                            <span class="badge
-                                                  <c:choose>
-                                                      <c:when test="${f.estado == 'PUBLICADO'}">badge-publicado</c:when>
-                                                      <c:when test="${f.estado == 'BORRADOR'}">badge-borrador</c:when>
-                                                      <c:when test="${f.estado == 'CANCELADO'}">badge-cancelado</c:when>
-                                                      <c:when test="${f.estado == 'FINALIZADO'}">badge-finalizado</c:when>
-                                                      <c:otherwise>bg-gray-100 text-gray-800</c:otherwise>
-                                                  </c:choose>
-                                                  "> ${f.estado} </span>
+                                            <span class="badge ..."> ${f.estado} </span> <%-- Clases de badge definidas en <style> --%>
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap text-center text-sm font-medium space-x-2">
                                             <c:if test="${f.estado == 'BORRADOR'}">
                                                 <form action="${pageContext.request.contextPath}/api/admin/festivales/confirmar" method="post" class="inline" onsubmit="return confirm('Confirmar y publicar \'${f.nombre}\'?');">
                                                     <input type="hidden" name="idFestival" value="${f.idFestival}">
-                                                    <%-- Botón estilo link verde --%>
                                                     <button type="submit" class="text-green-600 hover:text-green-900 underline font-semibold" title="Confirmar y Publicar">Confirmar</button>
                                                 </form>
                                             </c:if>
@@ -119,17 +99,14 @@
                                                 <form action="${pageContext.request.contextPath}/api/admin/festivales/cambiar-estado" method="post" class="inline" onsubmit="return confirm('¿Estás seguro de CANCELAR el festival \'${f.nombre}\'?');">
                                                     <input type="hidden" name="idFestival" value="${f.idFestival}">
                                                     <input type="hidden" name="nuevoEstado" value="CANCELADO">
-                                                    <%-- Botón estilo link rojo --%>
                                                     <button type="submit" class="text-red-600 hover:text-red-900 underline font-semibold" title="Cancelar Festival">Cancelar</button>
                                                 </form>
                                                 <form action="${pageContext.request.contextPath}/api/admin/festivales/cambiar-estado" method="post" class="inline" onsubmit="return confirm('¿Marcar el festival \'${f.nombre}\' como FINALIZADO?');">
                                                     <input type="hidden" name="idFestival" value="${f.idFestival}">
                                                     <input type="hidden" name="nuevoEstado" value="FINALIZADO">
-                                                    <%-- Botón estilo link gris --%>
                                                     <button type="submit" class="text-gray-600 hover:text-gray-900 underline font-semibold" title="Marcar como Finalizado">Finalizar</button>
                                                 </form>
                                             </c:if>
-                                            <%-- <a href="#" class="text-indigo-600 hover:text-indigo-900 underline font-medium ml-2" title="Ver Detalles (Admin)">Ver</a> --%>
                                         </td>
                                     </tr>
                                 </c:forEach>
@@ -139,6 +116,5 @@
                 </table>
             </div>
         </div>
-
     </body>
 </html>

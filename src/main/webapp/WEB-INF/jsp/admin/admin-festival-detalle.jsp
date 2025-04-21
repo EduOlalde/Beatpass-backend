@@ -14,34 +14,22 @@
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
         <style>
-            /* Estilos generales que NO usan @apply */
             body {
                 font-family: 'Inter', sans-serif;
             }
             textarea {
                 min-height: 8rem;
             }
-            /* Las clases para label, input, select, textarea, required-star y botones se aplicarán directamente */
         </style>
     </head>
     <body class="bg-gray-100 text-gray-800">
 
         <div class="container mx-auto p-4 md:p-8 max-w-4xl">
 
-            <%-- Cabecera Admin (simplificada) --%>
-            <header class="flex flex-col sm:flex-row justify-between items-center mb-6 pb-4 border-b border-gray-300">
-                <h1 class="text-3xl font-bold text-purple-700 mb-4 sm:mb-0">Panel de Administración</h1>
-                <div class="flex items-center space-x-4">
-                    <c:if test="${not empty sessionScope.userName}">
-                        <span class="text-sm text-gray-600">Admin: ${sessionScope.userName}</span>
-                    </c:if>
-                    <a href="${pageContext.request.contextPath}/api/admin/promotores/listar" class="text-sm text-indigo-600 hover:underline">Gestionar Promotores</a>
-                    <a href="${pageContext.request.contextPath}/api/admin/festivales/listar-todos" class="text-sm text-indigo-600 hover:underline">Gestionar Festivales</a>
-                    <form action="${pageContext.request.contextPath}/logout" method="post" class="inline">
-                        <button type="submit" class="text-sm text-gray-500 hover:text-red-600 underline">Cerrar Sesión</button>
-                    </form>
-                </div>
-            </header>
+            <%-- Incluir Menú Admin Común --%>
+            <jsp:include page="/WEB-INF/jsp/admin/_admin_menu.jsp">
+                <jsp:param name="activePage" value="festivales"/> <%-- Pertenece a la sección festivales --%>
+            </jsp:include>
 
             <h2 class="text-2xl font-semibold text-gray-700 mb-5">
                 ${esNuevo ? 'Crear Nuevo Festival (Admin)' : 'Editar Festival (Admin): '}
@@ -52,6 +40,7 @@
                     <a href="${pageContext.request.contextPath}/api/admin/festivales/listar-todos" class="text-indigo-600 hover:text-indigo-800 text-sm">&larr; Volver a Gestionar Festivales</a>
             </div>
 
+            <%-- Mensajes de error --%>
             <c:if test="${not empty requestScope.error}">
                 <div class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-4 rounded-md shadow-sm" role="alert">
                     <p class="font-bold">Error</p>
@@ -59,12 +48,12 @@
                 </div>
             </c:if>
 
+            <%-- Formulario --%>
             <form action="${pageContext.request.contextPath}/api/admin/festivales/guardar" method="post" class="bg-white p-6 md:p-8 rounded-lg shadow-md space-y-4">
+                <%-- ... (contenido del formulario sin cambios) ... --%>
                 <input type="hidden" name="idFestival" value="${festival.idFestival}">
-
                 <c:if test="${esNuevo}">
                     <div>
-                        <%-- Aplicar clases a label y select --%>
                         <label for="idPromotorSeleccionado" class="block text-sm font-medium text-gray-700 mb-1">
                             Asignar a Promotor <span class="text-red-500 ml-1">*</span>
                         </label>
@@ -76,7 +65,7 @@
                             </c:forEach>
                         </select>
                         <c:if test="${empty promotores}">
-                            <p class="text-xs text-red-600 mt-1">No hay promotores activos disponibles. Debes crear uno primero.</p>
+                            <p class="text-xs text-red-600 mt-1">No hay promotores activos disponibles.</p>
                         </c:if>
                     </div>
                 </c:if>
@@ -88,7 +77,6 @@
                         </p>
                     </div>
                 </c:if>
-
                 <div>
                     <label for="nombre" class="block text-sm font-medium text-gray-700 mb-1">
                         Nombre del Festival <span class="text-red-500 ml-1">*</span>
@@ -96,13 +84,11 @@
                     <input type="text" id="nombre" name="nombre" value="${festival.nombre}" required maxlength="100"
                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-500 focus:ring-opacity-50 sm:text-sm">
                 </div>
-
                 <div>
                     <label for="descripcion" class="block text-sm font-medium text-gray-700 mb-1">Descripción</label>
                     <textarea id="descripcion" name="descripcion" rows="4"
                               class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-500 focus:ring-opacity-50 sm:text-sm">${festival.descripcion}</textarea>
                 </div>
-
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                         <label for="fechaInicio" class="block text-sm font-medium text-gray-700 mb-1">
@@ -119,13 +105,11 @@
                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-500 focus:ring-opacity-50 sm:text-sm">
                     </div>
                 </div>
-
                 <div>
                     <label for="ubicacion" class="block text-sm font-medium text-gray-700 mb-1">Ubicación</label>
                     <input type="text" id="ubicacion" name="ubicacion" value="${festival.ubicacion}" maxlength="255"
                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-500 focus:ring-opacity-50 sm:text-sm">
                 </div>
-
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                         <label for="aforo" class="block text-sm font-medium text-gray-700 mb-1">Aforo (Opcional)</label>
@@ -138,37 +122,25 @@
                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-500 focus:ring-opacity-50 sm:text-sm">
                     </div>
                 </div>
-
                 <c:if test="${not esNuevo}">
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Estado Actual</label>
-                        <p class="mt-1 block w-full rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm font-medium text-gray-700 font-semibold
-                           <c:choose>
-                               <c:when test="${festival.estado == 'PUBLICADO'}">text-green-700</c:when>
-                               <c:when test="${festival.estado == 'BORRADOR'}">text-yellow-700</c:when>
-                               <c:when test="${festival.estado == 'CANCELADO'}">text-red-700</c:when>
-                               <c:otherwise>text-gray-700</c:otherwise>
-                           </c:choose>
-                           ">
+                        <p class="mt-1 block w-full rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm font-medium text-gray-700 font-semibold ...">
                             ${festival.estado}
                         </p>
-                        <p class="text-xs text-gray-500 mt-1">El estado se cambia desde la lista de festivales (ej: Confirmar).</p>
+                        <p class="text-xs text-gray-500 mt-1">El estado se cambia desde la lista de festivales.</p>
                     </div>
                 </c:if>
-
                 <div class="mt-6 flex justify-end space-x-3 pt-4 border-t border-gray-200">
-                    <%-- Botón Cancelar con clases aplicadas --%>
                     <a href="${pageContext.request.contextPath}/api/admin/festivales/listar-todos"
                        class="font-bold py-2 px-4 rounded shadow transition duration-150 ease-in-out bg-gray-200 hover:bg-gray-300 text-gray-800">
                         Cancelar
                     </a>
-                    <%-- Botón Guardar/Crear con clases aplicadas --%>
                     <button type="submit"
                             class="font-bold py-2 px-4 rounded shadow transition duration-150 ease-in-out bg-purple-600 hover:bg-purple-700 text-white">
                         ${esNuevo ? 'Crear Festival' : 'Guardar Cambios'}
                     </button>
                 </div>
-
             </form>
 
             <c:if test="${not esNuevo}">
@@ -180,8 +152,6 @@
                     </div>
                 </div>
             </c:if>
-
         </div>
-
     </body>
 </html>

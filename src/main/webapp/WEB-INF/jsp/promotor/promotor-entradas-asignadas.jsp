@@ -1,6 +1,6 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%@ taglib uri="jakarta.tags.core" prefix="c" %>
-<%@ taglib uri="jakarta.tags.fmt" prefix="fmt" %>
+<%@ taglib uri="jakarta.tags.fmt" prefix="fmt" %> <%-- Mantenemos la importación por si se usa en otro sitio --%>
 
 <!DOCTYPE html>
 <html lang="es">
@@ -13,7 +13,6 @@
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
         <style>
-            /* Estilos generales que NO usan @apply */
             body {
                 font-family: 'Inter', sans-serif;
             }
@@ -28,15 +27,15 @@
             .badge-activa {
                 background-color: #D1FAE5;
                 color: #065F46;
-            } /* green */
+            }
             .badge-usada {
                 background-color: #E5E7EB;
                 color: #374151;
-            } /* gray */
+            }
             .badge-cancelada {
                 background-color: #FEE2E2;
                 color: #991B1B;
-            } /* red */
+            }
             .qr-code {
                 font-family: monospace;
                 background-color: #f3f4f6;
@@ -44,14 +43,13 @@
                 border-radius: 0.25rem;
                 font-size: 0.8rem;
             }
-            /* Las clases para botones link se aplicarán directamente en el HTML */
         </style>
     </head>
     <body class="bg-gray-100 text-gray-800">
 
         <div class="container mx-auto p-4 md:p-8 max-w-7xl">
 
-            <%-- Cabecera del Panel de Promotor --%>
+            <%-- Cabecera --%>
             <header class="flex flex-col sm:flex-row justify-between items-center mb-6 pb-4 border-b border-gray-300">
                 <h1 class="text-3xl font-bold text-indigo-700 mb-4 sm:mb-0">Panel de Promotor</h1>
                 <div class="flex items-center space-x-4">
@@ -131,27 +129,27 @@
                                             </c:choose>
                                         </td>
                                         <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
+                                            <%-- *** CORRECCIÓN: Eliminar fmt:formatDate *** --%>
                                             <c:if test="${not empty ea.fechaAsignacion}">
-                                                <fmt:formatDate value="${ea.fechaAsignacion}" pattern="dd/MM/yy HH:mm"/>
+                                                ${ea.fechaAsignacion} <%-- Mostrar formato por defecto de LocalDateTime --%>
                                             </c:if>
                                         </td>
-                                        <td class="px-4 py-4 whitespace-nowrap text-center text-sm space-x-2">
+                                        <td class="px-4 py-4 whitespace-nowrap text-center text-sm space-x-1">
                                             <%-- Acciones Condicionales --%>
                                             <c:if test="${empty ea.idAsistente and ea.estado == 'ACTIVA'}">
-                                                <%-- TODO: Implementar formulario/modal para buscar/introducir asistente y enviar POST a nominar --%>
-                                                <%-- Aplicar clases directamente al botón --%>
-                                                <button type="button" class="text-indigo-600 hover:text-indigo-900 underline font-medium p-0 bg-transparent shadow-none text-sm" onclick="alert('Nominar entrada ID ${ea.idEntradaAsignada} - Pendiente UI/Formulario');">Nominar</button>
+                                                <form action="${pageContext.request.contextPath}/api/promotor/entradas-asignadas/${ea.idEntradaAsignada}/nominar" method="post" class="inline-flex items-center space-x-1"
+                                                      onsubmit="return document.getElementById('idAsistente_${ea.idEntradaAsignada}').value.trim() !== '';">
+                                                    <input type="number" id="idAsistente_${ea.idEntradaAsignada}" name="idAsistente" required min="1" placeholder="ID Asist." title="Introduce el ID del asistente"
+                                                           class="p-1 border border-gray-300 rounded-md shadow-sm text-sm w-20 focus:ring-indigo-500 focus:border-indigo-500">
+                                                    <button type="submit" class="text-indigo-600 hover:text-indigo-900 underline font-medium p-0 bg-transparent shadow-none text-sm" title="Nominar esta entrada">Nominar</button>
+                                                </form>
                                             </c:if>
                                             <c:if test="${not empty ea.idAsistente and ea.estado == 'ACTIVA'}">
-                                                <%-- TODO: Implementar endpoint y UI para modificar nominación --%>
-                                                <%-- Aplicar clases directamente al botón --%>
-                                                <button type="button" class="text-yellow-600 hover:text-yellow-900 underline font-semibold p-0 bg-transparent shadow-none text-sm" onclick="alert('Modificar nominación entrada ID ${ea.idEntradaAsignada} - Pendiente');">Modificar Nom.</button>
+                                                <button type="button" class="text-yellow-600 hover:text-yellow-900 underline font-semibold p-0 bg-transparent shadow-none text-sm" onclick="alert('Modificar nominación entrada ID ${ea.idEntradaAsignada} - Pendiente');">Modificar</button>
                                             </c:if>
                                             <c:if test="${ea.estado == 'ACTIVA'}">
-                                                <%-- *** Formulario para Cancelar Entrada *** --%>
                                                 <form action="${pageContext.request.contextPath}/api/promotor/entradas-asignadas/${ea.idEntradaAsignada}/cancelar" method="post" class="inline"
                                                       onsubmit="return confirm('¿Estás seguro de CANCELAR la entrada ID ${ea.idEntradaAsignada}? Esta acción no se puede deshacer y el stock se restaurará.');">
-                                                    <%-- Aplicar clases directamente al botón --%>
                                                     <button type="submit" class="text-red-600 hover:text-red-900 underline font-semibold p-0 bg-transparent shadow-none text-sm" title="Cancelar Entrada">Cancelar</button>
                                                 </form>
                                             </c:if>
@@ -163,9 +161,9 @@
                     </tbody>
                 </table>
             </div>
+            <p class="text-xs text-gray-500 mt-2 italic">Nota: Para nominar una entrada, introduce el ID del asistente existente y pulsa "Nominar".</p>
 
         </div>
 
     </body>
 </html>
- 

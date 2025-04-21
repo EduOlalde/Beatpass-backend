@@ -1,15 +1,17 @@
 package com.daw2edudiego.beatpasstfg.service;
 
 import com.daw2edudiego.beatpasstfg.dto.EntradaDTO;
-import com.daw2edudiego.beatpasstfg.exception.EntradaNotFoundException; 
+import com.daw2edudiego.beatpasstfg.exception.EntradaNotFoundException;
 import com.daw2edudiego.beatpasstfg.exception.FestivalNotFoundException;
 import com.daw2edudiego.beatpasstfg.exception.UsuarioNotFoundException;
 
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Interfaz que define el contrato para la lógica de negocio relacionada con la
  * gestión de Tipos de Entrada de los festivales.
+ *
  * @author Eduardo Olalde
  */
 public interface EntradaService {
@@ -92,6 +94,19 @@ public interface EntradaService {
      */
     void eliminarEntrada(Integer idEntrada, Integer idPromotor);
 
-    // Podríamos añadir un método para obtener un EntradaDTO por su ID si fuera necesario
-    // Optional<EntradaDTO> obtenerEntradaPorId(Integer idEntrada, Integer idPromotor);
+    /**
+     * Obtiene los detalles de un tipo de entrada específico por su ID. Verifica
+     * que el promotor sea el dueño del festival asociado.
+     *
+     * @param idEntrada ID del tipo de entrada a buscar.
+     * @param idPromotor ID del promotor que realiza la acción.
+     * @return Optional con el EntradaDTO si se encuentra y pertenece al
+     * promotor.
+     * @throws UsuarioNotFoundException si el promotor no existe.
+     * @throws SecurityException si el promotor no es dueño del festival
+     * asociado.
+     * @throws RuntimeException si ocurre un error inesperado.
+     */
+    Optional<EntradaDTO> obtenerEntradaPorId(Integer idEntrada, Integer idPromotor); // <-- NUEVO MÉTODO
+
 }
