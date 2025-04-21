@@ -1,6 +1,6 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
-<%@ taglib uri="jakarta.tags.core" prefix="c" %> <%-- Asegúrate de usar jakarta.tags.core --%>
-<%@ taglib uri="jakarta.tags.fmt" prefix="fmt" %> <%-- Asegúrate de usar jakarta.tags.fmt --%>
+<%@ taglib uri="jakarta.tags.core" prefix="c" %>
+<%@ taglib uri="jakarta.tags.fmt" prefix="fmt" %>
 
 <!DOCTYPE html>
 <html lang="es">
@@ -9,98 +9,123 @@
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Gestionar Promotores - Beatpass Admin</title>
         <script src="https://cdn.tailwindcss.com"></script>
-        <style> body {
-            font-family: 'Inter', sans-serif;
-        } </style>
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+        <style>
+            /* Estilos generales que NO usan @apply */
+            body {
+                font-family: 'Inter', sans-serif;
+            }
+            .badge {
+                padding: 0.1em 0.6em;
+                border-radius: 9999px;
+                font-size: 0.75rem;
+                font-weight: 600;
+                display: inline-flex;
+                align-items: center;
+            }
+            .badge-activo {
+                background-color: #D1FAE5;
+                color: #065F46;
+            } /* green */
+            .badge-inactivo {
+                background-color: #FEE2E2;
+                color: #991B1B;
+            } /* red */
+            /* Las clases para botones (btn, btn-*, btn-link-*) se aplicarán directamente */
+        </style>
     </head>
     <body class="bg-gray-100 text-gray-800">
 
-        <div class="container mx-auto p-4 md:p-8">
-            <%-- Incluir un menú de navegación de admin si lo tienes --%>
-            <%-- <jsp:include page="../_admin_menu.jsp" /> --%>
+        <div class="container mx-auto p-4 md:p-8 max-w-7xl">
 
-            <div class="flex justify-between items-center mb-6">
-                <h1 class="text-3xl font-bold text-purple-700">Gestionar Promotores</h1>
-                <div>
-                    <%-- Botón para ir a Crear Promotor --%>
-                    <a href="${pageContext.request.contextPath}/api/admin/promotores/crear"
-                       class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded shadow mr-2">
-                        + Añadir Promotor
-                    </a>
-                    <%-- NUEVO Botón para ir a Crear Festival --%>
-                    <a href="${pageContext.request.contextPath}/api/admin/festivales/crear"
-                       class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded shadow">
-                        + Crear Festival
-                    </a>
+            <%-- Cabecera Admin --%>
+            <header class="flex flex-col sm:flex-row justify-between items-center mb-6 pb-4 border-b border-gray-300">
+                <h1 class="text-3xl font-bold text-purple-700 mb-4 sm:mb-0">Panel de Administración</h1>
+                <div class="flex items-center space-x-4">
+                    <c:if test="${not empty sessionScope.userName}">
+                        <span class="text-sm text-gray-600">Admin: ${sessionScope.userName}</span>
+                    </c:if>
+                    <a href="${pageContext.request.contextPath}/api/admin/festivales/listar-todos" class="text-sm text-indigo-600 hover:underline">Gestionar Festivales</a>
+                    <form action="${pageContext.request.contextPath}/logout" method="post" class="inline">
+                        <button type="submit" class="text-sm text-gray-500 hover:text-red-600 underline">Cerrar Sesión</button>
+                    </form>
                 </div>
+            </header>
+
+            <h2 class="text-2xl font-semibold text-gray-700 mb-5">Gestionar Promotores</h2>
+
+            <div class="flex justify-end mb-4 space-x-3">
+                <%-- Botones con clases aplicadas directamente --%>
+                <a href="${pageContext.request.contextPath}/api/admin/promotores/crear"
+                   class="font-bold py-2 px-4 rounded shadow transition duration-150 ease-in-out bg-purple-600 hover:bg-purple-700 text-white">
+                    + Añadir Nuevo Promotor
+                </a>
+                <a href="${pageContext.request.contextPath}/api/admin/festivales/crear"
+                   class="font-bold py-2 px-4 rounded shadow transition duration-150 ease-in-out bg-green-600 hover:bg-green-700 text-white">
+                    + Crear Festival (Asignar)
+                </a>
             </div>
 
-
-            <%-- Mostrar mensajes flash --%>
-            <c:if test="${not empty sessionScope.mensaje}">
-                <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4" role="alert">
-                    <span class="block sm:inline">${sessionScope.mensaje}</span>
+            <%-- Mensajes flash --%>
+            <c:if test="${not empty requestScope.mensajeExito}">
+                <div class="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 mb-4 rounded-md shadow-sm" role="alert">
+                    <p class="font-bold">Éxito</p> <p>${requestScope.mensajeExito}</p>
                 </div>
-                <% session.removeAttribute("mensaje"); %>
-            </c:if>
-            <c:if test="${not empty sessionScope.error}">
-                <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
-                    <span class="block sm:inline">${sessionScope.error}</span>
-                </div>
-                <% session.removeAttribute("error");%>
             </c:if>
             <c:if test="${not empty requestScope.error}">
-                <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
-                    <span class="block sm:inline">${requestScope.error}</span>
+                <div class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-4 rounded-md shadow-sm" role="alert">
+                    <p class="font-bold">Error</p> <p>${requestScope.error}</p>
                 </div>
             </c:if>
 
-
+            <%-- Tabla de Promotores --%>
             <div class="bg-white shadow-md rounded-lg overflow-x-auto">
                 <table class="min-w-full divide-y divide-gray-200">
                     <thead class="bg-gray-50">
                         <tr>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
+                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
                             <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nombre</th>
                             <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+                            <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
+                            <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Festivales</th>
+                            <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
                         </tr>
                     </thead>
                     <tbody class="bg-white divide-y divide-gray-200">
                         <c:choose>
                             <c:when test="${empty promotores}">
-                                <tr>
-                                    <td colspan="5" class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">No hay promotores registrados.</td>
-                                </tr>
+                                <tr> <td colspan="6" class="px-6 py-4 text-center text-sm text-gray-500">No hay promotores registrados.</td> </tr>
                             </c:when>
                             <c:otherwise>
                                 <c:forEach var="p" items="${promotores}">
                                     <tr>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${p.idUsuario}</td>
+                                        <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-500">${p.idUsuario}</td>
                                         <td class="px-6 py-4 whitespace-nowrap">
-                                            <%-- NOMBRE AHORA ES UN ENLACE --%>
-                                            <a href="${pageContext.request.contextPath}/api/admin/promotores/${p.idUsuario}/festivales" class="text-sm font-medium text-indigo-600 hover:text-indigo-900 hover:underline">
-                                                ${p.nombre}
-                                            </a>
+                                            <div class="text-sm font-medium text-gray-900">${p.nombre}</div>
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${p.email}</td>
-                                        <td class="px-6 py-4 whitespace-nowrap">
-                                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${p.estado ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
+                                        <td class="px-6 py-4 whitespace-nowrap text-center">
+                                            <span class="badge ${p.estado ? 'badge-activo' : 'badge-inactivo'}">
                                                 ${p.estado ? 'Activo' : 'Inactivo'}
                                             </span>
                                         </td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                            <%-- Formulario para cambiar estado --%>
+                                        <td class="px-6 py-4 whitespace-nowrap text-center text-sm font-medium">
+                                            <%-- Botón estilo link --%>
+                                            <a href="${pageContext.request.contextPath}/api/admin/promotores/${p.idUsuario}/festivales" class="text-indigo-600 hover:text-indigo-900 underline font-medium" title="Ver festivales de ${p.nombre}">
+                                                Ver Festivales
+                                            </a>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-center text-sm font-medium space-x-2">
                                             <form action="${pageContext.request.contextPath}/api/admin/promotores/cambiar-estado" method="post" class="inline">
                                                 <input type="hidden" name="idPromotor" value="${p.idUsuario}">
-                                                <input type="hidden" name="nuevoEstado" value="${!p.estado}"> <%-- Envía el estado opuesto --%>
-                                                <button type="submit" class="${p.estado ? 'text-yellow-600 hover:text-yellow-900' : 'text-green-600 hover:text-green-900'}">
+                                                <input type="hidden" name="nuevoEstado" value="${!p.estado}">
+                                                <%-- Botón estilo link con color condicional --%>
+                                                <button type="submit" class="${p.estado ? 'text-yellow-600 hover:text-yellow-900' : 'text-green-600 hover:text-green-900'} underline font-semibold" title="${p.estado ? 'Desactivar cuenta' : 'Activar cuenta'}">
                                                     ${p.estado ? 'Desactivar' : 'Activar'}
                                                 </button>
                                             </form>
-                                            <%-- TODO: Añadir enlace para editar promotor (si se implementa) --%>
-                                            <%-- <a href="#" class="text-indigo-600 hover:text-indigo-900 ml-3">Editar</a> --%>
                                         </td>
                                     </tr>
                                 </c:forEach>
@@ -110,6 +135,5 @@
                 </table>
             </div>
         </div>
-
     </body>
 </html>

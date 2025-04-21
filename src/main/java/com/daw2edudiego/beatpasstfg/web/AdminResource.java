@@ -1,10 +1,17 @@
-package com.daw2edudiego.beatpasstfg.web; // O tu paquete web
+/*
+ * Recurso JAX-RS para las funcionalidades del panel de Administración.
+ * Gestiona operaciones sobre Promotores y Festivales que requieren rol ADMIN.
+ * La autenticación y autorización para este panel se basa en Sesión HTTP.
+ * ACTUALIZADO: Añadido endpoint GET para ver festivales de un promotor específico.
+ */
+package com.daw2edudiego.beatpasstfg.web;
 
-// Imports actualizados a jakarta.*
+// Imports DTOs, Excepciones, Modelo, Servicios
 import com.daw2edudiego.beatpasstfg.dto.FestivalDTO;
 import com.daw2edudiego.beatpasstfg.dto.UsuarioCreacionDTO;
 import com.daw2edudiego.beatpasstfg.dto.UsuarioDTO;
 import com.daw2edudiego.beatpasstfg.exception.EmailExistenteException;
+import com.daw2edudiego.beatpasstfg.exception.FestivalNotFoundException;
 import com.daw2edudiego.beatpasstfg.exception.UsuarioNotFoundException;
 import com.daw2edudiego.beatpasstfg.model.RolUsuario;
 import com.daw2edudiego.beatpasstfg.model.EstadoFestival;
@@ -13,34 +20,38 @@ import com.daw2edudiego.beatpasstfg.service.FestivalServiceImpl;
 import com.daw2edudiego.beatpasstfg.service.UsuarioService;
 import com.daw2edudiego.beatpasstfg.service.UsuarioServiceImpl;
 
+// Imports Jakarta EE para Servlets y JAX-RS
 import jakarta.servlet.RequestDispatcher;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
-import jakarta.ws.rs.*;
-import jakarta.ws.rs.core.Context;
-import jakarta.ws.rs.core.MediaType;
-import jakarta.ws.rs.core.Response;
-import jakarta.ws.rs.core.UriInfo;
-// jakarta.validation.Valid si usas Bean Validation
+import jakarta.ws.rs.*; // Anotaciones JAX-RS
+import jakarta.ws.rs.core.Context; // Para inyectar contexto HTTP/Seguridad
+import jakarta.ws.rs.core.MediaType; // Tipos MIME
+import jakarta.ws.rs.core.Response; // Respuesta HTTP
+import jakarta.ws.rs.core.UriInfo; // Información sobre la URI de la petición
+// jakarta.validation.Valid; // Si se usara Bean Validation
 
+// Logging
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+// Clases estándar de Java
 import java.io.IOException;
 import java.net.URI;
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
 import java.util.List;
-import java.util.Optional; // Necesario para Optional
+import java.util.Optional; // Necesario para Optional<UsuarioDTO>
 import java.util.stream.Collectors;
 
 /**
- * Recurso JAX-RS para el panel de Administración. Gestiona Promotores y
- * Festivales (creación y visualización por promotor). Requiere rol ADMIN
- * autenticado mediante Sesión HTTP. ¡ACTUALIZADO para ver festivales de un
- * promotor!
+ * Recurso JAX-RS (@Path) para el panel de Administración (/api/admin). Define
+ * endpoints para gestionar Promotores (crear, listar, cambiar estado) y
+ * Festivales (crear por admin, listar todos, confirmar, cambiar estado, listar
+ * por promotor). La seguridad de estos endpoints se basa en verificar la sesión
+ * HTTP y el rol ADMIN almacenado en ella.
  */
 @Path("/admin")
 public class AdminResource {
@@ -62,7 +73,7 @@ public class AdminResource {
         this.festivalService = new FestivalServiceImpl();
     }
 
-    // --- Métodos de Gestión de Promotores ---
+    // --- Endpoints para Gestión de Promotores por Admin ---
     @GET
     @Path("/promotores/listar")
     @Produces(MediaType.TEXT_HTML)
@@ -74,6 +85,7 @@ public class AdminResource {
         List<UsuarioDTO> listaPromotores = usuarioService.obtenerUsuariosPorRol(RolUsuario.PROMOTOR);
         request.setAttribute("promotores", listaPromotores);
         request.setAttribute("idAdminAutenticado", idAdmin);
+        mostrarMensajeFlash(request);
         RequestDispatcher dispatcher = request.getRequestDispatcher("/WEB-INF/jsp/admin/admin-promotores.jsp");
         dispatcher.forward(request, response);
         return Response.ok().build();
@@ -86,6 +98,54 @@ public class AdminResource {
         return listarPromotores();
     }
 
+    // *** NUEVO MÉTODO ***
+    /**
+     * GET /api/admin/promotores/{idPromotor}/festivales Muestra la lista de
+     * festivales para un promotor específico (vista de admin). Devuelve HTML
+     * (forward a JSP). Requiere rol ADMIN en sesión.
+     */
+    @GET
+    @Path("/promotores/{idPromotor}/festivales")
+    @Produces(MediaType.TEXT_HTML)
+    public Response listarFestivalesDePromotor(@PathParam("idPromotor") Integer idPromotor) throws ServletException, IOException {
+        log.debug("GET /admin/promotores/{}/festivales recibido", idPromotor);
+        Integer idAdmin = verificarAccesoAdmin(request); // Verifica sesión y rol ADMIN
+
+        if (idPromotor == null) {
+            throw new BadRequestException("ID de Promotor no proporcionado.");
+        }
+
+        try {
+            // Obtener datos del promotor para mostrar su nombre
+            UsuarioDTO promotor = usuarioService.obtenerUsuarioPorId(idPromotor)
+                    .filter(u -> u.getRol() == RolUsuario.PROMOTOR) // Asegurarse que es promotor
+                    .orElseThrow(() -> new NotFoundException("Promotor no encontrado con ID: " + idPromotor));
+
+            // Obtener festivales de ese promotor
+            List<FestivalDTO> listaFestivales = festivalService.obtenerFestivalesPorPromotor(idPromotor);
+
+            // Pasar datos al JSP
+            request.setAttribute("promotor", promotor); // Datos del promotor
+            request.setAttribute("festivales", listaFestivales); // Lista de sus festivales
+            request.setAttribute("idAdminAutenticado", idAdmin);
+            mostrarMensajeFlash(request); // Por si hay mensajes de acciones previas
+
+            // Forward al JSP correspondiente
+            RequestDispatcher dispatcher = request.getRequestDispatcher("/WEB-INF/jsp/admin/admin-promotor-festivales.jsp");
+            dispatcher.forward(request, response);
+            return Response.ok().build();
+
+        } catch (NotFoundException e) {
+            // Si el promotor no se encuentra, lanzar 404
+            log.warn("Promotor ID {} no encontrado al intentar listar sus festivales.", idPromotor);
+            throw e;
+        } catch (Exception e) {
+            log.error("Error al obtener festivales para promotor ID {}: {}", idPromotor, e.getMessage(), e);
+            throw new InternalServerErrorException("Error interno al cargar los festivales del promotor.", e);
+        }
+    }
+    // *** FIN NUEVO MÉTODO ***
+
     @GET
     @Path("/dashboard")
     @Produces(MediaType.TEXT_HTML)
@@ -93,7 +153,7 @@ public class AdminResource {
         // ... (sin cambios) ...
         log.debug("GET /admin/dashboard recibido");
         verificarAccesoAdmin(request);
-        log.info("Dashboard no implementado, redirigiendo a lista de promotores.");
+        log.info("Dashboard de Admin no implementado, redirigiendo a lista de promotores.");
         URI listUri = uriInfo.getBaseUriBuilder().path(AdminResource.class).path(AdminResource.class, "listarPromotores").build();
         return Response.seeOther(listUri).build();
     }
@@ -199,7 +259,7 @@ public class AdminResource {
         return Response.seeOther(listUri).build();
     }
 
-    // --- Métodos para Gestión de Festivales por Admin ---
+    // --- Endpoints para Gestión de Festivales por Admin ---
     @GET
     @Path("/festivales/crear")
     @Produces(MediaType.TEXT_HTML)
@@ -234,7 +294,7 @@ public class AdminResource {
             @FormParam("imagenUrl") String imagenUrl,
             @FormParam("idPromotorSeleccionado") Integer idPromotorSeleccionado
     ) throws ServletException, IOException {
-        // ... (lógica try/catch separada sin cambios) ...
+        // ... (sin cambios) ...
         log.info("POST /admin/festivales/guardar (CREACIÓN Admin) recibido para promotor ID: {}", idPromotorSeleccionado);
         Integer idAdmin = verificarAccesoAdmin(request);
         FestivalDTO dto = new FestivalDTO();
@@ -247,7 +307,7 @@ public class AdminResource {
                 throw new IllegalArgumentException("Debe seleccionar un promotor.");
             }
             if (nombre == null || nombre.isBlank()) {
-                throw new IllegalArgumentException("Nombre obligatorio");
+                throw new IllegalArgumentException("Nombre obligatorio.");
             }
             dto.setFechaInicio(LocalDate.parse(fechaInicioStr));
             dto.setFechaFin(LocalDate.parse(fechaFinStr));
@@ -256,35 +316,34 @@ public class AdminResource {
             }
             if (aforoStr != null && !aforoStr.isBlank()) {
                 dto.setAforo(Integer.parseInt(aforoStr));
+                if (dto.getAforo() <= 0) {
+                    throw new IllegalArgumentException("El aforo debe ser un número positivo.");
+                }
             }
             dto.setEstado(EstadoFestival.BORRADOR);
+
+            log.info("Llamando a festivalService.crearFestival para promotor ID: {} por Admin ID: {}", idPromotorSeleccionado, idAdmin);
+            FestivalDTO creado = festivalService.crearFestival(dto, idPromotorSeleccionado);
+            String mensajeExito = "Festival '" + creado.getNombre() + "' creado y asignado al promotor ID " + idPromotorSeleccionado + " con éxito (estado BORRADOR).";
+            HttpSession session = request.getSession(false);
+            if (session != null) {
+                session.setAttribute("mensaje", mensajeExito);
+            }
+            URI listUri = uriInfo.getBaseUriBuilder().path(AdminResource.class).path(AdminResource.class, "listarTodosFestivales").build();
+            log.debug("Redirigiendo a: {}", listUri);
+            return Response.seeOther(listUri).build();
+
         } catch (NumberFormatException e) {
             log.warn("Error de formato numérico al crear festival por admin: {}", e.getMessage());
             forwardToFestivalFormWithError(dto, idAdmin, "Formato de número inválido (ej: en Aforo).");
             return Response.ok().build();
         } catch (DateTimeParseException e) {
             log.warn("Error de formato de fecha al crear festival por admin: {}", e.getMessage());
-            forwardToFestivalFormWithError(dto, idAdmin, "Formato de fecha inválido (use yyyy-MM-dd).");
+            forwardToFestivalFormWithError(dto, idAdmin, "Formato de fecha inválido (use YYYY-MM-DD).");
             return Response.ok().build();
-        } catch (IllegalArgumentException e) {
-            log.warn("Error de validación al crear festival por admin: {}", e.getMessage());
+        } catch (IllegalArgumentException | UsuarioNotFoundException e) {
+            log.warn("Error de validación/negocio al crear festival por admin: {}", e.getMessage());
             forwardToFestivalFormWithError(dto, idAdmin, "Datos inválidos: " + e.getMessage());
-            return Response.ok().build();
-        }
-        try {
-            log.info("Llamando a festivalService.crearFestival para promotor ID: {} por Admin ID: {}", idPromotorSeleccionado, idAdmin);
-            FestivalDTO creado = festivalService.crearFestival(dto, idPromotorSeleccionado);
-            String mensajeExito = "Festival '" + creado.getNombre() + "' creado y asignado al promotor ID " + idPromotorSeleccionado + " con éxito.";
-            HttpSession session = request.getSession(false);
-            if (session != null) {
-                session.setAttribute("mensaje", mensajeExito);
-            }
-            URI listUri = uriInfo.getBaseUriBuilder().path(AdminResource.class).path(AdminResource.class, "listarPromotores").build();
-            log.debug("Redirigiendo a: {}", listUri);
-            return Response.seeOther(listUri).build();
-        } catch (IllegalArgumentException e) {
-            log.warn("Error de negocio al crear festival por admin: {}", e.getMessage());
-            forwardToFestivalFormWithError(dto, idAdmin, e.getMessage());
             return Response.ok().build();
         } catch (Exception e) {
             log.error("Error interno inesperado al crear festival por admin: {}", e.getMessage(), e);
@@ -292,65 +351,173 @@ public class AdminResource {
         }
     }
 
-    // --- NUEVO MÉTODO: Ver Festivales de un Promotor Específico ---
-    /**
-     * Muestra la lista de festivales pertenecientes a un promotor específico.
-     * GET /api/admin/promotores/{id}/festivales
-     */
     @GET
-    @Path("/promotores/{idPromotor}/festivales")
+    @Path("/festivales/listar-todos")
     @Produces(MediaType.TEXT_HTML)
-    public Response listarFestivalesDePromotor(@PathParam("idPromotor") Integer idPromotor)
-            throws ServletException, IOException {
+    public Response listarTodosFestivales(@QueryParam("estado") String estadoFilter) throws ServletException, IOException {
+        // ... (sin cambios) ...
+        log.debug("GET /admin/festivales/listar-todos recibido. Filtro estado: {}", estadoFilter);
+        Integer idAdmin = verificarAccesoAdmin(request);
 
-        log.debug("GET /admin/promotores/{}/festivales recibido", idPromotor);
-        Integer idAdmin = verificarAccesoAdmin(request); // Verifica que el admin esté logueado
+        List<FestivalDTO> listaFestivales;
+        EstadoFestival estadoEnum = null;
+        String errorFiltro = null;
 
         try {
-            // Obtener info del promotor para mostrar su nombre
-            UsuarioDTO promotor = usuarioService.obtenerUsuarioPorId(idPromotor)
-                    .orElseThrow(() -> new WebApplicationException("Promotor no encontrado con ID: " + idPromotor, Response.Status.NOT_FOUND));
-
-            // Verificar que el usuario encontrado sea realmente un promotor (por si acaso)
-            if (promotor.getRol() != RolUsuario.PROMOTOR) {
-                log.warn("Se intentó ver festivales de un usuario que no es promotor. ID: {}", idPromotor);
-                throw new WebApplicationException("El ID proporcionado no corresponde a un promotor.", Response.Status.BAD_REQUEST);
+            if (estadoFilter != null && !estadoFilter.isBlank()) {
+                estadoEnum = EstadoFestival.valueOf(estadoFilter.toUpperCase());
+                log.debug("Filtrando festivales por estado: {}", estadoEnum);
             }
+            listaFestivales = festivalService.obtenerFestivalesPorEstado(estadoEnum);
 
-            log.debug("Listando festivales para Promotor ID: {} (visto por Admin ID: {})", idPromotor, idAdmin);
-            List<FestivalDTO> listaFestivales = festivalService.obtenerFestivalesPorPromotor(idPromotor);
-
-            // Pasar datos a la nueva JSP
-            request.setAttribute("promotor", promotor); // Info del promotor
-            request.setAttribute("festivales", listaFestivales); // Lista de sus festivales
-            request.setAttribute("idAdminAutenticado", idAdmin);
-
-            RequestDispatcher dispatcher = request.getRequestDispatcher("/WEB-INF/jsp/admin/admin-promotor-festivales.jsp");
-            dispatcher.forward(request, response);
-            return Response.ok().build();
-
-        } catch (WebApplicationException wae) {
-            throw wae; // Relanzar excepciones JAX-RS
+        } catch (IllegalArgumentException e) {
+            log.warn("Estado de filtro inválido recibido: {}", estadoFilter);
+            errorFiltro = "Estado de filtro inválido: '" + estadoFilter + "'. Mostrando todos.";
+            listaFestivales = festivalService.obtenerTodosLosFestivales();
         } catch (Exception e) {
-            log.error("Error al listar festivales del promotor ID {}: {}", idPromotor, e.getMessage(), e);
-            throw new ServletException("Error al obtener los festivales del promotor.", e);
+            log.error("Error obteniendo lista de festivales para admin: {}", e.getMessage(), e);
+            request.setAttribute("error", "Error crítico al cargar la lista de festivales.");
+            listaFestivales = List.of();
         }
+
+        request.setAttribute("festivales", listaFestivales);
+        request.setAttribute("idAdminAutenticado", idAdmin);
+        request.setAttribute("estadoFiltro", estadoFilter);
+        request.setAttribute("estadosPosibles", EstadoFestival.values());
+        if (errorFiltro != null) {
+            request.setAttribute("error", errorFiltro);
+        }
+        mostrarMensajeFlash(request);
+
+        RequestDispatcher dispatcher = request.getRequestDispatcher("/WEB-INF/jsp/admin/admin-festivales.jsp");
+        dispatcher.forward(request, response);
+        return Response.ok().build();
+    }
+
+    @POST
+    @Path("/festivales/confirmar")
+    @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
+    public Response confirmarFestival(@FormParam("idFestival") Integer idFestival) {
+        // ... (sin cambios) ...
+        log.info("POST /admin/festivales/confirmar para ID: {}", idFestival);
+        Integer idAdmin = verificarAccesoAdmin(request);
+
+        if (idFestival == null) {
+            throw new BadRequestException("Falta el parámetro idFestival.");
+        }
+
+        String mensajeFlash = null;
+        String errorFlash = null;
+
+        try {
+            log.info("Llamando a festivalService.cambiarEstadoFestival ID {} a PUBLICADO por Admin ID {}", idFestival, idAdmin);
+            FestivalDTO confirmado = festivalService.cambiarEstadoFestival(idFestival, EstadoFestival.PUBLICADO, idAdmin);
+            mensajeFlash = "Festival '" + confirmado.getNombre() + "' confirmado y publicado con éxito.";
+
+        } catch (FestivalNotFoundException | UsuarioNotFoundException e) {
+            log.warn("Error al confirmar festival ID {}: {}", idFestival, e.getMessage());
+            errorFlash = e.getMessage();
+        } catch (SecurityException | IllegalStateException e) {
+            log.warn("Error de negocio/seguridad al confirmar festival ID {}: {}", idFestival, e.getMessage());
+            errorFlash = "No se pudo confirmar el festival: " + e.getMessage();
+        } catch (Exception e) {
+            log.error("Error interno al confirmar festival ID {}: {}", idFestival, e.getMessage(), e);
+            errorFlash = "Error interno al confirmar el festival.";
+        }
+
+        HttpSession session = request.getSession(false);
+        if (session != null) {
+            if (mensajeFlash != null) {
+                session.setAttribute("mensaje", mensajeFlash);
+            }
+            if (errorFlash != null) {
+                session.setAttribute("error", errorFlash);
+            }
+        }
+
+        URI listUri = uriInfo.getBaseUriBuilder().path(AdminResource.class).path(AdminResource.class, "listarTodosFestivales").build();
+        log.debug("Redirigiendo a: {}", listUri);
+        return Response.seeOther(listUri).build();
+    }
+
+    @POST
+    @Path("/festivales/cambiar-estado")
+    @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
+    public Response cambiarEstadoFestivalAdmin(
+            @FormParam("idFestival") Integer idFestival,
+            @FormParam("nuevoEstado") String nuevoEstadoStr) {
+        // ... (sin cambios) ...
+        log.info("POST /admin/festivales/cambiar-estado para ID: {} a {}", idFestival, nuevoEstadoStr);
+        Integer idAdmin = verificarAccesoAdmin(request);
+
+        if (idFestival == null || nuevoEstadoStr == null || nuevoEstadoStr.isBlank()) {
+            throw new BadRequestException("Faltan parámetros requeridos (idFestival, nuevoEstado).");
+        }
+
+        EstadoFestival nuevoEstado;
+        try {
+            nuevoEstado = EstadoFestival.valueOf(nuevoEstadoStr.toUpperCase());
+            if (nuevoEstado == EstadoFestival.BORRADOR || nuevoEstado == EstadoFestival.PUBLICADO) {
+                throw new IllegalArgumentException("Use la acción 'Confirmar' para publicar. No se puede volver a Borrador.");
+            }
+        } catch (IllegalArgumentException e) {
+            log.warn("Valor inválido para 'nuevoEstado' en POST /admin/festivales/cambiar-estado: {}", nuevoEstadoStr);
+            throw new BadRequestException("Valor de 'nuevoEstado' inválido. Use CANCELADO o FINALIZADO.");
+        }
+
+        String mensajeFlash = null;
+        String errorFlash = null;
+
+        try {
+            log.info("Llamando a festivalService.cambiarEstadoFestival ID {} a {} por Admin ID {}", idFestival, nuevoEstado, idAdmin);
+            FestivalDTO actualizado = festivalService.cambiarEstadoFestival(idFestival, nuevoEstado, idAdmin);
+            mensajeFlash = "Estado del festival '" + actualizado.getNombre() + "' cambiado a " + nuevoEstado + " con éxito.";
+
+        } catch (FestivalNotFoundException | UsuarioNotFoundException e) {
+            log.warn("Error al cambiar estado de festival ID {}: {}", idFestival, e.getMessage());
+            errorFlash = e.getMessage();
+        } catch (SecurityException | IllegalStateException e) {
+            log.warn("Error de negocio/seguridad al cambiar estado de festival ID {}: {}", idFestival, e.getMessage());
+            errorFlash = "No se pudo cambiar el estado: " + e.getMessage();
+        } catch (Exception e) {
+            log.error("Error interno al cambiar estado de festival ID {}: {}", idFestival, e.getMessage(), e);
+            errorFlash = "Error interno al cambiar el estado del festival.";
+        }
+
+        HttpSession session = request.getSession(false);
+        if (session != null) {
+            if (mensajeFlash != null) {
+                session.setAttribute("mensaje", mensajeFlash);
+            }
+            if (errorFlash != null) {
+                session.setAttribute("error", errorFlash);
+            }
+        }
+
+        URI listUri = uriInfo.getBaseUriBuilder().path(AdminResource.class).path(AdminResource.class, "listarTodosFestivales").build();
+        log.debug("Redirigiendo a: {}", listUri);
+        return Response.seeOther(listUri).build();
     }
 
     // --- Método Auxiliar de Seguridad ---
     private Integer verificarAccesoAdmin(HttpServletRequest request) {
         // ... (sin cambios) ...
         HttpSession session = request.getSession(false);
+        log.debug("Verificando acceso Admin. ¿Sesión existe?: {}", (session != null));
         if (session == null) {
-            throw new NotAuthorizedException("No hay sesión activa.", Response.status(Response.Status.UNAUTHORIZED).build());
+            log.warn("Intento de acceso a recurso Admin sin sesión activa.");
+            throw new NotAuthorizedException("No hay sesión activa. Por favor, inicie sesión.", Response.status(Response.Status.UNAUTHORIZED).build());
         }
         Integer userId = (Integer) session.getAttribute("userId");
         String userRole = (String) session.getAttribute("userRole");
+        log.debug("Atributos de sesión encontrados: userId={}, userRole={}", userId, userRole);
         if (userId == null || userRole == null) {
+            log.warn("Intento de acceso a recurso Admin con sesión inválida (faltan atributos userId o userRole). Sesión ID: {}", session.getId());
             session.invalidate();
-            throw new NotAuthorizedException("Sesión inválida.", Response.status(Response.Status.UNAUTHORIZED).build());
+            throw new NotAuthorizedException("Sesión inválida. Por favor, inicie sesión de nuevo.", Response.status(Response.Status.UNAUTHORIZED).build());
         }
         if (!RolUsuario.ADMIN.name().equals(userRole)) {
+            log.warn("Usuario ID {} con rol {} intentó acceder a recurso de Admin.", userId, userRole);
             throw new ForbiddenException("Acceso denegado. Se requiere rol ADMIN.");
         }
         log.debug("Acceso permitido para admin ID: {}", userId);
@@ -384,4 +551,18 @@ public class AdminResource {
         dispatcher.forward(request, response);
     }
 
+    private void mostrarMensajeFlash(HttpServletRequest request) {
+        // ... (sin cambios) ...
+        HttpSession session = request.getSession(false);
+        if (session != null) {
+            if (session.getAttribute("mensaje") != null) {
+                request.setAttribute("mensajeExito", session.getAttribute("mensaje"));
+                session.removeAttribute("mensaje");
+            }
+            if (session.getAttribute("error") != null) {
+                request.setAttribute("error", session.getAttribute("error"));
+                session.removeAttribute("error");
+            }
+        }
+    }
 }

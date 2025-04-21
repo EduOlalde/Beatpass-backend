@@ -1,140 +1,191 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
-<%@ taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c" %>
-<%@ taglib uri="http://java.sun.com/jsp/jstl/fmt" prefix="fmt" %>
+<%@ taglib uri="jakarta.tags.core" prefix="c" %>
+<%@ taglib uri="jakarta.tags.fmt" prefix="fmt" %>
 
 <!DOCTYPE html>
 <html lang="es">
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <%-- Determinar si es creación o edición para el título --%>
-    <c:set var="esNuevo" value="${empty festival.idFestival or festival.idFestival == 0}"/>
-    <title>${esNuevo ? 'Crear Nuevo' : 'Editar'} Festival - Beatpass Promotor</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        body {
-            font-family: 'Inter', sans-serif;
-        }
-        label {
-            margin-top: 0.5rem;
-            display: block;
-        }
-        input[type=text], input[type=date], input[type=number], textarea, select {
-            width: 100%;
-            padding: 0.5rem;
-            border: 1px solid #ccc;
-            border-radius: 0.25rem;
-            margin-top: 0.25rem;
-        }
-        .error-message {
-            color: red;
-            font-size: 0.875rem;
-            margin-top: 0.25rem;
-        }
-    </style>
-</head>
-<body class="bg-gray-100 text-gray-800">
+        <c:set var="esNuevo" value="${empty festival.idFestival or festival.idFestival == 0}"/>
+        <title>${esNuevo ? 'Crear Nuevo' : 'Editar'} Festival - Beatpass Promotor</title>
+        <script src="https://cdn.tailwindcss.com"></script>
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+        <style>
+            /* Estilos generales que NO usan @apply */
+            body {
+                font-family: 'Inter', sans-serif;
+            }
+            textarea {
+                min-height: 8rem;
+            }
+            /* Clases para .badge definidas aquí porque no usan @apply */
+            .badge {
+                padding: 0.1em 0.6em;
+                border-radius: 9999px;
+                font-size: 0.75rem;
+                font-weight: 600;
+                display: inline-flex;
+                align-items: center;
+            }
+            .badge-borrador {
+                background-color: #FEF3C7;
+                color: #92400E;
+            }
+            .badge-publicado {
+                background-color: #D1FAE5;
+                color: #065F46;
+            }
+            .badge-cancelado {
+                background-color: #FEE2E2;
+                color: #991B1B;
+            }
+            .badge-finalizado {
+                background-color: #E5E7EB;
+                color: #374151;
+            }
+            /* Las clases para label, input, select, textarea, required-star y estado-display se aplicarán directamente */
+        </style>
+    </head>
+    <body class="bg-gray-100 text-gray-800">
 
-    <div class="container mx-auto p-4 md:p-8">
-        <h1 class="text-3xl font-bold mb-6 text-blue-700">
-            ${esNuevo ? 'Crear Nuevo Festival' : 'Editar Festival: '}
-            <c:if test="${not esNuevo}"><span class="text-gray-700">${festival.nombre}</span></c:if>
-        </h1>
+        <div class="container mx-auto p-4 md:p-8 max-w-4xl">
 
-        <%-- Mostrar mensajes de error si existen --%>
-        <c:if test="${not empty requestScope.error}">
-            <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
-                <span class="block sm:inline">${requestScope.error}</span>
-            </div>
-        </c:if>
-
-        <form action="${pageContext.request.contextPath}/promotor/festivales/" method="post" class="bg-white p-6 rounded-lg shadow-md">
-            <%-- Campo oculto para indicar la acción al servlet --%>
-            <input type="hidden" name="action" value="guardar">
-            <%-- Campo oculto para el ID si estamos editando --%>
-            <input type="hidden" name="idFestival" value="${festival.idFestival}">
-
-            <div>
-                <label for="nombre" class="block text-sm font-medium text-gray-700">Nombre del Festival <span class="text-red-500">*</span></label>
-                <input type="text" id="nombre" name="nombre" value="${festival.nombre}" required
-                       class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
-            </div>
-
-            <div class="mt-4">
-                <label for="descripcion" class="block text-sm font-medium text-gray-700">Descripción</label>
-                <textarea id="descripcion" name="descripcion" rows="4"
-                          class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">${festival.descripcion}</textarea>
-            </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                <div>
-                    <label for="fechaInicio" class="block text-sm font-medium text-gray-700">Fecha de Inicio <span class="text-red-500">*</span></label>
-                    <input type="date" id="fechaInicio" name="fechaInicio" value="${festival.fechaInicio}" required
-                           class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+            <%-- Cabecera del Panel de Promotor --%>
+            <header class="flex flex-col sm:flex-row justify-between items-center mb-6 pb-4 border-b border-gray-300">
+                <h1 class="text-3xl font-bold text-indigo-700 mb-4 sm:mb-0">
+                    ${esNuevo ? 'Crear Nuevo Festival' : 'Editar Festival'}
+                </h1>
+                <div class="flex items-center space-x-4">
+                    <c:if test="${not empty sessionScope.userName}">
+                        <span class="text-sm text-gray-600">Hola, ${sessionScope.userName}</span>
+                    </c:if>
+                    <form action="${pageContext.request.contextPath}/logout" method="post" class="inline">
+                        <button type="submit" class="text-sm text-gray-500 hover:text-red-600 underline">Cerrar Sesión</button>
+                    </form>
                 </div>
-                <div>
-                    <label for="fechaFin" class="block text-sm font-medium text-gray-700">Fecha de Fin <span class="text-red-500">*</span></label>
-                    <input type="date" id="fechaFin" name="fechaFin" value="${festival.fechaFin}" required
-                           class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
-                </div>
+            </header>
+
+            <h2 class="text-2xl font-semibold text-gray-700 mb-5">
+                ${esNuevo ? 'Introduce los datos del nuevo festival' : 'Modifica los datos de:'}
+                <c:if test="${not esNuevo}"><span class="font-bold text-gray-800"> ${festival.nombre}</span></c:if>
+                </h2>
+
+                <div class="mb-4">
+                    <a href="${pageContext.request.contextPath}/api/promotor/festivales" class="text-indigo-600 hover:text-indigo-800 text-sm">&larr; Volver a Mis Festivales</a>
             </div>
 
-            <div class="mt-4">
-                <label for="ubicacion" class="block text-sm font-medium text-gray-700">Ubicación</label>
-                <input type="text" id="ubicacion" name="ubicacion" value="${festival.ubicacion}"
-                       class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
-            </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                <div>
-                    <label for="aforo" class="block text-sm font-medium text-gray-700">Aforo (Opcional)</label>
-                    <input type="number" id="aforo" name="aforo" value="${festival.aforo}" min="0"
-                           class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
-                </div>
-                <div>
-                    <label for="imagenUrl" class="block text-sm font-medium text-gray-700">URL de la Imagen (Opcional)</label>
-                    <input type="text" id="imagenUrl" name="imagenUrl" value="${festival.imagenUrl}" placeholder="https://ejemplo.com/imagen.jpg"
-                           class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
-                </div>
-            </div>
-
-            <c:if test="${not esNuevo}"> <%-- Solo mostrar opción de estado si se está editando --%>
-                <div class="mt-4">
-                    <label for="estado" class="block text-sm font-medium text-gray-700">Estado</label>
-                    <select id="estado" name="estado"
-                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
-                        <c:forEach var="e" items="${estadosPosibles}">
-                            <option value="${e}" ${festival.estado == e ? 'selected' : ''}>${e}</option>
-                        </c:forEach>
-                    </select>
+            <c:if test="${not empty requestScope.error}">
+                <div class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-4 rounded-md shadow-sm" role="alert">
+                    <p class="font-bold">Error</p>
+                    <p>${requestScope.error}</p>
                 </div>
             </c:if>
 
-            <div class="mt-6 flex justify-end space-x-3">
-                <a href="${pageContext.request.contextPath}/promotor/festivales/listar"
-                   class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded shadow">
-                    Cancelar
-                </a>
-                <button type="submit"
-                        class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded shadow">
-                    ${esNuevo ? 'Crear Festival' : 'Guardar Cambios'}
-                </button>
-            </div>
+            <form action="${pageContext.request.contextPath}/api/promotor/festivales/guardar" method="post" class="bg-white p-6 md:p-8 rounded-lg shadow-md space-y-4">
+                <input type="hidden" name="idFestival" value="${festival.idFestival}">
 
-        </form>
+                <div>
+                    <%-- Aplicar clases directamente a label --%>
+                    <label for="nombre" class="block text-sm font-medium text-gray-700 mb-1">
+                        Nombre del Festival <span class="text-red-500 ml-1">*</span> <%-- Clase para asterisco --%>
+                    </label>
+                    <%-- Aplicar clases directamente a input --%>
+                    <input type="text" id="nombre" name="nombre" value="${festival.nombre}" required maxlength="100"
+                           class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-500 focus:ring-opacity-50 sm:text-sm">
+                </div>
 
-        <%-- Sección para gestionar Tipos de Entrada (a implementar) --%>
-        <c:if test="${not esNuevo}">
-            <div class="mt-10 pt-6 border-t border-gray-300">
-                <h2 class="text-2xl font-bold mb-4 text-gray-700">Tipos de Entrada</h2>
-                <p class="text-gray-500">Aquí se mostraría la lista de tipos de entrada para este festival y opciones para añadir/editar/eliminar.</p>
-                <%-- TODO: Implementar lógica para mostrar y gestionar tipos de entrada --%>
-                <%-- <a href="#" class="bg-green-500 hover:bg-green-600 text-white font-bold py-1 px-3 rounded text-sm shadow">Añadir Tipo Entrada</a> --%>
-                <%-- <table class="min-w-full ..."> ... </table> --%>
-            </div>
-        </c:if>
+                <div>
+                    <label for="descripcion" class="block text-sm font-medium text-gray-700 mb-1">Descripción</label>
+                    <%-- Aplicar clases directamente a textarea --%>
+                    <textarea id="descripcion" name="descripcion" rows="4"
+                              class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-500 focus:ring-opacity-50 sm:text-sm">${festival.descripcion}</textarea>
+                </div>
 
-    </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="fechaInicio" class="block text-sm font-medium text-gray-700 mb-1">
+                            Fecha de Inicio <span class="text-red-500 ml-1">*</span>
+                        </label>
+                        <input type="date" id="fechaInicio" name="fechaInicio" value="${festival.fechaInicio}" required
+                               class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-500 focus:ring-opacity-50 sm:text-sm">
+                    </div>
+                    <div>
+                        <label for="fechaFin" class="block text-sm font-medium text-gray-700 mb-1">
+                            Fecha de Fin <span class="text-red-500 ml-1">*</span>
+                        </label>
+                        <input type="date" id="fechaFin" name="fechaFin" value="${festival.fechaFin}" required
+                               class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-500 focus:ring-opacity-50 sm:text-sm">
+                    </div>
+                </div>
 
-</body>
+                <div>
+                    <label for="ubicacion" class="block text-sm font-medium text-gray-700 mb-1">Ubicación</label>
+                    <input type="text" id="ubicacion" name="ubicacion" value="${festival.ubicacion}" maxlength="255"
+                           class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-500 focus:ring-opacity-50 sm:text-sm">
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="aforo" class="block text-sm font-medium text-gray-700 mb-1">Aforo (Opcional)</label>
+                        <input type="number" id="aforo" name="aforo" value="${festival.aforo}" min="1" placeholder="Ej: 5000"
+                               class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-500 focus:ring-opacity-50 sm:text-sm">
+                    </div>
+                    <div>
+                        <label for="imagenUrl" class="block text-sm font-medium text-gray-700 mb-1">URL de la Imagen (Opcional)</label>
+                        <input type="text" id="imagenUrl" name="imagenUrl" value="${festival.imagenUrl}" placeholder="https://ejemplo.com/imagen.jpg" maxlength="255"
+                               class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-500 focus:ring-opacity-50 sm:text-sm">
+                    </div>
+                </div>
+
+                <%-- Estado (Solo mostrar) --%>
+                <c:if test="${not esNuevo}">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Estado Actual</label>
+                        <%-- Aplicar clases directamente al párrafo que muestra el estado --%>
+                        <p class="mt-1 block w-full rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm font-medium text-gray-700">
+                            <span class="badge
+                                  <c:choose>
+                                      <c:when test="${festival.estado == 'PUBLICADO'}">badge-publicado</c:when>
+                                      <c:when test="${festival.estado == 'BORRADOR'}">badge-borrador</c:when>
+                                      <c:when test="${festival.estado == 'CANCELADO'}">badge-cancelado</c:when>
+                                      <c:when test="${festival.estado == 'FINALIZADO'}">badge-finalizado</c:when>
+                                      <c:otherwise>bg-gray-100 text-gray-800</c:otherwise>
+                                  </c:choose>
+                                  ">
+                                ${festival.estado}
+                            </span>
+                        </p>
+                        <p class="mt-1 text-xs text-gray-500">El estado solo puede ser modificado por un administrador.</p>
+                    </div>
+                </c:if>
+
+                <div class="mt-6 flex justify-end space-x-3 pt-4 border-t border-gray-200">
+                    <a href="${pageContext.request.contextPath}/api/promotor/festivales"
+                       class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-2 px-4 rounded shadow transition duration-150 ease-in-out">
+                        Cancelar
+                    </a>
+                    <button type="submit"
+                            class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded shadow transition duration-150 ease-in-out">
+                        ${esNuevo ? 'Crear Solicitud de Festival' : 'Guardar Cambios'}
+                    </button>
+                </div>
+
+            </form>
+
+            <c:if test="${not esNuevo}">
+                <div class="mt-10 pt-6 border-t border-gray-300">
+                    <h3 class="text-xl font-semibold mb-4 text-gray-700">Tipos de Entrada</h3>
+                    <div class="bg-white p-6 rounded-lg shadow-md">
+                        <p class="text-gray-600 mb-4">Aquí podrás añadir, ver y editar los diferentes tipos de entrada para tu festival (General, VIP, Abono, etc.).</p>
+                        <p class="text-sm text-gray-500 italic">(Funcionalidad de gestión de entradas pendiente de implementación)</p>
+                    </div>
+                </div>
+            </c:if>
+
+        </div>
+
+    </body>
 </html>

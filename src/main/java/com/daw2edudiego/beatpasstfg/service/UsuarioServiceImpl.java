@@ -7,6 +7,7 @@ package com.daw2edudiego.beatpasstfg.service;
 import com.daw2edudiego.beatpasstfg.dto.UsuarioCreacionDTO;
 import com.daw2edudiego.beatpasstfg.dto.UsuarioDTO;
 import com.daw2edudiego.beatpasstfg.exception.EmailExistenteException;
+import com.daw2edudiego.beatpasstfg.exception.PasswordIncorrectoException;
 import com.daw2edudiego.beatpasstfg.exception.UsuarioNotFoundException;
 import com.daw2edudiego.beatpasstfg.model.RolUsuario;
 import com.daw2edudiego.beatpasstfg.model.Usuario;
@@ -65,6 +66,7 @@ public class UsuarioServiceImpl implements UsuarioService {
             log.debug("Hasheando contraseña para el usuario {}", ucDTO.getEmail());
             String hashedPassword = PasswordUtil.hashPassword(ucDTO.getPassword());
             usuario.setPassword(hashedPassword);
+            usuario.setCambioPasswordRequerido(true); 
             log.debug("Guardando entidad Usuario");
             usuario = usuarioRepository.save(em, usuario);
             tx.commit();
@@ -248,6 +250,138 @@ public class UsuarioServiceImpl implements UsuarioService {
             if (em != null && em.isOpen()) {
                 em.close();
                 log.trace("EntityManager cerrado para eliminarUsuario.");
+            }
+        }
+    }
+
+    @Override
+    public void cambiarPassword(Integer userId, String passwordAntigua, String passwordNueva) {
+        log.info("Iniciando cambio de contraseña para usuario ID: {}", userId);
+        // Validación básica de entrada
+        if (userId == null || passwordAntigua == null || passwordAntigua.isEmpty() || passwordNueva == null || passwordNueva.isEmpty()) {
+            throw new IllegalArgumentException("ID de usuario, contraseña antigua y nueva son obligatorios.");
+        }
+        if (passwordNueva.length() < 8) { // Misma validación que al crear
+            throw new IllegalArgumentException("La nueva contraseña debe tener al menos 8 caracteres.");
+        }
+        if (passwordAntigua.equals(passwordNueva)) {
+            throw new IllegalArgumentException("La nueva contraseña no puede ser igual a la anterior.");
+        }
+
+        EntityManager em = null;
+        EntityTransaction tx = null;
+        try {
+            em = JPAUtil.createEntityManager();
+            tx = em.getTransaction();
+            tx.begin();
+
+            log.debug("Buscando usuario con ID: {}", userId);
+            Usuario usuario = usuarioRepository.findById(em, userId)
+                    .orElseThrow(() -> new UsuarioNotFoundException("Usuario no encontrado con ID: " + userId));
+
+            log.debug("Verificando contraseña antigua para usuario ID: {}", userId);
+            if (!PasswordUtil.checkPassword(passwordAntigua, usuario.getPassword())) {
+                log.warn("Intento de cambio de contraseña fallido (contraseña antigua incorrecta) para usuario ID: {}", userId);
+                throw new PasswordIncorrectoException("La contraseña actual introducida es incorrecta.");
+            }
+
+            log.debug("Hasheando nueva contraseña para usuario ID: {}", userId);
+            String nuevoHash = PasswordUtil.hashPassword(passwordNueva);
+
+            // Actualizar contraseña y marcar cambio como realizado
+            usuario.setPassword(nuevoHash);
+            usuario.setCambioPasswordRequerido(false); // <-- Marcar como ya cambiado
+
+            log.debug("Guardando cambios de contraseña y estado para usuario ID: {}", userId);
+            usuarioRepository.save(em, usuario); // merge
+
+            tx.commit();
+            log.info("Contraseña cambiada exitosamente para usuario ID: {}", userId);
+
+        } catch (Exception e) {
+            log.error("Error durante el cambio de contraseña para usuario ID {}: {}", userId, e.getMessage(), e);
+            if (tx != null && tx.isActive()) {
+                log.warn("Realizando rollback de la transacción de cambio de contraseña.");
+                tx.rollback();
+            }
+            // Relanzar excepciones específicas o una genérica
+            if (e instanceof UsuarioNotFoundException || e instanceof PasswordIncorrectoException || e instanceof IllegalArgumentException) {
+                throw e;
+            }
+            throw new RuntimeException("Error al cambiar la contraseña: " + e.getMessage(), e);
+        } finally {
+            if (em != null && em.isOpen()) {
+                em.close();
+                log.trace("EntityManager cerrado para cambiarPassword.");
+            }
+        }
+    }
+    
+    /**
+     * Cambia la contraseña de un usuario SIN verificar la contraseña antigua
+     * y marca el flag 'cambioPasswordRequerido' a false.
+     * Usado para el flujo de cambio obligatorio en el primer login.
+     *
+     * @param userId        ID del usuario a modificar.
+     * @param passwordNueva La nueva contraseña en texto plano.
+     * @throws UsuarioNotFoundException Si el usuario no se encuentra.
+     * @throws IllegalArgumentException Si la nueva contraseña es inválida.
+     * @throws RuntimeException Si ocurre un error durante la transacción.
+     */
+    @Override 
+    public void cambiarPasswordYMarcarActualizada(Integer userId, String passwordNueva) {
+        log.info("Iniciando cambio de contraseña obligatorio para usuario ID: {}", userId);
+        // Validación básica de entrada
+        if (userId == null || passwordNueva == null || passwordNueva.isEmpty()) {
+            throw new IllegalArgumentException("ID de usuario y nueva contraseña son obligatorios.");
+        }
+        // Puedes añadir aquí la misma validación de complejidad que usas en otros sitios
+        // if (passwordNueva.length() < 8) {
+        //     throw new IllegalArgumentException("La nueva contraseña debe tener al menos 8 caracteres.");
+        // }
+
+        EntityManager em = null;
+        EntityTransaction tx = null;
+        try {
+            em = JPAUtil.createEntityManager();
+            tx = em.getTransaction();
+            tx.begin();
+
+            log.debug("Buscando usuario con ID: {}", userId);
+            Usuario usuario = usuarioRepository.findById(em, userId)
+                    .orElseThrow(() -> {
+                         log.warn("Intento de cambio obligatorio a usuario no existente ID: {}", userId);
+                         return new UsuarioNotFoundException("Usuario no encontrado con ID: " + userId);
+                     });
+
+            log.debug("Hasheando nueva contraseña para usuario ID: {}", userId);
+            String nuevoHash = PasswordUtil.hashPassword(passwordNueva);
+
+            // Actualizar contraseña y marcar cambio como realizado
+            usuario.setPassword(nuevoHash);
+            usuario.setCambioPasswordRequerido(false); // <-- Marcar como ya cambiado
+
+            log.debug("Guardando cambios de contraseña y estado para usuario ID: {}", userId);
+            usuarioRepository.save(em, usuario); // merge
+
+            tx.commit();
+            log.info("Contraseña cambiada (obligatorio) exitosamente para usuario ID: {}", userId);
+
+        } catch (Exception e) {
+            log.error("Error durante el cambio de contraseña obligatorio para usuario ID {}: {}", userId, e.getMessage(), e);
+            if (tx != null && tx.isActive()) {
+                log.warn("Realizando rollback de la transacción de cambio de contraseña obligatorio.");
+                tx.rollback();
+            }
+            // Relanzar excepciones específicas o una genérica
+            if (e instanceof UsuarioNotFoundException || e instanceof IllegalArgumentException) {
+                throw e;
+            }
+            throw new RuntimeException("Error al cambiar la contraseña obligatoria: " + e.getMessage(), e);
+        } finally {
+            if (em != null && em.isOpen()) {
+                em.close();
+                log.trace("EntityManager cerrado para cambiarPasswordYMarcarActualizada.");
             }
         }
     }

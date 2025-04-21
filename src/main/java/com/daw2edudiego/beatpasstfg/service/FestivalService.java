@@ -4,8 +4,8 @@
  */
 package com.daw2edudiego.beatpasstfg.service;
 
-import com.daw2edudiego.beatpasstfg.dto.FestivalDTO; 
-import com.daw2edudiego.beatpasstfg.exception.FestivalNotFoundException; 
+import com.daw2edudiego.beatpasstfg.dto.FestivalDTO;
+import com.daw2edudiego.beatpasstfg.exception.FestivalNotFoundException;
 import com.daw2edudiego.beatpasstfg.model.EstadoFestival;
 
 import java.time.LocalDate;
@@ -88,5 +88,23 @@ public interface FestivalService {
      * @throws // SecurityException o similar si el promotor no tiene permiso.
      */
     FestivalDTO cambiarEstadoFestival(Integer idFestival, EstadoFestival nuevoEstado, Integer idPromotor);
+
+    /**
+     * Obtiene una lista de TODOS los festivales registrados en el sistema.
+     * Utilizado principalmente por el Administrador.
+     *
+     * @return Lista de DTOs de todos los festivales.
+     */
+    List<FestivalDTO> obtenerTodosLosFestivales();
+
+    /**
+     * Obtiene una lista de festivales filtrando por estado. Utilizado
+     * principalmente por el Administrador.
+     *
+     * @param estado El estado por el cual filtrar (puede ser null para no
+     * filtrar por estado).
+     * @return Lista de DTOs de los festivales que coinciden.
+     */
+    List<FestivalDTO> obtenerFestivalesPorEstado(EstadoFestival estado);
 
 }

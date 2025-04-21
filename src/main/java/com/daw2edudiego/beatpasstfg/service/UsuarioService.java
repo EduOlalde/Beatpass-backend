@@ -84,5 +84,32 @@ public interface UsuarioService {
      */
     void eliminarUsuario(Integer id);
 
-    // Podrían añadirse métodos para actualizar perfil, cambiar contraseña, etc.
+    /**
+     * Permite a un usuario cambiar su propia contraseña. Verifica la contraseña
+     * antigua antes de establecer la nueva y marca el cambio como realizado
+     * (pone cambioPasswordRequerido a false).
+     *
+     * @param userId ID del usuario que cambia la contraseña.
+     * @param passwordAntigua La contraseña actual del usuario.
+     * @param passwordNueva La nueva contraseña deseada.
+     * @throws UsuarioNotFoundException si el userId no existe.
+     * @throws PasswordIncorrectoException si la passwordAntigua no coincide.
+     * @throws IllegalArgumentException si la passwordNueva es inválida (ej: muy
+     * corta).
+     */
+    void cambiarPassword(Integer userId, String passwordAntigua, String passwordNueva); // <-- NUEVO MÉTODO
+
+    /**
+     * Cambia la contraseña de un usuario SIN verificar la contraseña antigua y
+     * marca el flag 'cambioPasswordRequerido' a false. Usado para el flujo de
+     * cambio obligatorio en el primer login.
+     *
+     * @param userId ID del usuario a modificar.
+     * @param passwordNueva La nueva contraseña en texto plano.
+     * @throws UsuarioNotFoundException Si el usuario no se encuentra.
+     * @throws IllegalArgumentException Si la nueva contraseña es inválida.
+     * @throws RuntimeException Si ocurre un error durante la transacción.
+     */
+    void cambiarPasswordYMarcarActualizada(Integer userId, String passwordNueva);
+
 }
