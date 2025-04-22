@@ -43,7 +43,6 @@
                 border-radius: 0.25rem;
                 font-size: 0.8rem;
             }
-            /* Clases aplicadas directamente */
         </style>
     </head>
     <body class="bg-gray-100 text-gray-800">
@@ -133,10 +132,9 @@
                                             <c:if test="${not empty ea.fechaAsignacion}"> ${ea.fechaAsignacion} </c:if>
                                             </td>
                                             <td class="px-4 py-4 whitespace-nowrap text-center text-sm">
-                                            <%-- Acciones Condicionales --%>
-                                            <div class="flex flex-col items-center space-y-1 md:space-y-2"> <%-- Ajuste espacio vertical --%>
+                                                <div class="flex flex-col items-center space-y-1 md:space-y-2">
+                                                <%-- Formulario Nominar (si no está nominada y está activa) --%>
                                                 <c:if test="${empty ea.idAsistente and ea.estado == 'ACTIVA'}">
-                                                    <%-- Formulario para Nominar por Email/Nombre --%>
                                                     <form action="${pageContext.request.contextPath}/api/promotor/entradas-asignadas/${ea.idEntradaAsignada}/nominar" method="post" class="inline-block"
                                                           onsubmit="return confirm('Nominar entrada ID ${ea.idEntradaAsignada} a ' + document.getElementById('emailAsistente_${ea.idEntradaAsignada}').value + '?');">
                                                         <div class="flex flex-col space-y-1 text-left">
@@ -151,10 +149,9 @@
                                                     </form>
                                                 </c:if>
 
-                                                <%-- *** NUEVO: Formulario para Asociar Pulsera *** --%>
-                                                <c:if test="${not empty ea.idAsistente and ea.estado == 'ACTIVA'}"> <%-- Solo si está nominada y activa --%>
-                                                    <%-- TODO: Necesitamos saber si YA tiene pulsera para no mostrar el form. Esto requeriría añadir info al DTO o hacer otra consulta.
-                                                             Por ahora, el servicio evitará la re-asociación, pero el form se mostrará siempre. --%>
+                                                <%-- Formulario Asociar Pulsera (si está nominada y activa) --%>
+                                                <%-- TODO: Ocultar si ya tiene pulsera asociada (requiere info en DTO) --%>
+                                                <c:if test="${not empty ea.idAsistente and ea.estado == 'ACTIVA'}">
                                                     <form action="${pageContext.request.contextPath}/api/pos/asociar-pulsera" method="post" class="inline-block mt-1"
                                                           onsubmit="return confirm('Asociar pulsera a entrada ID ${ea.idEntradaAsignada}?');">
                                                         <input type="hidden" name="idEntradaAsignada" value="${ea.idEntradaAsignada}">
@@ -165,9 +162,9 @@
                                                         </div>
                                                     </form>
                                                 </c:if>
-                                                <%-- ********************************************** --%>
 
-                                                <div class="flex justify-center space-x-2 mt-1"> <%-- Contenedor para otros botones --%>
+                                                <%-- Otros botones (Modificar, Cancelar) --%>
+                                                <div class="flex justify-center space-x-2 mt-1">
                                                     <c:if test="${not empty ea.idAsistente and ea.estado == 'ACTIVA'}">
                                                         <button type="button" class="text-yellow-600 hover:text-yellow-900 underline font-semibold p-0 bg-transparent shadow-none text-xs" onclick="alert('Modificar nominación entrada ID ${ea.idEntradaAsignada} - Pendiente');">Modificar</button>
                                                     </c:if>
@@ -187,7 +184,7 @@
                     </tbody>
                 </table>
             </div>
-            <p class="text-xs text-gray-500 mt-2 italic">Nota: Para nominar, introduce email y nombre. Para asociar pulsera, introduce su UID (la entrada debe estar nominada).</p>
+            <p class="text-xs text-gray-500 mt-2 italic">Nota: Para nominar, introduce email y nombre. Para asociar pulsera, introduce su UID (la entrada debe estar nominada y activa).</p>
 
         </div>
 

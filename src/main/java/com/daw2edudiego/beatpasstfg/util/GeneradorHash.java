@@ -4,8 +4,6 @@
  */
 package com.daw2edudiego.beatpasstfg.util; 
 
-// Asegúrate de que PasswordUtil está en el mismo paquete o es importable
-// import com.daw2edudiego.beatpasstfg.util.PasswordUtil;
 public class GeneradorHash {
 
     public static void main(String[] args) {
@@ -26,7 +24,7 @@ public class GeneradorHash {
             System.out.println("HASH GENERADO (BCrypt):");
             System.out.println(hashGenerado);
             System.out.println("---------------------------------------------------------------");
-            System.out.println("Copia y pega este hash en la columna 'password' de tu tabla 'usuarios' para el usuario ADMIN.");
+            System.out.println("Copia y pega este hash en la columna 'password' de tu tabla 'usuarios' para el usuario.");
 
         } catch (IllegalArgumentException e) {
             System.err.println("Error: " + e.getMessage());

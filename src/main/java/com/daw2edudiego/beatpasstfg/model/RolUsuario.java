@@ -9,5 +9,6 @@ package com.daw2edudiego.beatpasstfg.model;
  */
 public enum RolUsuario {
     ADMIN,
-    PROMOTOR
+    PROMOTOR,
+    CAJERO
 }

@@ -5,19 +5,49 @@
          version="5.0">
     <display-name>BeatpassTFG</display-name>
 
+    <filter>
+        <filter-name>CorsFilter</filter-name>
+        <filter-class>org.eclipse.jetty.servlets.CrossOriginFilter</filter-class>
+        <init-param>
+            <param-name>allowedOrigins</param-name>
+            <param-value>http://localhost:5500,http://127.0.0.1:5500</param-value>
+        </init-param>
+        <init-param>
+            <param-name>allowedMethods</param-name>
+            <param-value>GET,POST,PUT,DELETE,OPTIONS,HEAD</param-value>
+        </init-param>
+        <init-param>
+            <param-name>allowedHeaders</param-name>
+            <param-value>Origin,Content-Type,Accept,Authorization,X-Requested-With</param-value>
+        </init-param>
+        <init-param>
+            <param-name>allowCredentials</param-name>
+            <param-value>true</param-value>
+        </init-param>
+         <init-param>
+            <param-name>exposedHeaders</param-name>
+            <param-value>Content-Length,Content-Range</param-value>
+        </init-param>
+        <async-supported>true</async-supported>
+    </filter>
+
+    <filter-mapping>
+        <filter-name>CorsFilter</filter-name>
+        <url-pattern>/api/*</url-pattern>
+    </filter-mapping>
     <servlet>
         <servlet-name>Jersey REST Service</servlet-name>
         <servlet-class>org.glassfish.jersey.servlet.ServletContainer</servlet-class>
         <init-param>
-            <param-name>jakarta.ws.rs.Application</param-name> 
-            <param-value>com.daw2edudiego.beatpasstfg.config.ApplicationConfig</param-value> 
+            <param-name>jakarta.ws.rs.Application</param-name>
+            <param-value>com.daw2edudiego.beatpasstfg.config.ApplicationConfig</param-value>
         </init-param>
-        <load-on-startup>1</load-on-startup> 
+        <load-on-startup>1</load-on-startup>
     </servlet>
 
     <servlet-mapping>
         <servlet-name>Jersey REST Service</servlet-name>
-        <url-pattern>/api/*</url-pattern> 
+        <url-pattern>/api/*</url-pattern>
     </servlet-mapping>
 
     <session-config>
@@ -25,7 +55,7 @@
     </session-config>
 
     <welcome-file-list>
-        <welcome-file>login.jsp</welcome-file> 
+        <welcome-file>login.jsp</welcome-file>
     </welcome-file-list>
 
 </web-app>

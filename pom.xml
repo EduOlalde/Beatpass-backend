@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0"
-         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+             xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>com.daw2edudiego</groupId>
@@ -16,21 +16,22 @@
         <maven.compiler.source>21</maven.compiler.source>
         <maven.compiler.target>21</maven.compiler.target>
 
-        <jakartaee.api.version>9.1.0</jakartaee.api.version> 
-        <jstl.api.version>3.0.0</jstl.api.version> 
-        <jstl.impl.version>3.0.1</jstl.impl.version> 
-        <hibernate.version>6.4.4.Final</hibernate.version> 
-        <hibernate.validator.version>8.0.1.Final</hibernate.validator.version> 
-        <jersey.version>3.1.5</jersey.version> 
-        <mysql.connector.version>8.0.33</mysql.connector.version> 
+        <jakartaee.api.version>9.1.0</jakartaee.api.version>
+        <jstl.api.version>3.0.0</jstl.api.version>
+        <jstl.impl.version>3.0.1</jstl.impl.version>
+        <hibernate.version>6.4.4.Final</hibernate.version>
+        <hibernate.validator.version>8.0.1.Final</hibernate.validator.version>
+        <jersey.version>3.1.5</jersey.version>
+        <mysql.connector.version>8.0.33</mysql.connector.version>
         <slf4j.version>2.0.7</slf4j.version>
         <logback.version>1.4.7</logback.version>
         <jbcrypt.version>0.4</jbcrypt.version>
         <junit.version>5.9.2</junit.version>
-
+        <jjwt.version>0.11.5</jjwt.version>
+        <zxing.version>3.5.3</zxing.version>
+        <jetty.version>11.0.20</jetty.version> 
         <maven.compiler.plugin.version>3.12.1</maven.compiler.plugin.version>
         <maven.war.plugin.version>3.3.2</maven.war.plugin.version>
-
     </properties>
 
     <dependencies>
@@ -40,7 +41,6 @@
             <version>${jakartaee.api.version}</version>
             <scope>provided</scope>
         </dependency>
-
         <dependency>
             <groupId>jakarta.servlet.jsp.jstl</groupId>
             <artifactId>jakarta.servlet.jsp.jstl-api</artifactId>
@@ -52,13 +52,11 @@
             <version>${jstl.impl.version}</version>
             <scope>runtime</scope>
         </dependency>
-
         <dependency>
             <groupId>org.hibernate.orm</groupId>
             <artifactId>hibernate-core</artifactId>
             <version>${hibernate.version}</version>
         </dependency>
-
         <dependency>
             <groupId>org.hibernate.validator</groupId>
             <artifactId>hibernate-validator</artifactId>
@@ -66,12 +64,10 @@
         </dependency>
         <dependency>
             <groupId>org.glassfish</groupId>
-            <artifactId>jakarta.el</artifactId> 
-            <version>4.0.2</version> 
-            <scope>runtime</scope> 
+            <artifactId>jakarta.el</artifactId>
+            <version>4.0.2</version>
+            <scope>runtime</scope>
         </dependency>
-
-
         <dependency>
             <groupId>org.glassfish.jersey.containers</groupId>
             <artifactId>jersey-container-servlet</artifactId>
@@ -93,7 +89,6 @@
             <version>${mysql.connector.version}</version>
             <scope>runtime</scope>
         </dependency>
-
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-api</artifactId>
@@ -105,13 +100,11 @@
             <version>${logback.version}</version>
             <scope>runtime</scope>
         </dependency>
-
         <dependency>
             <groupId>org.mindrot</groupId>
             <artifactId>jbcrypt</artifactId>
             <version>${jbcrypt.version}</version>
         </dependency>
-
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter-api</artifactId>
@@ -127,35 +120,40 @@
         <dependency>
             <groupId>io.jsonwebtoken</groupId>
             <artifactId>jjwt-api</artifactId>
-            <version>0.11.5</version>
+            <version>${jjwt.version}</version>
         </dependency>
         <dependency>
             <groupId>io.jsonwebtoken</groupId>
             <artifactId>jjwt-impl</artifactId>
-            <version>0.11.5</version>
+            <version>${jjwt.version}</version>
             <scope>runtime</scope>
         </dependency>
         <dependency>
             <groupId>io.jsonwebtoken</groupId>
             <artifactId>jjwt-jackson</artifactId>
-            <version>0.11.5</version>
+            <version>${jjwt.version}</version>
             <scope>runtime</scope>
-        </dependency>   
-         
-        <dependency>
-            <groupId>com.google.zxing</groupId>
-            <artifactId>core</artifactId>
-            <version>3.5.3</version> 
         </dependency>
         <dependency>
             <groupId>com.google.zxing</groupId>
-            <artifactId>javase</artifactId> 
-            <version>3.5.3</version>
+            <artifactId>core</artifactId>
+            <version>${zxing.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.google.zxing</groupId>
+            <artifactId>javase</artifactId>
+            <version>${zxing.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.eclipse.jetty</groupId>
+            <artifactId>jetty-servlets</artifactId>
+            <version>${jetty.version}</version>
         </dependency>
     </dependencies>
 
     <build>
-        <finalName>BeatpassTFG</finalName> 
+        <finalName>BeatpassTFG</finalName>
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -178,3 +176,4 @@
     </build>
 
 </project>
+    

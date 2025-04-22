@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Apr 21, 2025 at 09:55 PM
+-- Generation Time: Apr 22, 2025 at 11:24 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -20,6 +20,9 @@ SET time_zone = "+00:00";
 --
 -- Database: `beatpasstfg`
 --
+
+CREATE DATABASE IF NOT EXISTS beatpasstfg;
+USE beatpasstfg;
 
 -- --------------------------------------------------------
 
@@ -354,7 +357,7 @@ CREATE TABLE `usuarios` (
   `nombre` varchar(100) NOT NULL,
   `email` varchar(100) NOT NULL,
   `password` varchar(255) NOT NULL,
-  `rol` enum('ADMIN','PROMOTOR') NOT NULL,
+  `rol` enum('ADMIN','PROMOTOR','CAJERO') NOT NULL,
   `estado` tinyint(1) DEFAULT 1,
   `cambio_password_requerido` tinyint(1) NOT NULL DEFAULT 1,
   `fecha_creacion` datetime DEFAULT current_timestamp(),
@@ -366,9 +369,10 @@ CREATE TABLE `usuarios` (
 --
 
 INSERT INTO `usuarios` (`id_usuario`, `nombre`, `email`, `password`, `rol`, `estado`, `cambio_password_requerido`, `fecha_creacion`, `fecha_modificacion`) VALUES
-(1, 'admin', 'admin@beatpass.com', '$2a$12$Ojk4J1J6IfqH58cHvIC3Fum2qEFhPGQY4Plw5hga0AiNRIbaRgkDa', 'ADMIN', 1, 0, '2025-04-18 17:11:43', '2025-04-21 13:57:12'),
+(1, 'admin', 'admin@beatpass.com', '$2a$12$UzQ4wCJ/9WC9qTvXU3Rwg.BQdF1Ct8sGwA7eg1OCycSiiqExwwZPe', 'ADMIN', 1, 0, '2025-04-18 17:11:43', '2025-04-22 23:23:01'),
 (2, 'Promotor1', 'promotor1@beatpass.com', '$2a$12$/gvki8tXKm6Wxx8Pl2v0.ex1y79kYi2w0mIQf2XcImmOQM15Pdgmm', 'PROMOTOR', 1, 0, '2025-04-21 00:25:40', '2025-04-21 13:45:07'),
-(3, 'Promotor2', 'promotor2@beatpass.com', '$2a$12$oa7doPOTayjcTQzoy7l27O/zn29zGOGUpIIS05YrZpNi3//2zOoO6', 'PROMOTOR', 1, 1, '2025-04-21 00:40:11', '2025-04-21 00:41:08');
+(3, 'Promotor2', 'promotor2@beatpass.com', '$2a$12$oa7doPOTayjcTQzoy7l27O/zn29zGOGUpIIS05YrZpNi3//2zOoO6', 'PROMOTOR', 1, 1, '2025-04-21 00:40:11', '2025-04-21 00:41:08'),
+(4, 'Punto Venta 1', 'cajero@beatpass.com', '$2a$12$UzQ4wCJ/9WC9qTvXU3Rwg.BQdF1Ct8sGwA7eg1OCycSiiqExwwZPe', 'CAJERO', 1, 0, '2025-04-22 23:23:49', '2025-04-22 23:23:49');
 
 --
 -- Indexes for dumped tables
@@ -526,7 +530,7 @@ ALTER TABLE `recargas`
 -- AUTO_INCREMENT for table `usuarios`
 --
 ALTER TABLE `usuarios`
-  MODIFY `id_usuario` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+  MODIFY `id_usuario` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 
 --
 -- Constraints for dumped tables
