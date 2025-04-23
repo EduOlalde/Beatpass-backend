@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulador POS - Beatpass</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            line-height: 1.6;
+            padding: 20px;
+            max-width: 800px;
+            margin: auto;
+        }
+
+        .container {
+            margin-bottom: 20px;
+            padding: 15px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        input[type="text"],
+        input[type="password"],
+        input[type="number"],
+        input[type="email"],
+        select {
+            width: calc(100% - 22px);
+            padding: 8px;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+        }
+
+        button {
+            padding: 10px 15px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            margin-right: 5px;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        #resultArea {
+            margin-top: 20px;
+            padding: 15px;
+            border: 1px solid #eee;
+            background-color: #f9f9f9;
+            border-radius: 5px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        .error {
+            color: red;
+            font-weight: bold;
+        }
+
+        .success {
+            color: green;
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>Simulador Punto de Venta (POS) - Beatpass</h1>
+
+    <div class="container">
+        <h2>Login Cajero</h2>
+        <form id="loginForm">
+            <label for="email">Email:</label>
+            <input type="email" id="email" name="email" value="cajero@beatpass.com" required>
+
+            <label for="password">Password:</label>
+            <input type="password" id="password" name="password" value="pass" required>
+
+            <button type="submit">Login</button>
+        </form>
+        <p>Estado: <span id="loginStatus">No autenticado</span></p>
+        <button id="logoutButton" style="display: none;">Logout</button>
+    </div>
+
+    <div id="posOperations" style="display: none;">
+
+        <div class="container">
+            <h2>Consultar Datos Pulsera</h2>
+            <form id="checkBalanceForm">
+                <label for="checkUid">Código UID Pulsera:</label>
+                <input type="text" id="checkUid" name="codigoUid" required>
+                <button type="submit">Consultar</button>
+            </form>
+        </div>
+
+        <div class="container">
+            <h2>Recargar Pulsera</h2>
+            <form id="rechargeForm">
+                <label for="rechargeUid">Código UID Pulsera:</label>
+                <input type="text" id="rechargeUid" name="codigoUid" required>
+
+                <label for="rechargeAmount">Monto (€):</label>
+                <input type="number" id="rechargeAmount" name="monto" step="0.01" min="0.01" required>
+
+                <label for="rechargeMethod">Método de Pago:</label>
+                <select id="rechargeMethod" name="metodoPago">
+                    <option value="Efectivo">Efectivo</option>
+                    <option value="Tarjeta">Tarjeta</option>
+                    <option value="Otro">Otro</option>
+                </select>
+
+                <button type="submit">Recargar</button>
+            </form>
+        </div>
+
+        <div class="container">
+            <h2>Registrar Consumo</h2>
+            <form id="consumeForm">
+                <label for="consumeUid">Código UID Pulsera:</label>
+                <input type="text" id="consumeUid" name="codigoUid" required>
+
+                <label for="consumeAmount">Monto (€):</label>
+                <input type="number" id="consumeAmount" name="monto" step="0.01" min="0.01" required>
+
+                <label for="consumeDescription">Descripción:</label>
+                <input type="text" id="consumeDescription" name="descripcion" value="Bebida" required>
+
+                <label for="consumeFestivalId">ID Festival:</label>
+                <input type="number" id="consumeFestivalId" name="idFestival" required> <label for="consumePosId">ID
+                    Punto Venta (Opcional):</label>
+                <input type="number" id="consumePosId" name="idPuntoVenta">
+
+                <button type="submit">Consumir</button>
+            </form>
+        </div>
+
+        <div class="container">
+            <h2>Asociar Pulsera a Entrada</h2>
+            <form id="associateForm">
+                <label for="associateUid">Código UID Pulsera (Nueva o Existente):</label>
+                <input type="text" id="associateUid" name="codigoUid" required>
+
+                <label for="associateTicketId">ID Entrada Asignada:</label>
+                <input type="number" id="associateTicketId" name="idEntradaAsignada" required>
+
+                <button type="submit">Asociar</button>
+            </form>
+        </div>
+
+    </div>
+
+    <div class="container">
+        <h2>Resultados API</h2>
+        <div id="resultArea">Esperando acciones...</div>
+    </div>
+
+    <script src="pos_simulator.js"></script>
+</body>
+
+</html>

@@ -37,6 +37,15 @@ public class AuthenticationFilter implements ContainerRequestFilter {
 
     @Override
     public void filter(ContainerRequestContext requestContext) throws IOException {
+        
+        // Permitir solicitudes OPTIONS para CORS preflight sin verificar token
+        if ("OPTIONS".equalsIgnoreCase(requestContext.getMethod())) {
+            log.debug("OPTIONS request received for path: {}. Allowing for CORS preflight.", requestContext.getUriInfo().getPath());
+            // Abortamos el procesamiento de este filtro y devolvemos OK.
+            requestContext.abortWith(Response.ok().build());
+            return; 
+        }
+        
         String path = requestContext.getUriInfo().getPath();
         log.debug("AuthenticationFilter interceptando path: {}", path);
 

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0"
-             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-             xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>com.daw2edudiego</groupId>
@@ -29,7 +29,8 @@
         <junit.version>5.9.2</junit.version>
         <jjwt.version>0.11.5</jjwt.version>
         <zxing.version>3.5.3</zxing.version>
-        <jetty.version>11.0.20</jetty.version> 
+        <jetty.version>11.0.20</jetty.version>
+        <jackson.jsr310.version>2.15.2</jackson.jsr310.version>
         <maven.compiler.plugin.version>3.12.1</maven.compiler.plugin.version>
         <maven.war.plugin.version>3.3.2</maven.war.plugin.version>
     </properties>
@@ -82,6 +83,12 @@
             <groupId>org.glassfish.jersey.media</groupId>
             <artifactId>jersey-media-json-jackson</artifactId>
             <version>${jersey.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.fasterxml.jackson.datatype</groupId>
+            <artifactId>jackson-datatype-jsr310</artifactId>
+            <version>${jackson.jsr310.version}</version> 
         </dependency>
         <dependency>
             <groupId>com.mysql</groupId>
@@ -176,4 +183,3 @@
     </build>
 
 </project>
-    
