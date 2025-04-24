@@ -5,6 +5,7 @@ import com.daw2edudiego.beatpasstfg.exception.*;
 import com.daw2edudiego.beatpasstfg.model.*;
 import com.daw2edudiego.beatpasstfg.repository.*;
 import com.daw2edudiego.beatpasstfg.util.JPAUtil;
+import com.daw2edudiego.beatpasstfg.util.QRCodeUtil; // Importar la utilidad QR
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityTransaction;
 import jakarta.persistence.LockModeType; // Para bloqueo pesimista
@@ -20,7 +21,14 @@ import org.slf4j.LoggerFactory;
  * Implementación de la interfaz {@link EntradaAsignadaService}. Gestiona la
  * lógica de negocio para las entradas asignadas, incluyendo nominación,
  * cancelación y consulta, asegurando la integridad de los datos y los permisos.
+ * <p>
+ * Al mapear entidades a DTOs, genera la imagen del código QR como URL de datos
+ * Base64 utilizando {@link QRCodeUtil}.
+ * </p>
  *
+ * @see EntradaAsignadaService
+ * @see EntradaAsignadaRepository
+ * @see QRCodeUtil
  * @author Eduardo Olalde
  */
 public class EntradaAsignadaServiceImpl implements EntradaAsignadaService {
@@ -298,8 +306,8 @@ public class EntradaAsignadaServiceImpl implements EntradaAsignadaService {
      * través de las relaciones. Lanza IllegalStateException si hay
      * inconsistencias en los datos que impiden encontrar el festival.
      *
-     * @param ea La EntradaAsignada.
-     * @return El Festival asociado.
+     * @param ea La EntradaAsignada. No debe ser {@code null}.
+     * @return El Festival asociado. Nunca {@code null}.
      * @throws IllegalStateException si no se puede determinar el festival.
      */
     private Festival obtenerFestivalDesdeEntradaAsignada(EntradaAsignada ea) {
@@ -315,8 +323,8 @@ public class EntradaAsignadaServiceImpl implements EntradaAsignadaService {
      * Obtiene la entidad Entrada original asociada a una EntradaAsignada. Lanza
      * IllegalStateException si hay inconsistencias.
      *
-     * @param ea La EntradaAsignada.
-     * @return La Entrada original.
+     * @param ea La EntradaAsignada. No debe ser {@code null}.
+     * @return La Entrada original. Nunca {@code null}.
      * @throws IllegalStateException si no se puede determinar la entrada
      * original.
      */
@@ -333,8 +341,9 @@ public class EntradaAsignadaServiceImpl implements EntradaAsignadaService {
      * Verifica que el promotor dado sea el propietario del festival. Lanza
      * SecurityException si no lo es.
      *
-     * @param festival El festival a verificar.
-     * @param idPromotor El ID del promotor que se espera sea el propietario.
+     * @param festival El festival a verificar. No debe ser {@code null}.
+     * @param idPromotor El ID del promotor que se espera sea el propietario. No
+     * debe ser {@code null}.
      * @throws SecurityException si el promotor no es el propietario.
      * @throws IllegalArgumentException si festival o idPromotor son nulos, o si
      * el festival no tiene promotor asociado.
@@ -418,9 +427,10 @@ public class EntradaAsignadaServiceImpl implements EntradaAsignadaService {
                 || e instanceof UsuarioNotFoundException
                 || e instanceof FestivalNoPublicadoException
                 || e instanceof StockInsuficienteException
-                || e instanceof EntradaAsignadaNotFoundException
-                || // Añadida
-                e instanceof IllegalArgumentException
+                || e instanceof EntradaAsignadaNotFoundException // Añadida
+                || e instanceof EntradaAsignadaNoNominadaException // Añadida
+                || e instanceof PulseraYaAsociadaException // Añadida
+                || e instanceof IllegalArgumentException
                 || e instanceof SecurityException
                 || e instanceof IllegalStateException
                 || e instanceof PersistenceException
@@ -433,18 +443,19 @@ public class EntradaAsignadaServiceImpl implements EntradaAsignadaService {
     /**
      * Mapea una entidad EntradaAsignada a su correspondiente
      * EntradaAsignadaDTO. Incluye información del asistente, tipo de entrada
-     * original y festival.
+     * original, festival y la URL de datos de la imagen QR.
      *
-     * @param ea La entidad EntradaAsignada.
-     * @return El EntradaAsignadaDTO mapeado, o null si la entidad es null.
+     * @param ea La entidad EntradaAsignada. No debe ser {@code null}.
+     * @return El EntradaAsignadaDTO mapeado.
      */
     private EntradaAsignadaDTO mapEntityToDto(EntradaAsignada ea) {
         if (ea == null) {
+            // Devolver null o un DTO vacío según preferencia. Devolver null aquí.
             return null;
         }
         EntradaAsignadaDTO dto = new EntradaAsignadaDTO();
         dto.setIdEntradaAsignada(ea.getIdEntradaAsignada());
-        dto.setCodigoQr(ea.getCodigoQr()); // Considerar truncar o no enviar completo
+        dto.setCodigoQr(ea.getCodigoQr()); // Mantener el contenido textual
         dto.setEstado(ea.getEstado());
         dto.setFechaAsignacion(ea.getFechaAsignacion());
         dto.setFechaUso(ea.getFechaUso());
@@ -471,6 +482,20 @@ public class EntradaAsignadaServiceImpl implements EntradaAsignadaService {
         if (ea.getPulseraAsociada() != null) {
             dto.setIdPulseraAsociada(ea.getPulseraAsociada().getIdPulsera());
             dto.setCodigoUidPulsera(ea.getPulseraAsociada().getCodigoUid());
+        }
+
+        // *** Generar y establecer la imagen QR en Base64 ***
+        if (ea.getCodigoQr() != null && !ea.getCodigoQr().isBlank()) {
+            // Definir tamaño deseado para la imagen QR
+            int qrWidth = 100; // Ancho en píxeles
+            int qrHeight = 100; // Alto en píxeles
+            String imageDataUrl = QRCodeUtil.generarQrComoBase64(ea.getCodigoQr(), qrWidth, qrHeight);
+            if (imageDataUrl != null) {
+                dto.setQrCodeImageDataUrl(imageDataUrl);
+            } else {
+                // Si falla la generación, el campo quedará null (JsonInclude lo omitirá)
+                log.warn("No se pudo generar la imagen QR para la entrada asignada ID {}", ea.getIdEntradaAsignada());
+            }
         }
 
         return dto;
