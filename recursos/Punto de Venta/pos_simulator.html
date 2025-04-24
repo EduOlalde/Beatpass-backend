@@ -12,18 +12,30 @@
             padding: 20px;
             max-width: 800px;
             margin: auto;
+            background-color: #f4f4f4; /* Fondo ligeramente gris */
         }
 
         .container {
             margin-bottom: 20px;
-            padding: 15px;
-            border: 1px solid #ccc;
-            border-radius: 5px;
+            padding: 20px; /* Más padding */
+            border: 1px solid #ddd; /* Borde más suave */
+            border-radius: 8px; /* Bordes más redondeados */
+            background-color: #fff; /* Fondo blanco */
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1); /* Sombra suave */
+        }
+
+        h1, h2 {
+            color: #333; /* Color oscuro para títulos */
+            border-bottom: 2px solid #007bff; /* Línea azul bajo títulos */
+            padding-bottom: 5px;
+            margin-bottom: 15px;
         }
 
         label {
             display: block;
-            margin-bottom: 5px;
+            margin-bottom: 8px; /* Más espacio bajo labels */
+            font-weight: bold; /* Labels en negrita */
+            color: #555; /* Color gris oscuro para labels */
         }
 
         input[type="text"],
@@ -31,26 +43,37 @@
         input[type="number"],
         input[type="email"],
         select {
-            width: calc(100% - 22px);
-            padding: 8px;
-            margin-bottom: 10px;
+            width: calc(100% - 22px); /* Ajuste para padding y borde */
+            padding: 10px; /* Inputs más altos */
+            margin-bottom: 15px; /* Más espacio bajo inputs */
             border: 1px solid #ccc;
-            border-radius: 3px;
+            border-radius: 4px; /* Bordes redondeados para inputs */
+            box-sizing: border-box; /* Incluir padding y borde en el width */
         }
 
         button {
-            padding: 10px 15px;
+            padding: 10px 20px; /* Botones más anchos */
             background-color: #007bff;
             color: white;
             border: none;
-            border-radius: 3px;
+            border-radius: 4px;
             cursor: pointer;
             margin-right: 5px;
+            transition: background-color 0.2s ease; /* Transición suave */
+            font-size: 1em; /* Tamaño de fuente */
         }
 
         button:hover {
             background-color: #0056b3;
         }
+
+        #logoutButton {
+            background-color: #dc3545; /* Botón logout rojo */
+        }
+        #logoutButton:hover {
+            background-color: #c82333;
+        }
+
 
         #resultArea {
             margin-top: 20px;
@@ -58,18 +81,42 @@
             border: 1px solid #eee;
             background-color: #f9f9f9;
             border-radius: 5px;
-            white-space: pre-wrap;
-            word-wrap: break-word;
+            white-space: pre-wrap; /* Mantiene formato pero ajusta línea */
+            word-wrap: break-word; /* Asegura que palabras largas no desborden */
+            font-family: monospace; /* Fuente monoespaciada para JSON */
+            min-height: 50px; /* Altura mínima */
         }
 
         .error {
-            color: red;
+            color: #dc3545; /* Rojo para errores */
             font-weight: bold;
+            background-color: #f8d7da; /* Fondo rosa claro */
+            border: 1px solid #f5c6cb;
+            padding: 10px;
+            border-radius: 4px;
         }
 
         .success {
-            color: green;
+            color: #28a745; /* Verde para éxito */
             font-weight: bold;
+            background-color: #d4edda; /* Fondo verde claro */
+            border: 1px solid #c3e6cb;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        #loginStatus {
+             font-weight: bold;
+             padding: 5px 10px;
+             border-radius: 4px;
+             display: inline-block; /* Para que el fondo se ajuste */
+        }
+        #loginStatus.success {
+             background-color: #d4edda;
+             color: #155724;
+        }
+         #loginStatus.error {
+             background-color: #f8d7da;
+             color: #721c24;
         }
     </style>
 </head>
@@ -89,17 +136,18 @@
 
             <button type="submit">Login</button>
         </form>
-        <p>Estado: <span id="loginStatus">No autenticado</span></p>
+        <p>Estado: <span id="loginStatus" class="error">No autenticado</span></p>
         <button id="logoutButton" style="display: none;">Logout</button>
     </div>
 
+    <%-- Sección de operaciones POS, inicialmente oculta --%>
     <div id="posOperations" style="display: none;">
 
         <div class="container">
             <h2>Consultar Datos Pulsera</h2>
             <form id="checkBalanceForm">
                 <label for="checkUid">Código UID Pulsera:</label>
-                <input type="text" id="checkUid" name="codigoUid" required>
+                <input type="text" id="checkUid" name="codigoUid" placeholder="Ej: A1B2C3D4" required>
                 <button type="submit">Consultar</button>
             </form>
         </div>
@@ -108,10 +156,10 @@
             <h2>Recargar Pulsera</h2>
             <form id="rechargeForm">
                 <label for="rechargeUid">Código UID Pulsera:</label>
-                <input type="text" id="rechargeUid" name="codigoUid" required>
+                <input type="text" id="rechargeUid" name="codigoUid" placeholder="Ej: A1B2C3D4" required>
 
                 <label for="rechargeAmount">Monto (€):</label>
-                <input type="number" id="rechargeAmount" name="monto" step="0.01" min="0.01" required>
+                <input type="number" id="rechargeAmount" name="monto" step="0.01" min="0.01" placeholder="Ej: 20.50" required>
 
                 <label for="rechargeMethod">Método de Pago:</label>
                 <select id="rechargeMethod" name="metodoPago">
@@ -128,37 +176,23 @@
             <h2>Registrar Consumo</h2>
             <form id="consumeForm">
                 <label for="consumeUid">Código UID Pulsera:</label>
-                <input type="text" id="consumeUid" name="codigoUid" required>
+                <input type="text" id="consumeUid" name="codigoUid" placeholder="Ej: A1B2C3D4" required>
 
                 <label for="consumeAmount">Monto (€):</label>
-                <input type="number" id="consumeAmount" name="monto" step="0.01" min="0.01" required>
+                <input type="number" id="consumeAmount" name="monto" step="0.01" min="0.01" placeholder="Ej: 5.00" required>
 
                 <label for="consumeDescription">Descripción:</label>
                 <input type="text" id="consumeDescription" name="descripcion" value="Bebida" required>
 
                 <label for="consumeFestivalId">ID Festival:</label>
-                <input type="number" id="consumeFestivalId" name="idFestival" required> <label for="consumePosId">ID
-                    Punto Venta (Opcional):</label>
-                <input type="number" id="consumePosId" name="idPuntoVenta">
+                <input type="number" id="consumeFestivalId" name="idFestival" placeholder="ID del festival actual" required>
+
+                <label for="consumePosId">ID Punto Venta (Opcional):</label>
+                <input type="number" id="consumePosId" name="idPuntoVenta" placeholder="ID de este POS (si aplica)">
 
                 <button type="submit">Consumir</button>
             </form>
-        </div>
-
-        <!-- 
-        <div class="container">
-            <h2>Asociar Pulsera a Entrada</h2>
-            <form id="associateForm">
-                <label for="associateUid">Código UID Pulsera (Nueva o Existente):</label>
-                <input type="text" id="associateUid" name="codigoUid" required>
-
-                <label for="associateTicketId">ID Entrada Asignada:</label>
-                <input type="number" id="associateTicketId" name="idEntradaAsignada" required>
-
-                <button type="submit">Asociar</button>
-            </form>
-        </div>
-        -->
+        </div>       
 
     </div>
 

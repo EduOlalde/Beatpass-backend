@@ -11,7 +11,7 @@ const resultArea = document.getElementById('resultArea');
 const checkBalanceForm = document.getElementById('checkBalanceForm');
 const rechargeForm = document.getElementById('rechargeForm');
 const consumeForm = document.getElementById('consumeForm');
-const associateForm = document.getElementById('associateForm');
+// const associateForm = document.getElementById('associateForm'); // ELIMINADO: Ya no se usa este formulario
 
 // --- Funciones Auxiliares ---
 
@@ -117,8 +117,8 @@ async function fetchWithAuth(url, options = {}) {
             if (!headers['Content-Type']) {
                 headers['Content-Type'] = 'application/x-www-form-urlencoded';
             }
-        } else if (typeof options.body === 'object') {
-            // **NUEVO**: Si es un objeto JS (no FormData/URLSearchParams), asumir JSON
+        } else if (typeof options.body === 'object' && !(options.body instanceof FormData)) { // Asegurarse que no sea FormData
+            // Si es un objeto JS (no FormData/URLSearchParams), asumir JSON
             if (!headers['Content-Type']) {
                 headers['Content-Type'] = 'application/json';
             }
@@ -149,7 +149,6 @@ async function fetchWithAuth(url, options = {}) {
             try {
                 responseData = await response.json(); // Intentar parsear como JSON
             } catch (jsonError) {
-                // Si falla el parseo JSON (ej. respuesta vacía o mal formada)
                 console.warn("Fallo al parsear JSON de la respuesta, obteniendo texto.", jsonError);
                 try {
                     responseData = await response.text(); // Intentar obtener como texto
@@ -186,7 +185,10 @@ async function fetchWithAuth(url, options = {}) {
         console.error('Error en fetchWithAuth:', error);
         // Mostrar error de red o el error ya lanzado por !response.ok
         if (!error.message.startsWith("Error ")) { // Evitar duplicar mensajes de error HTTP
-            displayResult(`Error de red o fetch: ${error.message}`, true);
+            // Solo mostrar si no fue un error HTTP ya mostrado
+            if (!error.message.includes("HTTP Error")) {
+                displayResult(`Error de red o fetch: ${error.message}`, true);
+            }
         }
         throw error; // Re-lanzar para que la función llamante sepa que falló
     }
@@ -201,7 +203,7 @@ async function handleLogin(event) {
     const email = formData.get('email');
     const password = formData.get('password');
 
-    // **CAMBIO**: Crear objeto para enviar como JSON
+    // Crear objeto para enviar como JSON
     const credentials = {
         email: email,
         password: password
@@ -211,7 +213,6 @@ async function handleLogin(event) {
 
     try {
         // Llamar a fetchWithAuth, pasando el objeto 'credentials' en el body
-        // fetchWithAuth lo convertirá a JSON y establecerá Content-Type: application/json
         const data = await fetchWithAuth(`${API_BASE_URL}/auth/login`, {
             method: 'POST',
             body: credentials // Enviar el objeto directamente
@@ -222,10 +223,9 @@ async function handleLogin(event) {
             storeToken(data.token); // Almacenar el token
             displayResult("Login exitoso.", false); // Mostrar éxito
         } else {
-            // Caso raro: respuesta 200 OK pero sin token
             console.error("Respuesta de login inesperada (sin token):", data);
             displayResult("Error: Respuesta de login inesperada del servidor.", true);
-            clearToken(); // Asegurarse de limpiar cualquier token previo
+            clearToken();
         }
     } catch (error) {
         // El error ya se mostró en displayResult dentro de fetchWithAuth
@@ -275,7 +275,7 @@ async function handleRecharge(event) {
             body: body // Enviar como form-urlencoded
         });
         displayResult(data, false); // Mostrar respuesta (DTO de pulsera actualizada)
-        // Podrías limpiar el formulario aquí si quieres: rechargeForm.reset();
+        rechargeForm.reset(); // Limpiar formulario tras éxito
     } catch (error) {
         // El error ya fue mostrado
     }
@@ -303,32 +303,18 @@ async function handleConsume(event) {
             body: body // Enviar como form-urlencoded
         });
         displayResult(data, false); // Mostrar respuesta (DTO de pulsera actualizada)
-        // Podrías limpiar el formulario aquí: consumeForm.reset();
+        consumeForm.reset(); // Limpiar formulario tras éxito
     } catch (error) {
         // El error ya fue mostrado
     }
 }
 
-/** Maneja el formulario de asociación de pulsera a entrada */
+/**
+ * ELIMINADO: Maneja el formulario de asociación de pulsera a entrada
 async function handleAssociate(event) {
-    event.preventDefault();
-    const formData = new FormData(associateForm);
-    // Crear cuerpo como URLSearchParams
-    const body = new URLSearchParams(formData);
-
-    displayResult(`Intentando asociar pulsera UID: ${formData.get('codigoUid')}...`);
-    try {
-        // Llamada POST al endpoint de asociación
-        const data = await fetchWithAuth(`${API_BASE_URL}/pos/asociar-pulsera`, {
-            method: 'POST',
-            body: body // Enviar como form-urlencoded
-        });
-        displayResult(data, false); // Mostrar respuesta (DTO de pulsera asociada)
-        // Podrías limpiar el formulario aquí: associateForm.reset();
-    } catch (error) {
-        // El error ya fue mostrado
-    }
+    // ... código eliminado ...
 }
+*/
 
 
 // --- Inicialización ---
@@ -342,5 +328,5 @@ document.addEventListener('DOMContentLoaded', () => {
     checkBalanceForm.addEventListener('submit', handleCheckBalance);
     rechargeForm.addEventListener('submit', handleRecharge);
     consumeForm.addEventListener('submit', handleConsume);
-    associateForm.addEventListener('submit', handleAssociate);
+    // associateForm.addEventListener('submit', handleAssociate); // ELIMINADO: Listener ya no necesario
 });

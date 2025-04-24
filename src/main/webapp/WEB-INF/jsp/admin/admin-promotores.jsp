@@ -25,12 +25,12 @@
                 align-items: center;
             }
             .badge-activo {
-                background-color: #D1FAE5;
-                color: #065F46;
+                background-color: #D1FAE5; /* Tailwind green-100 */
+                color: #065F46; /* Tailwind green-800 */
             }
             .badge-inactivo {
-                background-color: #FEE2E2;
-                color: #991B1B;
+                background-color: #FEE2E2; /* Tailwind red-100 */
+                color: #991B1B; /* Tailwind red-800 */
             }
         </style>
     </head>
@@ -45,15 +45,13 @@
 
             <h2 class="text-2xl font-semibold text-gray-700 mb-5">Gestionar Promotores</h2>
 
+            <%-- *** CAMBIO: Eliminado el botón "+ Crear Festival (Asignar)" *** --%>
             <div class="flex justify-end mb-4 space-x-3">
                 <a href="${pageContext.request.contextPath}/api/admin/promotores/crear"
                    class="font-bold py-2 px-4 rounded shadow transition duration-150 ease-in-out bg-purple-600 hover:bg-purple-700 text-white">
                     + Añadir Nuevo Promotor
                 </a>
-                <a href="${pageContext.request.contextPath}/api/admin/festivales/crear"
-                   class="font-bold py-2 px-4 rounded shadow transition duration-150 ease-in-out bg-green-600 hover:bg-green-700 text-white">
-                    + Crear Festival (Asignar)
-                </a>
+                <%-- Botón Crear Festival eliminado --%>
             </div>
 
             <%-- Mensajes flash --%>
@@ -70,7 +68,6 @@
 
             <%-- Tabla de Promotores --%>
             <div class="bg-white shadow-md rounded-lg overflow-x-auto">
-                <%-- ... (contenido de la tabla sin cambios) ... --%>
                 <table class="min-w-full divide-y divide-gray-200">
                     <thead class="bg-gray-50">
                         <tr>
@@ -106,10 +103,13 @@
                                             </a>
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap text-center text-sm font-medium space-x-2">
+                                            <%-- Enlace para editar datos del promotor --%>
+                                            <a href="${pageContext.request.contextPath}/api/admin/promotores/${p.idUsuario}/editar" class="text-yellow-600 hover:text-yellow-900 underline font-semibold" title="Editar datos de ${p.nombre}">Editar</a>
+                                            <%-- Formulario para activar/desactivar --%>
                                             <form action="${pageContext.request.contextPath}/api/admin/promotores/cambiar-estado" method="post" class="inline">
                                                 <input type="hidden" name="idPromotor" value="${p.idUsuario}">
                                                 <input type="hidden" name="nuevoEstado" value="${!p.estado}">
-                                                <button type="submit" class="${p.estado ? 'text-yellow-600 hover:text-yellow-900' : 'text-green-600 hover:text-green-900'} underline font-semibold" title="${p.estado ? 'Desactivar cuenta' : 'Activar cuenta'}">
+                                                <button type="submit" class="${p.estado ? 'text-red-600 hover:text-red-900' : 'text-green-600 hover:text-green-900'} underline font-semibold" title="${p.estado ? 'Desactivar cuenta' : 'Activar cuenta'}">
                                                     ${p.estado ? 'Desactivar' : 'Activar'}
                                                 </button>
                                             </form>
