@@ -28,11 +28,14 @@ import java.util.Map;
  * operaciones de Punto de Venta (POS), Cajero o Control de Acceso.
  * <p>
  * Se centra en operaciones relacionadas con {@link PulseraNFCService}, como
- * asociar pulseras, consultar saldo/datos, registrar recargas y consumos. La
- * autenticación para estos endpoints se espera que sea gestionada mediante JSON
- * Web Tokens (JWT) validados por un filtro (ej: {@code AuthenticationFilter}),
- * y la información del usuario se obtiene a través del {@link SecurityContext}
- * inyectado.
+ * consultar saldo/datos, registrar recargas y consumos. La asociación de
+ * pulseras se ha movido a {@link PromotorResource}.
+ * </p>
+ * <p>
+ * La autenticación para estos endpoints se espera que sea gestionada mediante
+ * JSON Web Tokens (JWT) validados por un filtro (ej:
+ * {@code AuthenticationFilter}), y la información del usuario se obtiene a
+ * través del {@link SecurityContext} inyectado.
  * </p>
  * <p>
  * Por defecto, los endpoints producen respuestas en formato
@@ -69,26 +72,8 @@ public class PuntoVentaResource {
     }
 
     // --- Endpoints API (devuelven JSON) ---
-    /**
-     * Endpoint POST para asociar una pulsera NFC (por UID) a una entrada
-     * asignada. Espera los datos como parámetros de formulario. Requiere
-     * autenticación con rol CAJERO, ADMIN o PROMOTOR.
-     *
-     * @param codigoUid UID de la pulsera a asociar.
-     * @param idEntradaAsignada ID de la entrada asignada a la que asociar.
-     * @return Respuesta HTTP:
-     * <ul>
-     * <li><b>200 OK:</b> con el DTO de la pulsera asociada/actualizada en el
-     * cuerpo.</li>
-     * <li><b>400 Bad Request:</b> si faltan datos, son inválidos, o la
-     * operación no es permitida (ej: entrada no nominada, pulsera ya
-     * asociada).</li>
-     * <li><b>401 Unauthorized:</b> si no está autenticado.</li>
-     * <li><b>403 Forbidden:</b> si el rol no es permitido.</li>
-     * <li><b>404 Not Found:</b> si la entrada asignada no existe.</li>
-     * <li><b>500 Internal Server Error:</b> si ocurre un error interno.</li>
-     * </ul>
-     */
+    // ** ELIMINADO ** Endpoint POST para asociar pulsera
+    /*
     @POST
     @Path("/asociar-pulsera")
     @Consumes(MediaType.APPLICATION_FORM_URLENCODED) // Espera datos de formulario
@@ -96,34 +81,9 @@ public class PuntoVentaResource {
     public Response asociarPulsera(
             @FormParam("codigoUid") String codigoUid,
             @FormParam("idEntradaAsignada") Integer idEntradaAsignada) {
-
-        log.info("POST /pos/asociar-pulsera recibido - UID: {}, EntradaID: {}", codigoUid, idEntradaAsignada);
-        Integer idActor;
-        try {
-            idActor = verificarAccesoActor(); // Verifica token y obtiene ID y rol permitido
-        } catch (NotAuthorizedException | ForbiddenException e) {
-            return e.getResponse();
-        } catch (Exception e) { // Captura error interno en verificación
-            return manejarErrorApi(e, "verificando acceso");
-        }
-
-        try {
-            // Validar parámetros básicos (el servicio hará validaciones más profundas)
-            if (codigoUid == null || codigoUid.isBlank() || idEntradaAsignada == null) {
-                throw new BadRequestException("Parámetros 'codigoUid' y 'idEntradaAsignada' son obligatorios.");
-            }
-
-            // Llamar al servicio
-            PulseraNFCDTO pulseraDTO = pulseraNFCService.asociarPulseraEntrada(codigoUid, idEntradaAsignada, idActor);
-            log.info("Asociación exitosa para pulsera UID {}", codigoUid);
-            return Response.ok(pulseraDTO).build(); // 200 OK con DTO como JSON
-
-        } catch (Exception e) {
-            // Centralizar manejo de errores (NotFound, BadRequest, Forbidden, Internal)
-            return manejarErrorApi(e, "asociando pulsera UID " + codigoUid);
-        }
+        // ... (Código anterior eliminado) ...
     }
-
+     */
     /**
      * Endpoint GET para obtener los datos (incluyendo saldo) de una pulsera NFC
      * por su UID. Requiere autenticación con rol CAJERO, ADMIN o PROMOTOR.
@@ -155,6 +115,7 @@ public class PuntoVentaResource {
         }
 
         if (codigoUid == null || codigoUid.isBlank()) {
+            // Lanzar BadRequestException para que manejarErrorApi la capture
             throw new BadRequestException("El código UID de la pulsera es obligatorio.");
         }
 

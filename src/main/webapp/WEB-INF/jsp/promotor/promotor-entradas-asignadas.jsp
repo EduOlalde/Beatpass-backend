@@ -25,20 +25,20 @@
                 align-items: center;
             }
             .badge-activa {
-                background-color: #D1FAE5;
-                color: #065F46;
+                background-color: #D1FAE5; /* Tailwind green-100 */
+                color: #065F46; /* Tailwind green-800 */
             }
             .badge-usada {
-                background-color: #E5E7EB;
-                color: #374151;
+                background-color: #E5E7EB; /* Tailwind gray-200 */
+                color: #374151; /* Tailwind gray-700 */
             }
             .badge-cancelada {
-                background-color: #FEE2E2;
-                color: #991B1B;
+                background-color: #FEE2E2; /* Tailwind red-100 */
+                color: #991B1B; /* Tailwind red-800 */
             }
             .qr-code {
                 font-family: monospace;
-                background-color: #f3f4f6;
+                background-color: #f3f4f6; /* Tailwind gray-100 */
                 padding: 0.1rem 0.3rem;
                 border-radius: 0.25rem;
                 font-size: 0.8rem;
@@ -129,10 +129,13 @@
                                             </c:choose>
                                         </td>
                                         <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
-                                            <c:if test="${not empty ea.fechaAsignacion}"> ${ea.fechaAsignacion} </c:if>
-                                            </td>
-                                            <td class="px-4 py-4 whitespace-nowrap text-center text-sm">
-                                                <div class="flex flex-col items-center space-y-1 md:space-y-2">
+                                            <%-- *** CORRECCIÓN: Mostrar LocalDateTime directamente *** --%>
+                                            <c:if test="${not empty ea.fechaAsignacion}">
+                                                ${ea.fechaAsignacion} <%-- Muestra formato ISO por defecto --%>
+                                            </c:if>
+                                        </td>
+                                        <td class="px-4 py-4 whitespace-nowrap text-center text-sm">
+                                            <div class="flex flex-col items-center space-y-1 md:space-y-2">
                                                 <%-- Formulario Nominar (si no está nominada y está activa) --%>
                                                 <c:if test="${empty ea.idAsistente and ea.estado == 'ACTIVA'}">
                                                     <form action="${pageContext.request.contextPath}/api/promotor/entradas-asignadas/${ea.idEntradaAsignada}/nominar" method="post" class="inline-block"
@@ -150,17 +153,24 @@
                                                 </c:if>
 
                                                 <%-- Formulario Asociar Pulsera (si está nominada y activa) --%>
-                                                <%-- TODO: Ocultar si ya tiene pulsera asociada (requiere info en DTO) --%>
-                                                <c:if test="${not empty ea.idAsistente and ea.estado == 'ACTIVA'}">
-                                                    <form action="${pageContext.request.contextPath}/api/pos/asociar-pulsera" method="post" class="inline-block mt-1"
-                                                          onsubmit="return confirm('Asociar pulsera a entrada ID ${ea.idEntradaAsignada}?');">
-                                                        <input type="hidden" name="idEntradaAsignada" value="${ea.idEntradaAsignada}">
+                                                <%-- Ocultar si ya tiene pulsera asociada (requiere info en DTO) --%>
+                                                <c:if test="${not empty ea.idAsistente and ea.estado == 'ACTIVA' and empty ea.idPulseraAsociada}">
+                                                    <%-- *** CAMBIO: Actualizar action del formulario *** --%>
+                                                    <form action="${pageContext.request.contextPath}/api/promotor/entradas-asignadas/${ea.idEntradaAsignada}/asociar-pulsera" method="post" class="inline-block mt-1"
+                                                          onsubmit="return confirm('Asociar pulsera con UID ' + this.codigoUid.value + ' a entrada ID ${ea.idEntradaAsignada}?');">
+                                                        <%-- idEntradaAsignada ahora está en la URL, no necesita campo hidden --%>
                                                         <div class="flex items-center space-x-1">
                                                             <input type="text" name="codigoUid" required placeholder="UID Pulsera" title="Introduce el UID de la pulsera NFC"
                                                                    class="p-1 border border-gray-300 rounded-md shadow-sm text-xs focus:ring-indigo-500 focus:border-indigo-500 w-28">
                                                             <button type="submit" class="text-green-600 hover:text-green-900 underline font-medium p-0 bg-transparent shadow-none text-xs" title="Asociar Pulsera">Asociar</button>
                                                         </div>
                                                     </form>
+                                                </c:if>
+                                                <%-- Mostrar UID si ya está asociada --%>
+                                                <c:if test="${not empty ea.idPulseraAsociada}">
+                                                    <span class="text-xs text-green-700 font-medium block mt-1" title="Pulsera asociada">
+                                                        Pulsera: <span class="qr-code">${ea.codigoUidPulsera}</span>
+                                                    </span>
                                                 </c:if>
 
                                                 <%-- Otros botones (Modificar, Cancelar) --%>
