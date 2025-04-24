@@ -1,89 +1,116 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package com.daw2edudiego.beatpasstfg.repository;
 
 import com.daw2edudiego.beatpasstfg.model.EstadoFestival;
 import com.daw2edudiego.beatpasstfg.model.Festival;
 import jakarta.persistence.EntityManager;
-
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
 /**
- * Define las operaciones de acceso a datos para la entidad Festival.
+ * Interfaz DAO (Data Access Object) para la entidad {@link Festival}. Define
+ * las operaciones de persistencia estándar para los festivales.
+ *
+ * @author Eduardo Olalde
  */
 public interface FestivalRepository {
 
     /**
-     * Guarda (crea o actualiza) un festival en la base de datos. Asume que se
-     * ejecuta dentro de una transacción activa gestionada externamente
-     * (Servicio).
+     * Guarda (crea o actualiza) una entidad Festival. Si el festival tiene ID
+     * nulo, se persiste. Si tiene ID, se actualiza (merge).
+     * <p>
+     * <b>Nota:</b> Esta operación debe ejecutarse dentro de una transacción
+     * activa.
+     * </p>
      *
-     * @param em EntityManager activo.
-     * @param festival El festival a guardar.
-     * @return El festival guardado (manejado por el EntityManager).
+     * @param em El EntityManager activo y transaccional.
+     * @param festival El festival a guardar. No debe ser nulo.
+     * @return La entidad Festival guardada o actualizada.
+     * @throws IllegalArgumentException si el festival es nulo.
+     * @throws jakarta.persistence.PersistenceException si ocurre un error
+     * durante la persistencia.
      */
     Festival save(EntityManager em, Festival festival);
 
     /**
-     * Busca un festival por su ID.
+     * Busca un Festival por su identificador único (clave primaria).
      *
-     * @param em EntityManager activo.
+     * @param em El EntityManager activo.
      * @param id El ID del festival a buscar.
-     * @return Un Optional conteniendo el festival si se encuentra, o vacío si
-     * no.
+     * @return Un {@link Optional} que contiene el Festival si se encuentra, o
+     * un Optional vacío si no se encuentra o si el ID es nulo.
      */
     Optional<Festival> findById(EntityManager em, Integer id);
 
     /**
-     * Elimina un festival de la base de datos. Asume que se ejecuta dentro de
-     * una transacción activa gestionada externamente (Servicio). Primero busca
-     * la entidad y luego la marca para eliminar.
+     * Elimina un festival por su ID. Busca la entidad y, si existe, la marca
+     * para eliminar.
+     * <p>
+     * <b>Nota:</b> Esta operación debe ejecutarse dentro de una transacción
+     * activa. Considerar las relaciones en cascada (eliminar un festival podría
+     * eliminar sus entradas, consumos, etc.).
+     * </p>
      *
-     * @param em EntityManager activo.
+     * @param em El EntityManager activo y transaccional.
      * @param id El ID del festival a eliminar.
-     * @return true si se encontró y marcó para eliminar, false si no se
-     * encontró.
+     * @return {@code true} si la entidad fue encontrada y marcada para
+     * eliminar, {@code false} si no se encontró.
+     * @throws jakarta.persistence.PersistenceException si ocurre un error
+     * durante la eliminación.
      */
     boolean deleteById(EntityManager em, Integer id);
 
     /**
-     * Busca todos los festivales.
+     * Busca y devuelve todos los festivales registrados en el sistema. Los
+     * resultados se ordenan por nombre. ¡Precaución! Puede devolver muchos
+     * resultados en un sistema real. Considerar paginación.
      *
-     * @param em EntityManager activo.
-     * @return Una lista con todos los festivales.
+     * @param em El EntityManager activo.
+     * @return Una lista (posiblemente vacía) con todos los festivales.
      */
     List<Festival> findAll(EntityManager em);
 
     /**
-     * Busca festivales por estado.
+     * Busca y devuelve todos los festivales que se encuentran en un estado
+     * específico. Los resultados se ordenan por fecha de inicio.
      *
-     * @param em EntityManager activo.
-     * @param estado El estado a buscar.
-     * @return Lista de festivales con ese estado.
+     * @param em El EntityManager activo.
+     * @param estado El {@link EstadoFestival} a buscar.
+     * @return Una lista (posiblemente vacía) de festivales en el estado
+     * especificado. Devuelve lista vacía si el estado es nulo o si ocurre un
+     * error.
      */
     List<Festival> findByEstado(EntityManager em, EstadoFestival estado);
 
     /**
-     * Busca festivales activos (publicados) en un rango de fechas.
+     * Busca y devuelve todos los festivales activos (estado PUBLICADO) cuyo
+     * periodo (fechaInicio a fechaFin) se solapa con el rango de fechas
+     * proporcionado. Los resultados se ordenan por fecha de inicio.
      *
-     * @param em EntityManager activo.
-     * @param fechaDesde Fecha de inicio del rango.
-     * @param fechaHasta Fecha de fin del rango.
-     * @return Lista de festivales activos en esas fechas.
+     * @param em El EntityManager activo.
+     * @param fechaDesde Fecha de inicio del rango de búsqueda.
+     * @param fechaHasta Fecha de fin del rango de búsqueda.
+     * @return Una lista (posiblemente vacía) de festivales activos que ocurren
+     * (total o parcialmente) dentro del rango de fechas especificado. Devuelve
+     * lista vacía si las fechas son nulas, inválidas o si ocurre un error.
      */
     List<Festival> findActivosEntreFechas(EntityManager em, LocalDate fechaDesde, LocalDate fechaHasta);
 
     /**
-     * Busca festivales de un promotor específico.
+     * Busca y devuelve todos los festivales gestionados por un promotor
+     * específico. Los resultados se ordenan por fecha de inicio descendente
+     * (los más recientes primero).
      *
-     * @param em EntityManager activo.
-     * @param idPromotor ID del promotor.
-     * @return Lista de festivales de ese promotor.
+     * @param em El EntityManager activo.
+     * @param idPromotor El ID del
+     * {@link com.daw2edudiego.beatpasstfg.model.Usuario} (promotor).
+     * @return Una lista (posiblemente vacía) de festivales asociados al
+     * promotor dado. Devuelve lista vacía si el idPromotor es nulo o si ocurre
+     * un error.
      */
     List<Festival> findByPromotorId(EntityManager em, Integer idPromotor);
 
+    // Podrían añadirse otros métodos como:
+    // List<Festival> findByNombreContaining(EntityManager em, String nombre);
+    // List<Festival> findByUbicacion(EntityManager em, String ubicacion);
 }

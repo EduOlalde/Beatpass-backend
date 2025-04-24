@@ -1,64 +1,129 @@
 package com.daw2edudiego.beatpasstfg.util;
 
-import java.util.UUID; // Para generar identificadores únicos universales
+import java.util.UUID;
+// Imports opcionales si se generan imágenes QR directamente
+// import com.google.zxing.BarcodeFormat;
+// import com.google.zxing.WriterException;
+// import com.google.zxing.client.j2se.MatrixToImageWriter;
+// import com.google.zxing.common.BitMatrix;
+// import com.google.zxing.qrcode.QRCodeWriter;
+// import java.io.ByteArrayOutputStream;
+// import java.io.IOException;
+// import java.util.Base64;
+// import org.slf4j.Logger;
+// import org.slf4j.LoggerFactory;
 
 /**
- * Utilidad para generar contenido único para los códigos QR de las entradas. En
- * esta versión inicial, simplemente genera un UUID único.
+ * Clase de utilidad para generar contenido único adecuado para codificar en
+ * códigos QR, principalmente destinado a identificar entradas asignadas
+ * (EntradaAsignada).
+ * <p>
+ * Actualmente, genera un identificador único basado en UUID. Mejoras futuras
+ * podrían implicar la generación de imágenes QR reales o la incrustación de
+ * datos más complejos y firmados.
+ * </p>
+ *
  * @author Eduardo Olalde
  */
 public class QRCodeUtil {
 
-    private static final String QR_PREFIX = "BEATPASS-TICKET-"; // Prefijo para identificar nuestros QRs
+    // private static final Logger log = LoggerFactory.getLogger(QRCodeUtil.class); // Descomentar si se necesita logging
+    /**
+     * Un prefijo añadido al identificador único generado para ayudar a
+     * identificar los códigos QR originados en este sistema.
+     */
+    private static final String QR_PREFIX = "BEATPASS-TICKET-";
 
     /**
-     * Genera una cadena de texto única para ser codificada en un código QR para
-     * una nueva entrada asignada.
+     * Genera una cadena identificadora única destinada a ser codificada en un
+     * código QR para una entrada recién asignada.
+     * <p>
+     * Esta implementación utiliza un {@link UUID} (Universally Unique
+     * Identifier) estándar prefijado con {@link #QR_PREFIX}. Los UUIDs
+     * proporcionan una alta probabilidad de unicidad.
+     * </p>
      *
-     * Actualmente, genera un UUID precedido por un prefijo. En el futuro,
-     * podría incluir más información relevante y segura.
-     *
-     * @return Una cadena única para el código QR.
+     * @return Una cadena única adecuada para el contenido del código QR (ej.,
+     * "BEATPASS-TICKET-123e4567-e89b-12d3-a456-426614174000").
      */
     public static String generarContenidoQrUnico() {
-        // Generar un UUID (Universally Unique Identifier) aleatorio
+        // Generar un UUID aleatorio de Tipo 4
         UUID uuid = UUID.randomUUID();
-        // Devolver el UUID como string, precedido por nuestro prefijo
-        return QR_PREFIX + uuid.toString();
+        String uniqueContent = QR_PREFIX + uuid.toString();
+        // log.debug("Generado contenido QR único: {}", uniqueContent); // Descomentar si se usa logging
+        return uniqueContent;
     }
 
+    /*
+     * --- Opcional: Generación de Imagen QR ---
+     * El siguiente método demuestra cómo generar una imagen de código QR
+     * como una cadena codificada en Base64 usando la librería ZXing.
+     * Requiere las dependencias 'com.google.zxing:core' y 'com.google.zxing:javase'.
+     */
     /**
-     * (Opcional) Método futuro para generar la imagen QR como datos Base64.
-     * Necesitaría las librerías zxing-core y zxing-javase.
+     * Genera una imagen de código QR para el contenido dado y la devuelve como
+     * una cadena de URL de datos codificada en Base64 (ej.,
+     * "data:image/png;base64,...").
+     * <p>
+     * NOTA: Este método está actualmente comentado. Descoméntalo y asegúrate de
+     * que las dependencias necesarias de ZXing estén incluidas en pom.xml si es
+     * necesario.
+     * </p>
      *
-     * @param qrContent La cadena de texto a codificar.
+     * @param qrContent El contenido de texto a codificar en el código QR. No
+     * puede ser nulo ni vacío.
      * @param width El ancho deseado de la imagen QR en píxeles.
      * @param height El alto deseado de la imagen QR en píxeles.
-     * @return String con la imagen QR codificada en Base64 (formato
-     * data:image/png;base64,...), o null si ocurre un error.
+     * @return Una cadena codificada en Base64 que representa la imagen PNG del
+     * código QR, prefijada con "data:image/png;base64,", o {@code null} si la
+     * generación falla o qrContent es inválido.
      */
     /*
     public static String generarQrComoBase64(String qrContent, int width, int height) {
         if (qrContent == null || qrContent.isEmpty()) {
+             log.warn("No se puede generar código QR para contenido nulo o vacío.");
             return null;
         }
-        try {
-            com.google.zxing.qrcode.QRCodeWriter qrCodeWriter = new com.google.zxing.qrcode.QRCodeWriter();
-            com.google.zxing.common.BitMatrix bitMatrix = qrCodeWriter.encode(qrContent, com.google.zxing.BarcodeFormat.QR_CODE, width, height);
+        if (width <= 0 || height <= 0) {
+             log.warn("No se puede generar código QR con ancho o alto no positivos.");
+             return null;
+        }
 
-            java.io.ByteArrayOutputStream pngOutputStream = new java.io.ByteArrayOutputStream();
-            com.google.zxing.client.j2se.MatrixToImageWriter.writeToStream(bitMatrix, "PNG", pngOutputStream);
+        try {
+            log.debug("Generando imagen de código QR para contenido: {}", qrContent);
+            QRCodeWriter qrCodeWriter = new QRCodeWriter();
+            // Codificar el contenido en una BitMatrix
+            BitMatrix bitMatrix = qrCodeWriter.encode(qrContent, BarcodeFormat.QR_CODE, width, height);
+
+            // Escribir la BitMatrix a una imagen PNG en memoria
+            ByteArrayOutputStream pngOutputStream = new ByteArrayOutputStream();
+            MatrixToImageWriter.writeToStream(bitMatrix, "PNG", pngOutputStream);
             byte[] pngData = pngOutputStream.toByteArray();
 
-            // Codificar en Base64 y añadir prefijo para data URL
-            return "data:image/png;base64," + java.util.Base64.getEncoder().encodeToString(pngData);
+            // Codificar el array de bytes PNG a Base64
+            String base64Image = Base64.getEncoder().encodeToString(pngData);
 
-        } catch (com.google.zxing.WriterException | java.io.IOException e) {
-            // Loggear el error
-            // log.error("Error generando imagen QR para contenido '{}': {}", qrContent, e.getMessage(), e);
-            System.err.println("Error generando imagen QR: " + e.getMessage());
+            // Formatear como una URL de datos
+            String dataUrl = "data:image/png;base64," + base64Image;
+            log.debug("Imagen de código QR generada exitosamente como URL de datos Base64.");
+            return dataUrl;
+
+        } catch (WriterException e) {
+            log.error("ZXing WriterException mientras se generaba código QR para contenido '{}': {}", qrContent, e.getMessage(), e);
             return null;
+        } catch (IOException e) {
+            log.error("IOException mientras se escribía PNG de código QR a stream para contenido '{}': {}", qrContent, e.getMessage(), e);
+            return null;
+        } catch (Exception e) {
+             log.error("Error inesperado generando imagen de código QR para contenido '{}': {}", qrContent, e.getMessage(), e);
+             return null;
         }
     }
      */
+    /**
+     * Constructor privado para prevenir la instanciación.
+     */
+    private QRCodeUtil() {
+        // Clase de utilidad, no debe ser instanciada.
+    }
 }

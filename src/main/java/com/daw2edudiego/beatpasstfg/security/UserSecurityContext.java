@@ -1,7 +1,3 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package com.daw2edudiego.beatpasstfg.security;
 
 import jakarta.ws.rs.core.SecurityContext;
@@ -9,46 +5,64 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.security.Principal;
+import java.util.Objects;
 
 /**
- * Implementación personalizada de SecurityContext para JAX-RS. Almacena la
- * información del usuario autenticado (obtenida del token JWT) y la hace
- * disponible para los recursos JAX-RS a través de la inyección @Context.
+ * Una implementación personalizada de {@link SecurityContext} para JAX-RS.
+ * <p>
+ * Este contexto almacena información sobre el usuario autenticado, típicamente
+ * obtenida de un JWT validado u otro mecanismo de autenticación. Hace que el
+ * {@link Principal} del usuario (representando su identidad, usualmente el ID
+ * de usuario) y su(s) rol(es) estén disponibles para los métodos de recurso
+ * JAX-RS a través de la inyección {@code @Context SecurityContext}.
+ * </p>
  */
 public class UserSecurityContext implements SecurityContext {
 
     private static final Logger log = LoggerFactory.getLogger(UserSecurityContext.class);
 
-    private final String userId;        // ID del usuario autenticado (del subject del token)
-    private final String role;          // Rol del usuario autenticado (del claim "role")
-    private final boolean secure;       // Si la conexión original era HTTPS
-    private final Principal principal;  // Principal que representa al usuario
+    private final String userId;        // El identificador único para el usuario autenticado.
+    private final String role;          // El rol asignado al usuario autenticado.
+    private final boolean secure;       // Indicador de si la petición original se hizo sobre HTTPS.
+    private final Principal principal;  // El objeto Principal que representa al usuario.
 
     /**
-     * Constructor para crear el contexto de seguridad.
+     * Construye un nuevo UserSecurityContext.
      *
-     * @param userId El ID del usuario autenticado.
-     * @param role El rol del usuario autenticado.
-     * @param secure True si la conexión es HTTPS, false si no.
+     * @param userId El ID del usuario autenticado. No puede ser nulo ni estar
+     * en blanco.
+     * @param role El rol del usuario autenticado. No puede ser nulo ni estar en
+     * blanco.
+     * @param secure {@code true} si la petición se hizo sobre HTTPS,
+     * {@code false} en caso contrario.
+     * @throws NullPointerException si userId o role es nulo.
+     * @throws IllegalArgumentException si userId o role está en blanco.
      */
     public UserSecurityContext(String userId, String role, boolean secure) {
-        if (userId == null || userId.isBlank() || role == null || role.isBlank()) {
-            log.error("Intento de crear UserSecurityContext con userId o role nulos/vacíos.");
-            throw new IllegalArgumentException("UserId y Role no pueden ser nulos o vacíos para SecurityContext.");
+        // Validaciones de nulidad y contenido
+        Objects.requireNonNull(userId, "El ID de usuario no puede ser nulo para SecurityContext.");
+        Objects.requireNonNull(role, "El Rol no puede ser nulo para SecurityContext.");
+        if (userId.isBlank()) {
+            throw new IllegalArgumentException("El ID de usuario no puede estar en blanco para SecurityContext.");
         }
+        if (role.isBlank()) {
+            throw new IllegalArgumentException("El Rol no puede estar en blanco para SecurityContext.");
+        }
+
         this.userId = userId;
         this.role = role;
         this.secure = secure;
-        // Creamos un Principal simple que devuelve el userId en getName()
-        this.principal = () -> userId;
-        log.trace("UserSecurityContext creado para userId: {}, role: {}, secure: {}", userId, role, secure);
+        // Crear un Principal simple donde getName() devuelve el userId.
+        this.principal = () -> this.userId; // Expresión lambda para la implementación de Principal
+
+        log.trace("UserSecurityContext creado - UserID: '{}', Role: '{}', Secure: {}", userId, role, secure);
     }
 
     /**
-     * Devuelve el Principal que representa al usuario autenticado. El nombre
-     * del principal es el ID del usuario.
+     * Devuelve el {@link Principal} que representa al usuario autenticado. El
+     * nombre del principal típicamente corresponde al ID único del usuario.
      *
-     * @return El Principal del usuario.
+     * @return El objeto Principal para el usuario.
      */
     @Override
     public Principal getUserPrincipal() {
@@ -56,24 +70,28 @@ public class UserSecurityContext implements SecurityContext {
     }
 
     /**
-     * Comprueba si el usuario autenticado pertenece a un rol específico. La
-     * comparación ignora mayúsculas y minúsculas.
+     * Comprueba si el usuario autenticado pertenece al rol especificado. La
+     * comparación no distingue entre mayúsculas y minúsculas.
      *
-     * @param requiredRole El rol a verificar (ej: "ADMIN", "PROMOTOR").
-     * @return true si el usuario tiene el rol, false en caso contrario.
+     * @param requiredRole El nombre del rol a comprobar (ej., "ADMIN",
+     * "PROMOTOR").
+     * @return {@code true} si el usuario está asociado con el rol dado,
+     * {@code false} en caso contrario.
      */
     @Override
     public boolean isUserInRole(String requiredRole) {
-        boolean isInRole = this.role != null && this.role.equalsIgnoreCase(requiredRole);
-        log.trace("Comprobando rol: usuario {} tiene rol '{}'? Requerido: '{}'. Resultado: {}", userId, this.role, requiredRole, isInRole);
+        // Comprobar si requiredRole no es nulo y coincide con el rol del usuario (ignorando mayúsculas/minúsculas)
+        boolean isInRole = requiredRole != null && requiredRole.equalsIgnoreCase(this.role);
+        log.trace("Comprobación de rol: Usuario '{}' en rol '{}'? Requerido: '{}'. Resultado: {}",
+                this.userId, this.role, requiredRole, isInRole);
         return isInRole;
     }
 
     /**
-     * Indica si la petición original se realizó sobre una conexión segura
-     * (HTTPS).
+     * Indica si la petición se realizó usando un canal seguro (HTTPS).
      *
-     * @return true si era HTTPS, false si no.
+     * @return {@code true} si la petición fue sobre HTTPS, {@code false} en
+     * caso contrario.
      */
     @Override
     public boolean isSecure() {
@@ -81,13 +99,15 @@ public class UserSecurityContext implements SecurityContext {
     }
 
     /**
-     * Devuelve el esquema de autenticación utilizado. Para JWT, comúnmente es
-     * "Bearer".
+     * Devuelve el esquema de autenticación utilizado para autenticar al
+     * usuario. Para autenticación basada en JWT, esto es típicamente "Bearer".
+     * Para basada en sesión, podría ser "FORM" o "BASIC", etc.
      *
-     * @return La cadena "Bearer".
+     * @return El identificador del esquema de autenticación (ej., "Bearer").
      */
     @Override
     public String getAuthenticationScheme() {
+        // Asumiendo Bearer para JWT, ajustar si otros esquemas son posibles en este contexto
         return "Bearer";
     }
 }

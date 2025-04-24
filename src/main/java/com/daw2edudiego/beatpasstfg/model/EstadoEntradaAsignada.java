@@ -1,14 +1,24 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package com.daw2edudiego.beatpasstfg.model;
 
 /**
- * Estados posibles para una entrada asignada (individual).
+ * Enumeración que define los posibles estados de una {@link EntradaAsignada}.
+ *
+ * @author Eduardo Olalde
  */
 public enum EstadoEntradaAsignada {
+    /**
+     * La entrada ha sido generada y/o nominada, está lista para ser usada o
+     * asociada a una pulsera.
+     */
     ACTIVA,
+    /**
+     * La entrada ya ha sido validada en el control de acceso o utilizada de
+     * alguna forma.
+     */
     USADA,
+    /**
+     * La entrada ha sido cancelada por un promotor o administrador y ya no es
+     * válida.
+     */
     CANCELADA
 }

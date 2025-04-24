@@ -1,8 +1,12 @@
 package com.daw2edudiego.beatpasstfg.exception;
 
 /**
- * Excepción personalizada que se lanza cuando no se encuentra un asistente
- * específico en la base de datos, generalmente al buscar por su ID o email.
+ * Excepción unchecked (RuntimeException) que se lanza cuando se intenta
+ * realizar una operación sobre un Asistente que no se encuentra en el sistema
+ * (generalmente al buscar por ID o email).
+ *
+ * @see com.daw2edudiego.beatpasstfg.model.Asistente
+ * @see com.daw2edudiego.beatpasstfg.service.AsistenteService
  */
 public class AsistenteNotFoundException extends RuntimeException {
 
@@ -17,10 +21,12 @@ public class AsistenteNotFoundException extends RuntimeException {
     }
 
     /**
-     * Constructor que acepta un mensaje y la causa original.
+     * Constructor que acepta un mensaje y la causa raíz original. Útil para
+     * encadenar excepciones y mantener el stack trace completo.
      *
      * @param message Mensaje detallando la causa de la excepción.
-     * @param cause La excepción original que causó esta.
+     * @param cause La excepción original que provocó esta (ej:
+     * NoResultException de JPA).
      */
     public AsistenteNotFoundException(String message, Throwable cause) {
         super(message, cause);

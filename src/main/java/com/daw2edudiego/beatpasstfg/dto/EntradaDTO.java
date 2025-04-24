@@ -2,37 +2,62 @@ package com.daw2edudiego.beatpasstfg.dto;
 
 import jakarta.validation.constraints.*; // Importaciones para Bean Validation
 import java.math.BigDecimal;
+import java.util.Objects;
 
 /**
  * DTO (Data Transfer Object) para representar un tipo de entrada de un
- * festival. Se utiliza para transferir datos entre la capa de servicio y la
- * capa web (API/JSP), y para validar los datos de entrada al crear o actualizar
- * tipos de entrada.
+ * {@link com.daw2edudiego.beatpasstfg.model.Festival}. Se utiliza para
+ * transferir datos entre la capa de servicio y la capa web (API/JSP), y
+ * especialmente para recibir y validar los datos al crear o actualizar tipos de
+ * entrada.
+ *
  * @author Eduardo Olalde
  */
 public class EntradaDTO {
 
-    private Integer idEntrada; // Identificador único (generado por la BD)
+    /**
+     * ID de la entrada. Será null al crear una nueva, y tendrá valor al mostrar
+     * o actualizar.
+     */
+    private Integer idEntrada;
 
-    @NotNull(message = "El ID del festival es obligatorio para asociar la entrada.")
+    /**
+     * ID del festival al que pertenece esta entrada. Obligatorio.
+     */
+    @NotNull(message = "El ID del festival es obligatorio.")
     private Integer idFestival; // ID del festival al que pertenece
 
+    /**
+     * Nombre del tipo de entrada (ej: "General", "VIP"). Obligatorio.
+     */
     @NotBlank(message = "El tipo de entrada no puede estar vacío.")
     @Size(max = 50, message = "El tipo de entrada no puede exceder los 50 caracteres.")
-    private String tipo; // Ej: "General", "VIP", "Abono 3 días"
+    private String tipo;
 
-    private String descripcion; // Descripción detallada (opcional)
+    /**
+     * Descripción detallada del tipo de entrada (opcional).
+     */
+    private String descripcion;
 
+    /**
+     * Precio de la entrada. Obligatorio y no negativo.
+     */
     @NotNull(message = "El precio no puede ser nulo.")
     @DecimalMin(value = "0.0", inclusive = true, message = "El precio no puede ser negativo.")
-    @Digits(integer = 6, fraction = 2, message = "Formato de precio inválido (máximo 6 enteros, 2 decimales).") // Ej: hasta 999999.99
-    private BigDecimal precio; // Precio de este tipo de entrada
+    // @Digits limita el número de dígitos enteros y fraccionarios
+    @Digits(integer = 6, fraction = 2, message = "Formato de precio inválido (máx 999999.99).")
+    private BigDecimal precio;
 
+    /**
+     * Stock inicial o actual de la entrada. Obligatorio y no negativo.
+     */
     @NotNull(message = "El stock no puede ser nulo.")
     @Min(value = 0, message = "El stock no puede ser negativo.")
-    private Integer stock; // Número de entradas de este tipo disponibles
+    private Integer stock;
 
-    // Constructor por defecto (necesario para frameworks como Jackson/JAX-RS)
+    /**
+     * Constructor por defecto (necesario para frameworks como Jackson/JAX-RS).
+     */
     public EntradaDTO() {
     }
 
@@ -97,6 +122,22 @@ public class EntradaDTO {
                 + '}';
     }
 
-    // --- equals y hashCode (opcional, basado en idEntrada si se usa en colecciones) ---
-    // Podrían implementarse si se necesita comparar DTOs
+    // --- equals y hashCode (basado en idEntrada, útil si se usan en colecciones) ---
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+        EntradaDTO that = (EntradaDTO) o;
+        // Compara por ID si ambos no son nulos
+        return idEntrada != null && Objects.equals(idEntrada, that.idEntrada);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(idEntrada);
+    }
 }

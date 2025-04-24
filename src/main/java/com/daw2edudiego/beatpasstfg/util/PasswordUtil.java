@@ -1,7 +1,3 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package com.daw2edudiego.beatpasstfg.util;
 
 import org.mindrot.jbcrypt.BCrypt;
@@ -9,63 +5,96 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Utilidad para manejar el hashing y verificación de contraseñas usando
- * jBCrypt.
+ * Clase de utilidad para manejar el hashing y la verificación de contraseñas
+ * usando la librería jBCrypt.
+ * <p>
+ * BCrypt maneja automáticamente la generación de salt y su incrustación dentro
+ * de la cadena hash.
+ * </p>
  */
 public class PasswordUtil {
 
     private static final Logger log = LoggerFactory.getLogger(PasswordUtil.class);
-    // El "work factor" de BCrypt. Valores más altos son más seguros pero más lentos.
-    // 12 es un buen punto de partida actualmente.
+
+    /**
+     * El factor de trabajo (work factor) para el hashing BCrypt. Valores más
+     * altos incrementan la seguridad pero también el tiempo de computación. 12
+     * se considera generalmente un buen equilibrio actualmente. Este valor
+     * debería revisarse periódicamente y potencialmente incrementarse a medida
+     * que el hardware mejora.
+     */
     private static final int WORK_FACTOR = 12;
 
     /**
-     * Genera el hash de una contraseña usando BCrypt.
+     * Genera un hash BCrypt para una contraseña en texto plano dada. Se genera
+     * automáticamente un salt único y se incluye en la cadena hash resultante.
      *
-     * @param passwordPlano La contraseña en texto plano.
-     * @return El hash de la contraseña (incluye el salt).
+     * @param plaintextPassword La contraseña a hashear. No puede ser nula ni
+     * vacía.
+     * @return La cadena hash BCrypt (incluyendo el salt).
+     * @throws IllegalArgumentException si plaintextPassword es nula o vacía.
      */
-    public static String hashPassword(String passwordPlano) {
-        if (passwordPlano == null || passwordPlano.isEmpty()) {
-            log.warn("Intento de hashear una contraseña vacía o nula.");
-            // Decide cómo manejar esto: lanzar excepción o devolver null/vacío?
-            // Lanzar excepción suele ser más seguro para evitar contraseñas vacías.
-            throw new IllegalArgumentException("La contraseña no puede ser vacía.");
+    public static String hashPassword(String plaintextPassword) {
+        if (plaintextPassword == null || plaintextPassword.isEmpty()) {
+            log.warn("Intento de hashear una contraseña nula o vacía.");
+            // Lanzar una excepción es más seguro que permitir contraseñas vacías.
+            throw new IllegalArgumentException("La contraseña no puede ser nula o vacía.");
         }
-        log.debug("Generando hash para contraseña.");
+        log.debug("Generando hash BCrypt con factor de trabajo: {}", WORK_FACTOR);
+        // gensalt() genera un salt con las rondas logarítmicas especificadas (work factor)
         String salt = BCrypt.gensalt(WORK_FACTOR);
-        String hashedPassword = BCrypt.hashpw(passwordPlano, salt);
-        log.debug("Hash generado exitosamente.");
+        // hashpw() hashea la contraseña usando el salt generado
+        String hashedPassword = BCrypt.hashpw(plaintextPassword, salt);
+        log.debug("Hash de contraseña generado exitosamente.");
         return hashedPassword;
     }
 
     /**
-     * Verifica si una contraseña en texto plano coincide con un hash existente.
+     * Verifica si una contraseña en texto plano dada coincide con un hash
+     * BCrypt almacenado. El salt se extrae automáticamente de la cadena
+     * hashedPassword por BCrypt.
      *
-     * @param passwordPlano La contraseña en texto plano introducida por el
-     * usuario.
-     * @param hashedPassword El hash almacenado en la base de datos.
-     * @return true si las contraseñas coinciden, false en caso contrario.
+     * @param plaintextPassword La contraseña intentada (ej., introducida por el
+     * usuario). No puede ser nula.
+     * @param hashedPassword La cadena hash BCrypt almacenada (ej., de la base
+     * de datos). No puede ser nula ni vacía.
+     * @return {@code true} si la contraseña coincide con el hash, {@code false}
+     * en caso contrario.
      */
-    public static boolean checkPassword(String passwordPlano, String hashedPassword) {
-        log.debug("Verificando contraseña.");
-        if (passwordPlano == null || hashedPassword == null || hashedPassword.isEmpty()) {
-            log.warn("Intento de verificar contraseña con datos nulos o vacíos.");
+    public static boolean checkPassword(String plaintextPassword, String hashedPassword) {
+        log.debug("Verificando contraseña contra hash almacenado.");
+        if (plaintextPassword == null || hashedPassword == null || hashedPassword.isEmpty()) {
+            log.warn("Intento de verificar contraseña con texto plano o hash nulos/vacíos.");
             return false;
         }
-        boolean match = false;
+
+        boolean passwordsMatch = false;
         try {
-            match = BCrypt.checkpw(passwordPlano, hashedPassword);
+            // checkpw compara la contraseña en texto plano contra el hash (que incluye el salt)
+            passwordsMatch = BCrypt.checkpw(plaintextPassword, hashedPassword);
         } catch (IllegalArgumentException e) {
-            // Esto puede ocurrir si el hash almacenado no es un hash BCrypt válido
-            log.error("Error al verificar contraseña: el hash almacenado parece inválido. Hash: {}", hashedPassword, e);
+            // Esta excepción puede ocurrir si el hash almacenado no tiene un formato BCrypt válido.
+            log.error("Error verificando contraseña: El hash almacenado '{}' parece inválido. {}", hashedPassword, e.getMessage());
+            // Devolver false ya que la verificación no pudo realizarse.
+            return false;
+        } catch (Exception e) {
+            // Capturar errores inesperados durante checkpw
+            log.error("Error inesperado durante la verificación de contraseña para el hash '{}': {}", hashedPassword, e.getMessage(), e);
             return false;
         }
-        if (match) {
-            log.debug("La contraseña coincide.");
+
+        if (passwordsMatch) {
+            log.debug("Verificación de contraseña exitosa.");
         } else {
-            log.debug("La contraseña NO coincide.");
+            log.debug("Verificación de contraseña fallida (la contraseña no coincide con el hash).");
         }
-        return match;
+        return passwordsMatch;
+    }
+
+    /**
+     * Constructor privado para prevenir la instanciación.
+     */
+    private PasswordUtil() {
+        // Clase de utilidad, no debe ser instanciada.
     }
 }

@@ -4,66 +4,97 @@ import com.daw2edudiego.beatpasstfg.model.Recarga;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceException;
 import jakarta.persistence.TypedQuery;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
- * Implementación de RecargaRepository usando JPA.
+ * Implementación de {@link RecargaRepository} utilizando JPA EntityManager.
+ * Proporciona la lógica concreta para interactuar con la base de datos para la
+ * entidad Recarga.
+ *
+ * @author Eduardo Olalde
  */
 public class RecargaRepositoryImpl implements RecargaRepository {
 
     private static final Logger log = LoggerFactory.getLogger(RecargaRepositoryImpl.class);
 
+    /**
+     * {@inheritDoc}
+     * <p>
+     * Esta implementación siempre realiza un {@code persist} ya que se asume
+     * que los registros de recarga no se actualizan, solo se crean.</p>
+     */
     @Override
     public Recarga save(EntityManager em, Recarga recarga) {
-        if (recarga == null || recarga.getPulseraNFC() == null || recarga.getMonto() == null) {
-            throw new IllegalArgumentException("Recarga, Pulsera asociada y Monto no pueden ser nulos.");
+        // Validación de precondiciones
+        if (recarga == null) {
+            throw new IllegalArgumentException("La entidad Recarga no puede ser nula.");
         }
+        if (recarga.getPulseraNFC() == null || recarga.getPulseraNFC().getIdPulsera() == null) {
+            throw new IllegalArgumentException("La PulseraNFC asociada a la Recarga no puede ser nula y debe tener ID.");
+        }
+        if (recarga.getMonto() == null) {
+            throw new IllegalArgumentException("El monto de la Recarga no puede ser nulo.");
+        }
+
         log.debug("Intentando guardar Recarga para Pulsera ID: {}", recarga.getPulseraNFC().getIdPulsera());
         try {
-            // Siempre es nueva
+            // Siempre es nueva, usamos persist
             em.persist(recarga);
-            em.flush();
+            // em.flush(); // Descomentar si se necesita ID inmediatamente
             log.info("Nueva Recarga persistida con ID: {}", recarga.getIdRecarga());
             return recarga;
         } catch (PersistenceException e) {
             log.error("Error de persistencia al guardar Recarga: {}", e.getMessage(), e);
-            throw e;
+            throw e; // Relanzar para manejo transaccional
         } catch (Exception e) {
             log.error("Error inesperado al guardar Recarga: {}", e.getMessage(), e);
             throw new PersistenceException("Error inesperado al guardar Recarga", e);
         }
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public Optional<Recarga> findById(EntityManager em, Integer id) {
         log.debug("Buscando Recarga ID: {}", id);
         if (id == null) {
+            log.warn("Intento de buscar Recarga con ID nulo.");
             return Optional.empty();
         }
         try {
-            return Optional.ofNullable(em.find(Recarga.class, id));
+            Recarga recarga = em.find(Recarga.class, id);
+            return Optional.ofNullable(recarga);
+        } catch (IllegalArgumentException e) {
+            log.error("Argumento ilegal al buscar Recarga por ID {}: {}", id, e.getMessage());
+            return Optional.empty();
         } catch (Exception e) {
-            log.error("Error buscando Recarga ID {}: {}", id, e.getMessage(), e);
+            log.error("Error inesperado buscando Recarga ID {}: {}", id, e.getMessage(), e);
             return Optional.empty();
         }
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public List<Recarga> findByPulseraId(EntityManager em, Integer idPulsera) {
         log.debug("Buscando Recargas para Pulsera ID: {}", idPulsera);
         if (idPulsera == null) {
+            log.warn("Intento de buscar recargas para un ID de pulsera nulo.");
             return Collections.emptyList();
         }
         try {
             TypedQuery<Recarga> query = em.createQuery(
                     "SELECT r FROM Recarga r WHERE r.pulseraNFC.idPulsera = :pulseraId ORDER BY r.fecha DESC", Recarga.class);
             query.setParameter("pulseraId", idPulsera);
-            return query.getResultList();
+            List<Recarga> recargas = query.getResultList();
+            log.debug("Encontradas {} recargas para Pulsera ID: {}", recargas.size(), idPulsera);
+            return recargas;
         } catch (Exception e) {
             log.error("Error buscando Recargas para Pulsera ID {}: {}", idPulsera, e.getMessage(), e);
             return Collections.emptyList();

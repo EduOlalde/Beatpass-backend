@@ -1,14 +1,10 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package com.daw2edudiego.beatpasstfg.repository;
 
 import com.daw2edudiego.beatpasstfg.model.EstadoFestival;
 import com.daw2edudiego.beatpasstfg.model.Festival;
 import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceException;
 import jakarta.persistence.TypedQuery;
-
 import java.time.LocalDate;
 import java.util.Collections;
 import java.util.List;
@@ -17,62 +13,115 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Implementación de FestivalRepository usando JPA EntityManager. Los métodos
- * asumen que el EntityManager proporcionado está activo y que las transacciones
- * son gestionadas por la capa de Servicio.
+ * Implementación de {@link FestivalRepository} utilizando JPA EntityManager.
+ * Proporciona la lógica concreta para interactuar con la base de datos para la
+ * entidad Festival. Asume que las transacciones son gestionadas externamente
+ * (ej: capa de servicio).
+ *
+ * @author Eduardo Olalde
  */
 public class FestivalRepositoryImpl implements FestivalRepository {
 
     private static final Logger log = LoggerFactory.getLogger(FestivalRepositoryImpl.class);
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public Festival save(EntityManager em, Festival festival) {
-        log.debug("Intentando guardar festival con ID: {}", festival.getIdFestival());
-        if (festival.getIdFestival() == null) {
-            // Es un festival nuevo, persistir
-            em.persist(festival);
-            log.info("Festival nuevo persistido con ID asignado."); // El ID se asigna después del persist/flush
-            return festival; // Devuelve la entidad manejada
-        } else {
-            // Es una actualización, hacer merge
-            Festival mergedFestival = em.merge(festival);
-            log.info("Festival actualizado con ID: {}", mergedFestival.getIdFestival());
-            return mergedFestival; // Devuelve la entidad actualizada y manejada
+        if (festival == null) {
+            throw new IllegalArgumentException("La entidad Festival no puede ser nula.");
         }
-        // El commit de la transacción se hará en la capa de Servicio
+        if (festival.getPromotor() == null || festival.getPromotor().getIdUsuario() == null) {
+            throw new IllegalArgumentException("El Promotor asociado al Festival no puede ser nulo y debe tener ID.");
+        }
+        // Podrían añadirse más validaciones aquí (ej: fecha fin >= fecha inicio) si no se hacen en el servicio
+
+        log.debug("Intentando guardar festival con ID: {}", festival.getIdFestival());
+        try {
+            if (festival.getIdFestival() == null) {
+                // Nuevo festival, usar persist
+                log.trace("Persistiendo nuevo Festival...");
+                em.persist(festival);
+                // em.flush(); // Descomentar si se necesita ID inmediatamente
+                log.info("Nuevo Festival persistido con ID: {}", festival.getIdFestival());
+                return festival;
+            } else {
+                // Festival existente, usar merge para actualizar
+                log.trace("Actualizando Festival con ID: {}", festival.getIdFestival());
+                Festival mergedFestival = em.merge(festival);
+                log.info("Festival actualizado con ID: {}", mergedFestival.getIdFestival());
+                return mergedFestival;
+            }
+        } catch (PersistenceException e) {
+            log.error("Error de persistencia al guardar Festival (ID: {}): {}", festival.getIdFestival(), e.getMessage(), e);
+            throw e; // Relanzar para manejo transaccional
+        } catch (Exception e) {
+            log.error("Error inesperado al guardar Festival (ID: {}): {}", festival.getIdFestival(), e.getMessage(), e);
+            throw new PersistenceException("Error inesperado al guardar Festival", e);
+        }
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public Optional<Festival> findById(EntityManager em, Integer id) {
         log.debug("Buscando festival con ID: {}", id);
         if (id == null) {
+            log.warn("Intento de buscar Festival con ID nulo.");
             return Optional.empty();
         }
-        // em.find() devuelve la entidad o null si no la encuentra
-        Festival festival = em.find(Festival.class, id);
-        if (festival != null) {
-            log.debug("Festival encontrado con ID: {}", id);
-        } else {
-            log.debug("Festival NO encontrado con ID: {}", id);
+        try {
+            Festival festival = em.find(Festival.class, id);
+            if (festival != null) {
+                log.trace("Festival encontrado con ID: {}", id);
+            } else {
+                log.trace("Festival NO encontrado con ID: {}", id);
+            }
+            return Optional.ofNullable(festival);
+        } catch (IllegalArgumentException e) {
+            log.error("Argumento ilegal al buscar Festival por ID {}: {}", id, e.getMessage());
+            return Optional.empty();
+        } catch (Exception e) {
+            log.error("Error inesperado al buscar Festival por ID {}: {}", id, e.getMessage(), e);
+            return Optional.empty();
         }
-        return Optional.ofNullable(festival);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public boolean deleteById(EntityManager em, Integer id) {
         log.debug("Intentando eliminar festival con ID: {}", id);
-        Optional<Festival> festivalOpt = findById(em, id); // Reutiliza findById para buscarlo primero
+        if (id == null) {
+            log.warn("Intento de eliminar Festival con ID nulo.");
+            return false;
+        }
+        // Buscar primero para asegurar que existe y está gestionado
+        Optional<Festival> festivalOpt = findById(em, id);
         if (festivalOpt.isPresent()) {
-            em.remove(festivalOpt.get()); // Marca la entidad para ser eliminada en el commit
-            log.info("Festival con ID: {} marcado para eliminación.", id);
-            return true;
+            try {
+                em.remove(festivalOpt.get()); // Marcar para eliminación
+                log.info("Festival con ID: {} marcado para eliminación.", id);
+                return true;
+            } catch (PersistenceException e) {
+                log.error("Error de persistencia al eliminar Festival ID {}: {}. Considerar relaciones en cascada.", id, e.getMessage());
+                throw e; // Relanzar para manejo transaccional
+            } catch (Exception e) {
+                log.error("Error inesperado al eliminar Festival ID {}: {}", id, e.getMessage(), e);
+                throw new PersistenceException("Error inesperado al eliminar Festival", e);
+            }
         } else {
             log.warn("No se pudo eliminar. Festival no encontrado con ID: {}", id);
             return false;
         }
-        // El commit/rollback de la transacción se hará en la capa de Servicio
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public List<Festival> findAll(EntityManager em) {
         log.debug("Buscando todos los festivales.");
@@ -83,14 +132,18 @@ public class FestivalRepositoryImpl implements FestivalRepository {
             return festivales;
         } catch (Exception e) {
             log.error("Error al buscar todos los festivales: {}", e.getMessage(), e);
-            return Collections.emptyList(); // Devolver lista vacía en caso de error
+            return Collections.emptyList();
         }
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public List<Festival> findByEstado(EntityManager em, EstadoFestival estado) {
         log.debug("Buscando festivales con estado: {}", estado);
         if (estado == null) {
+            log.warn("Intento de buscar festivales con estado nulo.");
             return Collections.emptyList();
         }
         try {
@@ -106,18 +159,22 @@ public class FestivalRepositoryImpl implements FestivalRepository {
         }
     }
 
+    /**
+     * {@inheritDoc} La lógica de solapamiento de fechas es: (InicioFestival <= FinRango) AND (FinFestival
+     * >= InicioRango)
+     */
     @Override
     public List<Festival> findActivosEntreFechas(EntityManager em, LocalDate fechaDesde, LocalDate fechaHasta) {
-        log.debug("Buscando festivales activos entre {} y {}", fechaDesde, fechaHasta);
+        log.debug("Buscando festivales activos (PUBLICADO) entre {} y {}", fechaDesde, fechaHasta);
         if (fechaDesde == null || fechaHasta == null || fechaHasta.isBefore(fechaDesde)) {
-            log.warn("Fechas inválidas para la búsqueda de festivales activos.");
+            log.warn("Fechas inválidas para la búsqueda de festivales activos: desde={}, hasta={}", fechaDesde, fechaHasta);
             return Collections.emptyList();
         }
         try {
             TypedQuery<Festival> query = em.createQuery(
                     "SELECT f FROM Festival f WHERE f.estado = :estadoPublicado "
-                    + "AND f.fechaInicio <= :fechaHasta "
-                    + "AND f.fechaFin >= :fechaDesde "
+                    + "AND f.fechaInicio <= :fechaHasta " // El festival empieza antes o durante el fin del rango
+                    + "AND f.fechaFin >= :fechaDesde " // El festival termina durante o después del inicio del rango
                     + "ORDER BY f.fechaInicio", Festival.class);
             query.setParameter("estadoPublicado", EstadoFestival.PUBLICADO);
             query.setParameter("fechaHasta", fechaHasta);
@@ -126,20 +183,25 @@ public class FestivalRepositoryImpl implements FestivalRepository {
             log.debug("Encontrados {} festivales activos entre {} y {}.", festivales.size(), fechaDesde, fechaHasta);
             return festivales;
         } catch (Exception e) {
-            log.error("Error buscando festivales activos entre fechas: {}", e.getMessage(), e);
+            log.error("Error buscando festivales activos entre fechas ({} - {}): {}", fechaDesde, fechaHasta, e.getMessage(), e);
             return Collections.emptyList();
         }
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public List<Festival> findByPromotorId(EntityManager em, Integer idPromotor) {
         log.debug("Buscando festivales para el promotor ID: {}", idPromotor);
         if (idPromotor == null) {
+            log.warn("Intento de buscar festivales para un ID de promotor nulo.");
             return Collections.emptyList();
         }
         try {
             TypedQuery<Festival> query = em.createQuery(
-                    "SELECT f FROM Festival f WHERE f.promotor.idUsuario = :promotorId ORDER BY f.fechaInicio DESC", Festival.class);
+                    "SELECT f FROM Festival f WHERE f.promotor.idUsuario = :promotorId ORDER BY f.fechaInicio DESC", // Ordenar por fecha más reciente primero
+                    Festival.class);
             query.setParameter("promotorId", idPromotor);
             List<Festival> festivales = query.getResultList();
             log.debug("Encontrados {} festivales para el promotor ID: {}.", festivales.size(), idPromotor);

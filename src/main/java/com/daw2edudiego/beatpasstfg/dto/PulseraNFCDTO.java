@@ -1,40 +1,93 @@
 package com.daw2edudiego.beatpasstfg.dto;
 
+import com.fasterxml.jackson.annotation.JsonInclude; // Para excluir nulos
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Objects;
 
 /**
- * DTO para representar la información de una PulseraNFC, incluyendo datos
- * básicos de la entrada y asistente asociados (si existen).
+ * DTO (Data Transfer Object) para representar la información de una
+ * {@link com.daw2edudiego.beatpasstfg.model.PulseraNFC}. Se utiliza para
+ * transferir datos de pulseras, incluyendo opcionalmente información básica de
+ * la entrada asignada y el asistente asociados.
+ *
+ * @author Eduardo Olalde
  */
+@JsonInclude(JsonInclude.Include.NON_NULL) // Opcional: Omite campos nulos en JSON
 public class PulseraNFCDTO {
 
+    /**
+     * ID de la pulsera.
+     */
     private Integer idPulsera;
+
+    /**
+     * Código UID único de la pulsera.
+     */
     private String codigoUid;
+
+    /**
+     * Saldo actual de la pulsera.
+     */
     private BigDecimal saldo;
+
+    /**
+     * Estado de activación de la pulsera.
+     */
     private Boolean activa;
+
+    /**
+     * Fecha de alta de la pulsera en el sistema.
+     */
     private LocalDateTime fechaAlta;
+
+    /**
+     * Fecha de la última modificación del registro de la pulsera.
+     */
     private LocalDateTime ultimaModificacion;
 
-    // Info de la Entrada Asignada asociada (si existe)
+    // --- Información Asociada (Opcional) ---
+    /**
+     * ID de la entrada asignada asociada (null si no está asociada).
+     */
     private Integer idEntradaAsignada;
-    private String qrEntradaAsignada; // Quizás solo una parte o un flag
 
-    // Info del Asistente asociado (a través de la EntradaAsignada)
+    /**
+     * Código QR de la entrada asignada (puede ser null o truncado).
+     */
+    private String qrEntradaAsignada; // Considerar si realmente necesario en este DTO
+
+    /**
+     * ID del asistente asociado a través de la entrada (null si no
+     * asociada/nominada).
+     */
     private Integer idAsistente;
+    /**
+     * Nombre del asistente asociado (null si no asociada/nominada).
+     */
     private String nombreAsistente;
+    /**
+     * Email del asistente asociado (null si no asociada/nominada).
+     */
     private String emailAsistente;
 
-    // Info del Festival (a través de la EntradaAsignada)
-    private Integer idFestival;
+    /**
+     * ID del festival asociado (a través de la entrada).
+     */
+    private Integer idFestival; // Se obtendría navegando EntradaAsignada -> CompraEntrada -> Entrada -> Festival
+    /**
+     * Nombre del festival asociado.
+     */
     private String nombreFestival;
 
-    // Constructor
+    /**
+     * Constructor por defecto.
+     */
     public PulseraNFCDTO() {
     }
 
     // --- Getters y Setters ---
+    // (Omitidos por brevedad, pero deben estar presentes todos los getters y setters)
     public Integer getIdPulsera() {
         return idPulsera;
     }
@@ -139,7 +192,7 @@ public class PulseraNFCDTO {
         this.nombreFestival = nombreFestival;
     }
 
-    // --- equals y hashCode ---
+    // --- equals y hashCode basados en ID ---
     @Override
     public boolean equals(Object o) {
         if (this == o) {
@@ -149,7 +202,8 @@ public class PulseraNFCDTO {
             return false;
         }
         PulseraNFCDTO that = (PulseraNFCDTO) o;
-        return Objects.equals(idPulsera, that.idPulsera);
+        // Compara por ID si ambos no son nulos
+        return idPulsera != null && Objects.equals(idPulsera, that.idPulsera);
     }
 
     @Override

@@ -1,38 +1,80 @@
 package com.daw2edudiego.beatpasstfg.dto;
 
 import com.daw2edudiego.beatpasstfg.model.EstadoEntradaAsignada;
+import com.fasterxml.jackson.annotation.JsonInclude; // Para excluir nulos en JSON
 import java.time.LocalDateTime;
+import java.util.Objects;
 
 /**
- * DTO para representar una Entrada Asignada (individual). Incluye información
- * básica de la entrada, su estado, y opcionalmente datos del asistente si está
- * nominada y del tipo de entrada original.
+ * DTO (Data Transfer Object) para representar una
+ * {@link com.daw2edudiego.beatpasstfg.model.EntradaAsignada} individual. Se
+ * utiliza para transferir información detallada sobre una entrada específica,
+ * incluyendo su estado, el asistente (si está nominada), y datos del tipo de
+ * entrada y festival asociados. Usar
+ * {@code @JsonInclude(JsonInclude.Include.NON_NULL)} para no enviar campos
+ * nulos en respuestas JSON.
+ *
+ * @author Eduardo Olalde
  */
+@JsonInclude(JsonInclude.Include.NON_NULL) // Opcional: Omite campos nulos en la serialización JSON
 public class EntradaAsignadaDTO {
 
     private Integer idEntradaAsignada;
-    private String codigoQr; // Podríamos mostrar solo una parte por seguridad
+    private String codigoQr; // Podría mostrarse truncado o completo según necesidad
     private EstadoEntradaAsignada estado;
-    private LocalDateTime fechaAsignacion;
-    private LocalDateTime fechaUso;
+    private LocalDateTime fechaAsignacion; // Fecha de nominación
+    private LocalDateTime fechaUso; // Fecha de validación/uso
 
-    // Info de la compra original
+    // --- Información relacionada ---
+    /**
+     * ID del detalle de compra original del que proviene esta entrada.
+     */
     private Integer idCompraEntrada;
 
-    // Info del Asistente (si está nominada)
+    /**
+     * ID del asistente al que está nominada la entrada (null si no nominada).
+     */
     private Integer idAsistente;
+    /**
+     * Nombre del asistente nominado (null si no nominada).
+     */
     private String nombreAsistente;
+    /**
+     * Email del asistente nominado (null si no nominada).
+     */
     private String emailAsistente;
 
-    // Info del Tipo de Entrada original (opcional, útil para mostrar)
+    /**
+     * ID del tipo de entrada original
+     * ({@link com.daw2edudiego.beatpasstfg.model.Entrada}).
+     */
     private Integer idEntradaOriginal;
+    /**
+     * Nombre del tipo de entrada original (ej: "General", "VIP").
+     */
     private String tipoEntradaOriginal;
 
-    // Info del Festival (opcional, útil para contexto)
+    /**
+     * ID del festival al que pertenece la entrada.
+     */
     private Integer idFestival;
+    /**
+     * Nombre del festival al que pertenece la entrada.
+     */
     private String nombreFestival;
 
-    // Constructor
+    /**
+     * ID de la pulsera asociada (null si no hay).
+     */
+    private Integer idPulseraAsociada;
+    /**
+     * Código UID de la pulsera asociada (null si no hay).
+     */
+    private String codigoUidPulsera;
+
+    /**
+     * Constructor por defecto.
+     */
     public EntradaAsignadaDTO() {
     }
 
@@ -141,15 +183,53 @@ public class EntradaAsignadaDTO {
         this.nombreFestival = nombreFestival;
     }
 
+    public Integer getIdPulseraAsociada() {
+        return idPulseraAsociada;
+    }
+
+    public void setIdPulseraAsociada(Integer idPulseraAsociada) {
+        this.idPulseraAsociada = idPulseraAsociada;
+    }
+
+    public String getCodigoUidPulsera() {
+        return codigoUidPulsera;
+    }
+
+    public void setCodigoUidPulsera(String codigoUidPulsera) {
+        this.codigoUidPulsera = codigoUidPulsera;
+    }
+
+    // --- equals y hashCode basados en ID ---
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+        EntradaAsignadaDTO that = (EntradaAsignadaDTO) o;
+        return Objects.equals(idEntradaAsignada, that.idEntradaAsignada);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(idEntradaAsignada);
+    }
+
     // --- toString ---
     @Override
     public String toString() {
         return "EntradaAsignadaDTO{"
                 + "idEntradaAsignada=" + idEntradaAsignada
-                + ", estado=" + estado
+                + ", codigoQr='" + (codigoQr != null ? codigoQr.substring(0, Math.min(codigoQr.length(), 15)) + "..." : "null") + '\''
+                + // Mostrar solo parte del QR
+                ", estado=" + estado
                 + ", idAsistente=" + idAsistente
                 + ", nombreAsistente='" + nombreAsistente + '\''
                 + ", tipoEntradaOriginal='" + tipoEntradaOriginal + '\''
+                + ", idFestival=" + idFestival
+                + ", idPulseraAsociada=" + idPulseraAsociada
                 + '}';
     }
 }

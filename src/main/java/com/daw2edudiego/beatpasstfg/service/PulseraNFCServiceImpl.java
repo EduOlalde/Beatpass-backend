@@ -10,48 +10,61 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityTransaction;
 import jakarta.persistence.LockModeType;
 import jakarta.persistence.PersistenceException;
-import jakarta.ws.rs.ForbiddenException;
-import jakarta.ws.rs.NotAuthorizedException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
 /**
- * Implementación de PulseraNFCService.
+ * Implementación de la interfaz {@link PulseraNFCService}. Gestiona la lógica
+ * de negocio para las pulseras NFC, incluyendo asociación, consultas, recargas
+ * y consumos, asegurando la integridad de los datos, manejo de saldo,
+ * transacciones y permisos.
+ *
+ * @see PulseraNFCService
+ * @see PulseraNFCRepository
+ * @see RecargaRepository
+ * @see ConsumoRepository
+ * @author Eduardo Olalde
  */
 public class PulseraNFCServiceImpl implements PulseraNFCService {
 
     private static final Logger log = LoggerFactory.getLogger(PulseraNFCServiceImpl.class);
 
-    // Dependencias
+    // Inyección manual de dependencias (en un entorno con CDI/Spring se usaría @Inject/@Autowired)
     private final PulseraNFCRepository pulseraNFCRepository;
     private final EntradaAsignadaRepository entradaAsignadaRepository;
     private final UsuarioRepository usuarioRepository;
     private final FestivalRepository festivalRepository;
-    private final EntradaRepository entradaRepository;
+    // private final EntradaRepository entradaRepository; // No se usa directamente aquí
     private final RecargaRepository recargaRepository;
     private final ConsumoRepository consumoRepository;
 
+    /**
+     * Constructor que inicializa los repositorios necesarios.
+     */
     public PulseraNFCServiceImpl() {
         this.pulseraNFCRepository = new PulseraNFCRepositoryImpl();
         this.entradaAsignadaRepository = new EntradaAsignadaRepositoryImpl();
         this.usuarioRepository = new UsuarioRepositoryImpl();
         this.festivalRepository = new FestivalRepositoryImpl();
-        this.entradaRepository = new EntradaRepositoryImpl();
+        // this.entradaRepository = new EntradaRepositoryImpl(); // No necesario
         this.recargaRepository = new RecargaRepositoryImpl();
         this.consumoRepository = new ConsumoRepositoryImpl();
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public PulseraNFCDTO asociarPulseraEntrada(String codigoUid, Integer idEntradaAsignada, Integer idActor) {
         log.info("Service: Asociando pulsera UID {} a entrada ID {} por actor ID {}", codigoUid, idEntradaAsignada, idActor);
 
+        // Validación de parámetros de entrada
         if (codigoUid == null || codigoUid.isBlank() || idEntradaAsignada == null || idActor == null) {
             throw new IllegalArgumentException("UID de pulsera, ID de entrada asignada y ID de actor son requeridos.");
         }
@@ -63,221 +76,195 @@ public class PulseraNFCServiceImpl implements PulseraNFCService {
             tx = em.getTransaction();
             tx.begin();
 
-            // 1. Verificar Actor (simplificado, asumimos ADMIN o PROMOTOR o CAJERO pueden asociar)
-            Usuario actor = usuarioRepository.findById(em, idActor)
-                    .orElseThrow(() -> new UsuarioNotFoundException("Usuario actor no encontrado con ID: " + idActor));
+            // 1. Verificar Actor y permisos básicos de asociación
+            Usuario actor = verificarActorPermitido(em, idActor, RolUsuario.ADMIN, RolUsuario.PROMOTOR, RolUsuario.CAJERO);
 
-            // *** CORRECCIÓN: Añadir CAJERO a los roles permitidos para asociar ***
-            boolean tienePermiso = (actor.getRol() == RolUsuario.ADMIN
-                    || actor.getRol() == RolUsuario.PROMOTOR
-                    || actor.getRol() == RolUsuario.CAJERO); // <-- Añadido CAJERO
-            if (!tienePermiso) {
-                throw new SecurityException("El usuario no tiene permiso para asociar pulseras.");
-            }
-
-            // 2. Buscar Entrada Asignada
+            // 2. Buscar Entrada Asignada y validar su estado
             EntradaAsignada entradaAsignada = entradaAsignadaRepository.findById(em, idEntradaAsignada)
                     .orElseThrow(() -> new EntradaAsignadaNotFoundException("Entrada asignada no encontrada con ID: " + idEntradaAsignada));
+            validarEstadoEntradaParaAsociacion(entradaAsignada);
 
-            // 3. Validar Estado y Nominación de la Entrada
-            if (entradaAsignada.getEstado() != EstadoEntradaAsignada.ACTIVA) {
-                throw new IllegalStateException("La entrada ID " + idEntradaAsignada + " no está activa (Estado: " + entradaAsignada.getEstado() + ").");
-            }
-            if (entradaAsignada.getAsistente() == null) {
-                throw new EntradaAsignadaNoNominadaException("La entrada ID " + idEntradaAsignada + " debe estar nominada a un asistente antes de asociar una pulsera.");
+            // 3. Verificar si la Entrada ya tiene una Pulsera asociada
+            if (pulseraNFCRepository.findByEntradaAsignadaId(em, idEntradaAsignada).isPresent()) {
+                throw new IllegalStateException("La entrada ID " + idEntradaAsignada + " ya tiene una pulsera asociada.");
             }
 
-            // 4. Verificar si la Entrada ya tiene una Pulsera asociada
-            Optional<PulseraNFC> pulseraExistenteParaEntrada = pulseraNFCRepository.findByEntradaAsignadaId(em, idEntradaAsignada);
-            if (pulseraExistenteParaEntrada.isPresent()) {
-                throw new IllegalStateException("La entrada ID " + idEntradaAsignada + " ya tiene asociada la pulsera UID " + pulseraExistenteParaEntrada.get().getCodigoUid());
-            }
+            // 4. Buscar o Crear Pulsera por UID
+            PulseraNFC pulsera = obtenerOCrearPulsera(em, codigoUid);
+            validarEstadoPulseraParaAsociacion(pulsera, entradaAsignada);
 
-            // 5. Buscar o Crear Pulsera por UID
-            Optional<PulseraNFC> pulseraOpt = pulseraNFCRepository.findByCodigoUid(em, codigoUid);
-            PulseraNFC pulsera;
-
-            if (pulseraOpt.isPresent()) {
-                // Pulsera encontrada - Verificar si está activa y si ya está asociada a OTRA entrada ACTIVA del MISMO festival
-                pulsera = pulseraOpt.get();
-                log.debug("Pulsera encontrada con UID {}. ID: {}", codigoUid, pulsera.getIdPulsera());
-                if (!Boolean.TRUE.equals(pulsera.getActiva())) {
-                    throw new IllegalStateException("La pulsera con UID " + codigoUid + " no está activa.");
-                }
-                // Verificar si ya está asociada a otra entrada activa del mismo festival
-                if (pulsera.getEntradaAsignada() != null && pulsera.getEntradaAsignada().getEstado() == EstadoEntradaAsignada.ACTIVA) {
-                    // Obtener festival de la pulsera ya asociada
-                    Festival festivalPulseraActual = obtenerFestivalDesdeEntradaAsignada(pulsera.getEntradaAsignada());
-                    // Obtener festival de la entrada que queremos asociar
-                    Festival festivalEntradaNueva = obtenerFestivalDesdeEntradaAsignada(entradaAsignada);
-
-                    if (festivalPulseraActual != null && festivalEntradaNueva != null && festivalPulseraActual.equals(festivalEntradaNueva)) {
-                        throw new PulseraYaAsociadaException("La pulsera UID " + codigoUid + " ya está asociada a otra entrada activa (ID: " + pulsera.getEntradaAsignada().getIdEntradaAsignada() + ") para este festival.");
-                    }
-                    // Si está asociada a una entrada de OTRO festival o una entrada NO ACTIVA, podríamos permitir reasociarla (depende reglas negocio)
-                    log.warn("Pulsera UID {} estaba asociada a entrada ID {}, pero se reasociará a entrada ID {}", codigoUid, pulsera.getEntradaAsignada().getIdEntradaAsignada(), idEntradaAsignada);
-                }
-
-            } else {
-                // Pulsera no encontrada - Crear una nueva
-                log.debug("Pulsera con UID {} no encontrada. Creando nueva.", codigoUid);
-                pulsera = new PulseraNFC();
-                pulsera.setCodigoUid(codigoUid);
-                pulsera.setSaldo(BigDecimal.ZERO); // Saldo inicial 0
-                pulsera.setActiva(true); // Activa por defecto al crear
-                // La fechaAlta se pone automáticamente por la BD
-            }
-
-            // 6. Verificar Permiso del Promotor (si el actor es promotor)
-            // Necesitamos el festival al que pertenece la entrada
-            Festival festival = obtenerFestivalDesdeEntradaAsignada(entradaAsignada);
+            // 5. Verificar Permiso específico del Promotor si aplica
+            Festival festival = obtenerFestivalDesdeEntradaAsignada(entradaAsignada); // Obtener festival
             if (actor.getRol() == RolUsuario.PROMOTOR) {
-                verificarPropiedadFestival(festival, idActor); // Reutilizamos helper
+                verificarPropiedadFestival(festival, idActor);
             }
-            // Nota: No se verifica propiedad si es ADMIN o CAJERO
 
-            // 7. Establecer la asociación y guardar
+            // 6. Establecer la asociación bidireccional y guardar
             pulsera.setEntradaAsignada(entradaAsignada);
+            // entradaAsignada.setPulseraAsociada(pulsera); // Gestionado por @OneToOne(mappedBy...) en EntradaAsignada
             pulsera = pulseraNFCRepository.save(em, pulsera); // Guarda o actualiza la pulsera
 
             tx.commit();
             log.info("Pulsera UID {} (ID: {}) asociada correctamente a Entrada ID {}",
                     pulsera.getCodigoUid(), pulsera.getIdPulsera(), idEntradaAsignada);
 
-            return mapEntityToDto(pulsera); // Devolver DTO de la pulsera
+            return mapEntityToDto(pulsera);
 
         } catch (Exception e) {
-            handleException(e, tx, "asociando pulsera a entrada");
-            throw mapException(e); // Relanzar excepción mapeada
+            handleException(e, tx, "asociando pulsera UID " + codigoUid + " a entrada ID " + idEntradaAsignada);
+            throw mapException(e);
         } finally {
             closeEntityManager(em);
         }
     }
 
-    // --- Métodos obtenerPulseraPorId, obtenerPulseraPorCodigoUid, obtenerSaldo, obtenerPulserasPorFestival SIN CAMBIOS ---
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public Optional<PulseraNFCDTO> obtenerPulseraPorId(Integer idPulsera, Integer idActor) {
         log.debug("Service: Obteniendo pulsera ID {} por actor ID {}", idPulsera, idActor);
         if (idPulsera == null || idActor == null) {
             throw new IllegalArgumentException("ID pulsera y ID actor requeridos.");
         }
+
         EntityManager em = null;
-        EntityTransaction tx = null;
+        // No requiere transacción para lectura, pero puede ser útil para verificar permisos si implica joins
         try {
             em = JPAUtil.createEntityManager();
-            tx = em.getTransaction();
-            tx.begin(); // Tx para posible verificación de permisos compleja
-            Usuario actor = usuarioRepository.findById(em, idActor).orElseThrow(() -> new UsuarioNotFoundException("Actor no encontrado: " + idActor));
-            PulseraNFC pulsera = pulseraNFCRepository.findById(em, idPulsera).orElseThrow(() -> new PulseraNFCNotFoundException("Pulsera no encontrada: " + idPulsera));
 
-            // Verificar permisos (simplificado: admin/cajero puede ver todo, promotor solo las de sus festivales)
-            if (actor.getRol() == RolUsuario.PROMOTOR) {
-                if (pulsera.getEntradaAsignada() == null) {
-                    throw new SecurityException("Promotor no puede ver pulseras no asociadas.");
-                }
-                Festival festival = obtenerFestivalDesdeEntradaAsignada(pulsera.getEntradaAsignada());
-                verificarPropiedadFestival(festival, idActor);
+            // Buscar pulsera
+            Optional<PulseraNFC> pulseraOpt = pulseraNFCRepository.findById(em, idPulsera);
+            if (pulseraOpt.isEmpty()) {
+                return Optional.empty(); // No encontrada
             }
-            // ADMIN y CAJERO pueden ver cualquiera
-            tx.commit();
+            PulseraNFC pulsera = pulseraOpt.get();
+
+            // Verificar permisos
+            verificarPermisoLecturaPulsera(em, pulsera, idActor);
+
+            // Mapear y devolver
             return Optional.of(mapEntityToDto(pulsera));
+
         } catch (Exception e) {
-            handleException(e, tx, "obteniendo pulsera por ID");
-            if (e instanceof SecurityException || e instanceof PulseraNFCNotFoundException) {
+            // No hacer rollback ya que es lectura
+            log.error("Error obteniendo pulsera ID {}: {}", idPulsera, e.getMessage(), e);
+            // Si es SecurityException, devolver vacío silenciosamente para el usuario
+            if (e instanceof SecurityException) {
                 return Optional.empty();
             }
-            throw mapException(e);
+            // Para otros errores, podríamos relanzar o devolver vacío
+            // throw mapException(e); // Opcional
+            return Optional.empty();
         } finally {
             closeEntityManager(em);
         }
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public Optional<PulseraNFCDTO> obtenerPulseraPorCodigoUid(String codigoUid, Integer idActor) {
         log.debug("Service: Obteniendo pulsera UID {} por actor ID {}", codigoUid, idActor);
         if (codigoUid == null || codigoUid.isBlank() || idActor == null) {
             throw new IllegalArgumentException("UID pulsera y ID actor requeridos.");
         }
+
         EntityManager em = null;
-        EntityTransaction tx = null;
         try {
             em = JPAUtil.createEntityManager();
-            tx = em.getTransaction();
-            tx.begin();
-            Usuario actor = usuarioRepository.findById(em, idActor).orElseThrow(() -> new UsuarioNotFoundException("Actor no encontrado: " + idActor));
-            PulseraNFC pulsera = pulseraNFCRepository.findByCodigoUid(em, codigoUid).orElseThrow(() -> new PulseraNFCNotFoundException("Pulsera no encontrada: " + codigoUid));
 
-            // Verificar permisos (igual que en findById)
-            if (actor.getRol() == RolUsuario.PROMOTOR) {
-                if (pulsera.getEntradaAsignada() == null) {
-                    throw new SecurityException("Promotor no puede ver pulseras no asociadas.");
-                }
-                Festival festival = obtenerFestivalDesdeEntradaAsignada(pulsera.getEntradaAsignada());
-                verificarPropiedadFestival(festival, idActor);
+            // Buscar pulsera por UID
+            Optional<PulseraNFC> pulseraOpt = pulseraNFCRepository.findByCodigoUid(em, codigoUid);
+            if (pulseraOpt.isEmpty()) {
+                return Optional.empty(); // No encontrada
             }
-            // ADMIN y CAJERO pueden ver cualquiera
-            tx.commit();
+            PulseraNFC pulsera = pulseraOpt.get();
+
+            // Verificar permisos
+            verificarPermisoLecturaPulsera(em, pulsera, idActor);
+
+            // Mapear y devolver
             return Optional.of(mapEntityToDto(pulsera));
+
         } catch (Exception e) {
-            handleException(e, tx, "obteniendo pulsera por UID");
-            if (e instanceof SecurityException || e instanceof PulseraNFCNotFoundException) {
+            log.error("Error obteniendo pulsera UID {}: {}", codigoUid, e.getMessage(), e);
+            if (e instanceof SecurityException) {
                 return Optional.empty();
             }
-            throw mapException(e);
+            // throw mapException(e); // Opcional
+            return Optional.empty();
         } finally {
             closeEntityManager(em);
         }
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public BigDecimal obtenerSaldo(Integer idPulsera, Integer idActor) {
         log.debug("Service: Obteniendo saldo pulsera ID {} por actor ID {}", idPulsera, idActor);
-        // Usamos obtenerPulseraPorId que ya incluye la verificación de permisos
+        // Reutiliza obtenerPulseraPorId que ya verifica permisos
         PulseraNFCDTO dto = obtenerPulseraPorId(idPulsera, idActor)
                 .orElseThrow(() -> new PulseraNFCNotFoundException("Pulsera no encontrada o sin permiso de acceso: " + idPulsera));
+        // Devuelve el saldo o CERO si es nulo
         return dto.getSaldo() != null ? dto.getSaldo() : BigDecimal.ZERO;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public List<PulseraNFCDTO> obtenerPulserasPorFestival(Integer idFestival, Integer idActor) {
         log.debug("Service: Obteniendo pulseras para festival ID {} por actor ID {}", idFestival, idActor);
         if (idFestival == null || idActor == null) {
             throw new IllegalArgumentException("ID festival y ID actor requeridos.");
         }
+
         EntityManager em = null;
-        EntityTransaction tx = null;
         try {
             em = JPAUtil.createEntityManager();
-            tx = em.getTransaction();
-            tx.begin();
-            Usuario actor = usuarioRepository.findById(em, idActor).orElseThrow(() -> new UsuarioNotFoundException("Actor no encontrado: " + idActor));
 
-            // Verificar permisos (Admin o Promotor dueño)
-            if (actor.getRol() == RolUsuario.PROMOTOR) {
-                Festival festival = festivalRepository.findById(em, idFestival).orElseThrow(() -> new FestivalNotFoundException("Festival no encontrado: " + idFestival));
-                verificarPropiedadFestival(festival, idActor);
-            } else if (actor.getRol() != RolUsuario.ADMIN) {
-                // CAJERO no puede listar todas las pulseras de un festival
-                throw new SecurityException("Rol no autorizado para ver todas las pulseras de un festival.");
-            }
+            // Verificar Actor y permisos para listar pulseras del festival
+            Usuario actor = usuarioRepository.findById(em, idActor)
+                    .orElseThrow(() -> new UsuarioNotFoundException("Usuario actor no encontrado: " + idActor));
+            verificarPermisoListadoPulserasFestival(em, idFestival, actor);
 
+            // Obtener pulseras del repositorio
             List<PulseraNFC> pulseras = pulseraNFCRepository.findByFestivalId(em, idFestival);
-            tx.commit();
+
+            // Mapear y devolver
             return pulseras.stream().map(this::mapEntityToDto).collect(Collectors.toList());
+
         } catch (Exception e) {
-            handleException(e, tx, "obteniendo pulseras por festival");
-            throw mapException(e);
+            log.error("Error obteniendo pulseras para festival ID {}: {}", idFestival, e.getMessage(), e);
+            // No hacer rollback en lectura
+            // No relanzar SecurityException para no exponer detalles internos
+            if (e instanceof SecurityException || e instanceof FestivalNotFoundException) {
+                return Collections.emptyList();
+            }
+            // Para otros errores, devolver lista vacía
+            // throw mapException(e); // Opcional
+            return Collections.emptyList();
         } finally {
             closeEntityManager(em);
         }
     }
-    // --- FIN MÉTODOS SIN CAMBIOS ---
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public PulseraNFCDTO registrarRecarga(String codigoUid, BigDecimal monto, String metodoPago, Integer idUsuarioCajero) {
         log.info("Service: Registrando recarga de {} ({}) en pulsera UID {} por cajero ID {}", monto, metodoPago, codigoUid, idUsuarioCajero);
-        if (codigoUid == null || codigoUid.isBlank() || monto == null || monto.compareTo(BigDecimal.ZERO) <= 0 || idUsuarioCajero == null) {
-            throw new IllegalArgumentException("UID pulsera, monto positivo y ID cajero son requeridos.");
+        // Validación de parámetros
+        if (codigoUid == null || codigoUid.isBlank() || idUsuarioCajero == null) {
+            throw new IllegalArgumentException("UID pulsera y ID cajero son requeridos.");
+        }
+        if (monto == null || monto.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("El monto de la recarga debe ser positivo.");
         }
 
         EntityManager em = null;
@@ -287,41 +274,32 @@ public class PulseraNFCServiceImpl implements PulseraNFCService {
             tx = em.getTransaction();
             tx.begin();
 
-            // 1. Verificar Cajero
-            Usuario cajero = usuarioRepository.findById(em, idUsuarioCajero)
-                    .orElseThrow(() -> new UsuarioNotFoundException("Usuario cajero no encontrado: " + idUsuarioCajero));
+            // 1. Verificar Cajero y permisos
+            Usuario cajero = verificarActorPermitido(em, idUsuarioCajero, RolUsuario.ADMIN, RolUsuario.PROMOTOR, RolUsuario.CAJERO);
 
-            // *** CORRECCIÓN: Permitir rol CAJERO ***
-            if (cajero.getRol() != RolUsuario.ADMIN && cajero.getRol() != RolUsuario.PROMOTOR && cajero.getRol() != RolUsuario.CAJERO) {
-                log.warn("Intento de recarga por usuario ID {} con rol no permitido: {}", idUsuarioCajero, cajero.getRol());
-                throw new SecurityException("Usuario no autorizado para realizar recargas."); // Mensaje original del error
-            }
-
-            // 2. Buscar Pulsera y bloquearla
+            // 2. Buscar Pulsera y bloquearla para escritura
             PulseraNFC pulsera = pulseraNFCRepository.findByCodigoUid(em, codigoUid)
                     .orElseThrow(() -> new PulseraNFCNotFoundException("Pulsera no encontrada con UID: " + codigoUid));
-            em.lock(pulsera, LockModeType.PESSIMISTIC_WRITE); // Bloqueo para actualizar saldo
+            em.lock(pulsera, LockModeType.PESSIMISTIC_WRITE);
 
-            // 3. Verificar si pulsera está activa
+            // 3. Verificar estado activo de la pulsera
             if (!Boolean.TRUE.equals(pulsera.getActiva())) {
                 throw new IllegalStateException("La pulsera UID " + codigoUid + " no está activa.");
             }
 
-            // 4. Crear registro de Recarga
+            // 4. Crear y guardar el registro de Recarga
             Recarga recarga = new Recarga();
             recarga.setPulseraNFC(pulsera);
             recarga.setMonto(monto);
-            recarga.setMetodoPago(metodoPago);
+            recarga.setMetodoPago(metodoPago != null ? metodoPago.trim() : null);
             recarga.setUsuarioCajero(cajero);
-            // La fecha se establece automáticamente por la BD
-
             recargaRepository.save(em, recarga);
             log.debug("Recarga ID {} registrada.", recarga.getIdRecarga());
 
             // 5. Actualizar saldo de la pulsera
             BigDecimal saldoActual = pulsera.getSaldo() != null ? pulsera.getSaldo() : BigDecimal.ZERO;
             pulsera.setSaldo(saldoActual.add(monto));
-            pulseraNFCRepository.save(em, pulsera); // Guardar pulsera con saldo actualizado
+            pulsera = pulseraNFCRepository.save(em, pulsera); // Guardar pulsera actualizada
 
             tx.commit();
             log.info("Recarga de {} realizada en pulsera UID {}. Nuevo saldo: {}", monto, codigoUid, pulsera.getSaldo());
@@ -329,20 +307,30 @@ public class PulseraNFCServiceImpl implements PulseraNFCService {
             return mapEntityToDto(pulsera);
 
         } catch (Exception e) {
-            handleException(e, tx, "registrando recarga");
+            handleException(e, tx, "registrando recarga para UID " + codigoUid);
             throw mapException(e);
         } finally {
             closeEntityManager(em);
         }
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public PulseraNFCDTO registrarConsumo(String codigoUid, BigDecimal monto, String descripcion, Integer idFestival, Integer idPuntoVenta, Integer idActor) {
         log.info("Service: Registrando consumo de {} ('{}') en pulsera UID {} para festival ID {} por actor ID {}",
                 monto, descripcion, codigoUid, idFestival, idActor);
 
-        if (codigoUid == null || codigoUid.isBlank() || monto == null || monto.compareTo(BigDecimal.ZERO) <= 0 || idFestival == null || idActor == null) {
-            throw new IllegalArgumentException("UID pulsera, monto positivo, ID festival y ID actor son requeridos.");
+        // Validación de parámetros
+        if (codigoUid == null || codigoUid.isBlank() || idFestival == null || idActor == null) {
+            throw new IllegalArgumentException("UID pulsera, ID festival y ID actor son requeridos.");
+        }
+        if (monto == null || monto.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("El monto del consumo debe ser positivo.");
+        }
+        if (descripcion == null || descripcion.isBlank()) {
+            throw new IllegalArgumentException("La descripción del consumo es requerida.");
         }
 
         EntityManager em = null;
@@ -352,27 +340,20 @@ public class PulseraNFCServiceImpl implements PulseraNFCService {
             tx = em.getTransaction();
             tx.begin();
 
-            // 1. Verificar Actor
-            Usuario actor = usuarioRepository.findById(em, idActor)
-                    .orElseThrow(() -> new UsuarioNotFoundException("Usuario actor no encontrado: " + idActor));
+            // 1. Verificar Actor y permisos
+            Usuario actor = verificarActorPermitido(em, idActor, RolUsuario.ADMIN, RolUsuario.PROMOTOR, RolUsuario.CAJERO);
 
-            // *** CORRECCIÓN: Permitir rol CAJERO ***
-            if (actor.getRol() != RolUsuario.ADMIN && actor.getRol() != RolUsuario.PROMOTOR && actor.getRol() != RolUsuario.CAJERO) {
-                log.warn("Intento de consumo por usuario ID {} con rol no permitido: {}", idActor, actor.getRol());
-                throw new SecurityException("Usuario no autorizado para registrar consumos.");
-            }
-
-            // 2. Buscar Festival
+            // 2. Buscar Festival (verificar que existe)
             Festival festival = festivalRepository.findById(em, idFestival)
                     .orElseThrow(() -> new FestivalNotFoundException("Festival no encontrado: " + idFestival));
-            // Podríamos verificar si el festival está activo/publicado
+            // Podríamos añadir verificación de si el festival está PUBLICADO/activo
 
-            // 3. Buscar Pulsera y bloquearla
+            // 3. Buscar Pulsera y bloquearla para escritura
             PulseraNFC pulsera = pulseraNFCRepository.findByCodigoUid(em, codigoUid)
                     .orElseThrow(() -> new PulseraNFCNotFoundException("Pulsera no encontrada con UID: " + codigoUid));
             em.lock(pulsera, LockModeType.PESSIMISTIC_WRITE);
 
-            // 4. Verificar si pulsera está activa
+            // 4. Verificar estado activo de la pulsera
             if (!Boolean.TRUE.equals(pulsera.getActiva())) {
                 throw new IllegalStateException("La pulsera UID " + codigoUid + " no está activa.");
             }
@@ -381,24 +362,22 @@ public class PulseraNFCServiceImpl implements PulseraNFCService {
             BigDecimal saldoActual = pulsera.getSaldo() != null ? pulsera.getSaldo() : BigDecimal.ZERO;
             if (saldoActual.compareTo(monto) < 0) {
                 log.warn("Saldo insuficiente en pulsera UID {}. Saldo: {}, Monto: {}", codigoUid, saldoActual, monto);
-                throw new SaldoInsuficienteException("Saldo insuficiente (" + saldoActual + "€) para realizar el consumo de " + monto + "€.");
+                throw new SaldoInsuficienteException("Saldo insuficiente (" + saldoActual + ") para realizar el consumo de " + monto + ".");
             }
 
-            // 6. Crear registro de Consumo
+            // 6. Crear y guardar el registro de Consumo
             Consumo consumo = new Consumo();
             consumo.setPulseraNFC(pulsera);
             consumo.setMonto(monto);
-            consumo.setDescripcion(descripcion);
+            consumo.setDescripcion(descripcion.trim());
             consumo.setFestival(festival); // Asociar al festival donde ocurre
             consumo.setIdPuntoVenta(idPuntoVenta); // Opcional
-            // La fecha se establece automáticamente
-
             consumoRepository.save(em, consumo);
             log.debug("Consumo ID {} registrado.", consumo.getIdConsumo());
 
             // 7. Actualizar saldo de la pulsera
             pulsera.setSaldo(saldoActual.subtract(monto));
-            pulseraNFCRepository.save(em, pulsera);
+            pulsera = pulseraNFCRepository.save(em, pulsera); // Guardar pulsera actualizada
 
             tx.commit();
             log.info("Consumo de {} registrado en pulsera UID {}. Nuevo saldo: {}", monto, codigoUid, pulsera.getSaldo());
@@ -406,76 +385,284 @@ public class PulseraNFCServiceImpl implements PulseraNFCService {
             return mapEntityToDto(pulsera);
 
         } catch (Exception e) {
-            handleException(e, tx, "registrando consumo");
+            handleException(e, tx, "registrando consumo para UID " + codigoUid);
             throw mapException(e);
         } finally {
             closeEntityManager(em);
         }
     }
 
-    // --- Helpers Internos (reutilizados de otros servicios) ---
+    // --- Métodos Privados de Ayuda (Helpers) ---
+    /**
+     * Verifica si un usuario existe y tiene uno de los roles permitidos.
+     *
+     * @param em EntityManager activo.
+     * @param idUsuario ID del usuario a verificar.
+     * @param rolesPermitidos Roles que tienen permiso.
+     * @return La entidad Usuario si existe y tiene un rol permitido.
+     * @throws UsuarioNotFoundException Si el usuario no existe.
+     * @throws SecurityException Si el usuario no tiene un rol permitido.
+     */
+    private Usuario verificarActorPermitido(EntityManager em, Integer idUsuario, RolUsuario... rolesPermitidos) {
+        Usuario actor = usuarioRepository.findById(em, idUsuario)
+                .orElseThrow(() -> new UsuarioNotFoundException("Usuario actor no encontrado con ID: " + idUsuario));
+
+        boolean permitido = false;
+        for (RolUsuario rol : rolesPermitidos) {
+            if (actor.getRol() == rol) {
+                permitido = true;
+                break;
+            }
+        }
+        if (!permitido) {
+            log.warn("Usuario ID {} con rol {} intentó realizar una acción no permitida.", idUsuario, actor.getRol());
+            throw new SecurityException("Rol de usuario no autorizado para esta acción.");
+        }
+        return actor;
+    }
+
+    /**
+     * Valida si el estado de una EntradaAsignada permite la asociación de una
+     * pulsera.
+     *
+     * @param entrada La EntradaAsignada a validar.
+     * @throws IllegalStateException Si la entrada no está ACTIVA.
+     * @throws EntradaAsignadaNoNominadaException Si la entrada no está
+     * nominada.
+     */
+    private void validarEstadoEntradaParaAsociacion(EntradaAsignada entrada) {
+        if (entrada.getEstado() != EstadoEntradaAsignada.ACTIVA) {
+            throw new IllegalStateException("La entrada ID " + entrada.getIdEntradaAsignada()
+                    + " no está activa (Estado: " + entrada.getEstado() + ").");
+        }
+        if (entrada.getAsistente() == null) {
+            throw new EntradaAsignadaNoNominadaException("La entrada ID " + entrada.getIdEntradaAsignada()
+                    + " debe estar nominada a un asistente.");
+        }
+    }
+
+    /**
+     * Obtiene una PulseraNFC por su UID. Si no existe, crea una nueva instancia
+     * (sin persistirla aún).
+     *
+     * @param em EntityManager activo.
+     * @param codigoUid UID de la pulsera.
+     * @return La entidad PulseraNFC (existente o nueva).
+     */
+    private PulseraNFC obtenerOCrearPulsera(EntityManager em, String codigoUid) {
+        Optional<PulseraNFC> pulseraOpt = pulseraNFCRepository.findByCodigoUid(em, codigoUid);
+        if (pulseraOpt.isPresent()) {
+            log.debug("Pulsera encontrada con UID {}", codigoUid);
+            return pulseraOpt.get();
+        } else {
+            log.debug("Pulsera con UID {} no encontrada. Preparando nueva instancia.", codigoUid);
+            PulseraNFC nuevaPulsera = new PulseraNFC();
+            nuevaPulsera.setCodigoUid(codigoUid);
+            nuevaPulsera.setSaldo(BigDecimal.ZERO);
+            nuevaPulsera.setActiva(true);
+            return nuevaPulsera;
+        }
+    }
+
+    /**
+     * Valida si el estado de una PulseraNFC existente permite asociarla a una
+     * nueva EntradaAsignada.
+     *
+     * @param pulsera La PulseraNFC existente.
+     * @param nuevaEntrada La nueva EntradaAsignada a la que se quiere asociar.
+     * @throws IllegalStateException Si la pulsera no está activa.
+     * @throws PulseraYaAsociadaException Si la pulsera ya está asociada a otra
+     * entrada activa del mismo festival.
+     */
+    private void validarEstadoPulseraParaAsociacion(PulseraNFC pulsera, EntradaAsignada nuevaEntrada) {
+        if (pulsera.getIdPulsera() == null) {
+            return; // Es una pulsera nueva, no hay estado que validar
+        }
+        if (!Boolean.TRUE.equals(pulsera.getActiva())) {
+            throw new IllegalStateException("La pulsera con UID " + pulsera.getCodigoUid() + " no está activa.");
+        }
+        // Verificar si ya está asociada a OTRA entrada ACTIVA del MISMO festival
+        if (pulsera.getEntradaAsignada() != null
+                && pulsera.getEntradaAsignada().getEstado() == EstadoEntradaAsignada.ACTIVA
+                && !pulsera.getEntradaAsignada().equals(nuevaEntrada)) { // Asegurarse que no es la misma entrada
+
+            Festival festivalPulseraActual = obtenerFestivalDesdeEntradaAsignada(pulsera.getEntradaAsignada());
+            Festival festivalEntradaNueva = obtenerFestivalDesdeEntradaAsignada(nuevaEntrada);
+
+            if (festivalPulseraActual != null && festivalPulseraActual.equals(festivalEntradaNueva)) {
+                throw new PulseraYaAsociadaException("La pulsera UID " + pulsera.getCodigoUid()
+                        + " ya está asociada a otra entrada activa (ID: "
+                        + pulsera.getEntradaAsignada().getIdEntradaAsignada() + ") para este festival.");
+            }
+            // Si está asociada a entrada de otro festival o entrada no activa, se permite reasociar
+            log.warn("Pulsera UID {} estaba asociada a entrada ID {}, pero se reasociará a entrada ID {}",
+                    pulsera.getCodigoUid(), pulsera.getEntradaAsignada().getIdEntradaAsignada(), nuevaEntrada.getIdEntradaAsignada());
+        }
+    }
+
+    /**
+     * Verifica si un usuario tiene permiso para leer la información de una
+     * pulsera.
+     *
+     * @param em EntityManager activo.
+     * @param pulsera La pulsera cuya información se quiere leer.
+     * @param idActor ID del usuario solicitante.
+     * @throws UsuarioNotFoundException Si el actor no existe.
+     * @throws SecurityException Si el actor no tiene permisos.
+     */
+    private void verificarPermisoLecturaPulsera(EntityManager em, PulseraNFC pulsera, Integer idActor) {
+        Usuario actor = usuarioRepository.findById(em, idActor)
+                .orElseThrow(() -> new UsuarioNotFoundException("Usuario actor no encontrado: " + idActor));
+
+        // ADMIN y CAJERO pueden ver cualquiera
+        if (actor.getRol() == RolUsuario.ADMIN || actor.getRol() == RolUsuario.CAJERO) {
+            return;
+        }
+
+        // PROMOTOR solo puede ver las asociadas a sus festivales
+        if (actor.getRol() == RolUsuario.PROMOTOR) {
+            if (pulsera.getEntradaAsignada() == null) {
+                // Si no está asociada, el promotor no puede verla directamente
+                throw new SecurityException("Promotor no puede ver pulseras no asociadas a una entrada.");
+            }
+            try {
+                Festival festival = obtenerFestivalDesdeEntradaAsignada(pulsera.getEntradaAsignada());
+                verificarPropiedadFestival(festival, idActor); // Lanza SecurityException si no es dueño
+            } catch (IllegalStateException | SecurityException e) {
+                // Si no se puede determinar el festival o no es dueño
+                throw new SecurityException("Promotor no tiene permiso para ver esta pulsera.", e);
+            }
+        } else {
+            // Otros roles no tienen permiso
+            throw new SecurityException("Rol no autorizado para ver información de pulseras.");
+        }
+    }
+
+    /**
+     * Verifica si un usuario tiene permiso para listar las pulseras de un
+     * festival.
+     *
+     * @param em EntityManager activo.
+     * @param idFestival ID del festival.
+     * @param actor El usuario solicitante.
+     * @throws FestivalNotFoundException Si el festival no existe.
+     * @throws SecurityException Si el actor no tiene permisos.
+     */
+    private void verificarPermisoListadoPulserasFestival(EntityManager em, Integer idFestival, Usuario actor) {
+        // ADMIN puede listar todas
+        if (actor.getRol() == RolUsuario.ADMIN) {
+            // Opcional: verificar que el festival existe si queremos lanzar FestivalNotFoundException
+            // festivalRepository.findById(em, idFestival).orElseThrow(() -> new FestivalNotFoundException(...));
+            return;
+        }
+        // PROMOTOR puede listar las de sus festivales
+        if (actor.getRol() == RolUsuario.PROMOTOR) {
+            Festival festival = festivalRepository.findById(em, idFestival)
+                    .orElseThrow(() -> new FestivalNotFoundException("Festival no encontrado: " + idFestival));
+            verificarPropiedadFestival(festival, actor.getIdUsuario()); // Lanza SecurityException si no es dueño
+            return;
+        }
+        // Otros roles (CAJERO) no pueden listar
+        throw new SecurityException("Rol no autorizado para listar todas las pulseras de un festival.");
+    }
+
+    /**
+     * Obtiene la entidad Festival asociada a una EntradaAsignada. Maneja
+     * posibles inconsistencias en la cadena de relaciones.
+     *
+     * @param ea La EntradaAsignada.
+     * @return El Festival asociado.
+     * @throws IllegalStateException si no se puede determinar el festival.
+     */
     private Festival obtenerFestivalDesdeEntradaAsignada(EntradaAsignada ea) {
+        // Reutilizado de EntradaAsignadaServiceImpl - Podría ir a una clase de utilidad
         if (ea == null || ea.getCompraEntrada() == null || ea.getCompraEntrada().getEntrada() == null || ea.getCompraEntrada().getEntrada().getFestival() == null) {
-            log.error("Inconsistencia de datos para EntradaAsignada ID {}: no se pudo obtener el festival asociado.", ea != null ? ea.getIdEntradaAsignada() : "null");
-            // Devolver null o lanzar excepción más específica si es recuperable
-            // return null;
-            throw new IllegalStateException("Error interno: no se pudo determinar el festival de la entrada.");
+            Integer eaId = (ea != null) ? ea.getIdEntradaAsignada() : null;
+            log.error("Inconsistencia de datos para EntradaAsignada ID {}: no se pudo obtener el festival asociado.", eaId);
+            throw new IllegalStateException("Error interno: no se pudo determinar el festival de la entrada ID " + eaId);
         }
         return ea.getCompraEntrada().getEntrada().getFestival();
     }
 
+    /**
+     * Verifica que el promotor dado sea el propietario del festival.
+     * (Reutilizado de otros servicios).
+     */
     private void verificarPropiedadFestival(Festival festival, Integer idPromotor) {
+        // Reutilizado de otros servicios
         if (festival == null) {
-            // Podría pasar si obtenerFestivalDesdeEntradaAsignada devuelve null
-            throw new IllegalStateException("Error interno: Festival asociado no encontrado para verificar propiedad.");
+            throw new IllegalArgumentException("El festival no puede ser nulo para verificar propiedad.");
         }
-        if (festival.getPromotor() == null || !festival.getPromotor().getIdUsuario().equals(idPromotor)) {
-            throw new SecurityException("No tiene permiso para realizar acciones sobre este festival/pulsera.");
+        if (idPromotor == null) {
+            throw new IllegalArgumentException("El ID del promotor no puede ser nulo para verificar propiedad.");
         }
+        if (festival.getPromotor() == null || festival.getPromotor().getIdUsuario() == null) {
+            log.error("Inconsistencia de datos: Festival ID {} no tiene un promotor asociado.", festival.getIdFestival());
+            throw new IllegalStateException("El festival no tiene un promotor asociado.");
+        }
+        if (!festival.getPromotor().getIdUsuario().equals(idPromotor)) {
+            log.warn("Intento de acceso no autorizado por promotor ID {} al festival ID {} (propiedad de promotor ID {})",
+                    idPromotor, festival.getIdFestival(), festival.getPromotor().getIdUsuario());
+            throw new SecurityException("El usuario no tiene permiso para acceder a los recursos de este festival.");
+        }
+        log.trace("Verificación de propiedad exitosa para promotor ID {} sobre festival ID {}", idPromotor, festival.getIdFestival());
     }
 
+    /**
+     * Manejador genérico de excepciones para métodos de servicio. (Reutilizado
+     * de otros servicios).
+     */
     private void handleException(Exception e, EntityTransaction tx, String action) {
-        log.error("Error {} : {}", action, e.getMessage(), e);
+        log.error("Error durante la acción '{}': {}", action, e.getMessage(), e);
         if (tx != null && tx.isActive()) {
             try {
                 tx.rollback();
-                log.warn("Rollback de transacción realizado tras error en {}", action);
+                log.warn("Rollback de transacción de {} realizado.", action);
             } catch (Exception rbEx) {
-                log.error("Error durante el rollback tras error en {}: {}", action, rbEx.getMessage(), rbEx);
+                log.error("Error durante el rollback de {}: {}", action, rbEx.getMessage(), rbEx);
             }
         }
     }
 
+    /**
+     * Cierra el EntityManager si está abierto. (Reutilizado de otros
+     * servicios).
+     */
     private void closeEntityManager(EntityManager em) {
         if (em != null && em.isOpen()) {
             em.close();
         }
     }
 
+    /**
+     * Mapea excepciones técnicas a excepciones de negocio o RuntimeException.
+     * (Reutilizado de otros servicios).
+     */
     private RuntimeException mapException(Exception e) {
-        // Mapear excepciones específicas a RuntimeExceptions si no lo son ya
+        // Asegurarse de incluir todas las excepciones personalizadas relevantes
         if (e instanceof PulseraNFCNotFoundException || e instanceof EntradaAsignadaNotFoundException
                 || e instanceof EntradaAsignadaNoNominadaException || e instanceof PulseraYaAsociadaException
                 || e instanceof AsistenteNotFoundException || e instanceof FestivalNotFoundException
                 || e instanceof UsuarioNotFoundException || e instanceof FestivalNoPublicadoException
-                || e instanceof StockInsuficienteException || e instanceof SaldoInsuficienteException // Añadida
+                || e instanceof StockInsuficienteException || e instanceof SaldoInsuficienteException
                 || e instanceof IllegalArgumentException
                 || e instanceof SecurityException || e instanceof IllegalStateException
-                || e instanceof PersistenceException || e instanceof ForbiddenException // Añadida
-                || e instanceof NotAuthorizedException) { // Añadida
-            // Si ya es RuntimeException o una de las específicas, relanzar
-            if (e instanceof RuntimeException) {
-                return (RuntimeException) e;
-            } else {
-                // Envolver excepciones checked (si hubiera) o específicas no-runtime
-                return new RuntimeException("Error de negocio o acceso: " + e.getMessage(), e);
-            }
+                || e instanceof PersistenceException
+                || e instanceof RuntimeException) { // Incluir RuntimeException genéricas
+            return (RuntimeException) e;
         }
-        // Para excepciones genéricas no esperadas
-        return new RuntimeException("Error inesperado en servicio NFC: " + e.getMessage(), e);
+        // Para otras excepciones no esperadas, envolvemos en RuntimeException
+        return new RuntimeException("Error inesperado en la capa de servicio PulseraNFC: " + e.getMessage(), e);
     }
 
-    // --- Helper de Mapeo PulseraNFC a PulseraNFCDTO ---
+    /**
+     * Mapea una entidad PulseraNFC a su correspondiente PulseraNFCDTO. Incluye
+     * información básica de la entrada y asistente asociados si existen.
+     *
+     * @param p La entidad PulseraNFC.
+     * @return El PulseraNFCDTO mapeado, o {@code null} si la entidad es
+     * {@code null}.
+     */
     private PulseraNFCDTO mapEntityToDto(PulseraNFC p) {
         if (p == null) {
             return null;
@@ -488,10 +675,11 @@ public class PulseraNFCServiceImpl implements PulseraNFCService {
         dto.setFechaAlta(p.getFechaAlta());
         dto.setUltimaModificacion(p.getUltimaModificacion());
 
+        // Incluir datos asociados si existen
         if (p.getEntradaAsignada() != null) {
             EntradaAsignada ea = p.getEntradaAsignada();
             dto.setIdEntradaAsignada(ea.getIdEntradaAsignada());
-            dto.setQrEntradaAsignada(ea.getCodigoQr()); // O solo una parte
+            // dto.setQrEntradaAsignada(ea.getCodigoQr()); // Opcional: enviar QR?
 
             if (ea.getAsistente() != null) {
                 Asistente as = ea.getAsistente();
@@ -499,7 +687,7 @@ public class PulseraNFCServiceImpl implements PulseraNFCService {
                 dto.setNombreAsistente(as.getNombre());
                 dto.setEmailAsistente(as.getEmail());
             }
-            // Obtener info del festival
+            // Incluir info del festival
             try {
                 Festival f = obtenerFestivalDesdeEntradaAsignada(ea);
                 if (f != null) {
@@ -507,7 +695,7 @@ public class PulseraNFCServiceImpl implements PulseraNFCService {
                     dto.setNombreFestival(f.getNombre());
                 }
             } catch (IllegalStateException ex) {
-                log.warn("No se pudo obtener info del festival para pulsera ID {} debido a inconsistencia.", p.getIdPulsera());
+                log.warn("No se pudo obtener info del festival para pulsera ID {} al mapear a DTO.", p.getIdPulsera());
             }
         }
         return dto;

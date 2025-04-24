@@ -1,25 +1,62 @@
 package com.daw2edudiego.beatpasstfg.dto;
 
+import jakarta.validation.constraints.Email; // Validación
+import jakarta.validation.constraints.NotBlank; // Validación
+import jakarta.validation.constraints.Size; // Validación
 import java.time.LocalDateTime;
 import java.util.Objects;
 
 /**
- * DTO para transferir información de Asistentes. No incluye información
- * sensible si la hubiera.
+ * DTO (Data Transfer Object) para representar la información de un
+ * {@link com.daw2edudiego.beatpasstfg.model.Asistente}. Se utiliza para
+ * transferir datos de asistentes entre capas (servicio, controlador, vista) y
+ * potencialmente para recibir datos de formularios (aunque podría necesitar un
+ * DTO específico para creación/edición). Excluye información sensible o
+ * relaciones complejas no necesarias para la transferencia.
+ *
+ * @author Eduardo Olalde
  */
 public class AsistenteDTO {
 
+    /**
+     * ID del asistente. Generalmente se incluye al mostrar datos, pero podría
+     * ser null al crear uno nuevo.
+     */
     private Integer idAsistente;
-    private String nombre;
-    private String email;
-    private String telefono; // Opcional
-    private LocalDateTime fechaCreacion; // Informativo
 
-    // Constructor por defecto
+    /**
+     * Nombre del asistente. Requerido al crear/actualizar.
+     */
+    @NotBlank(message = "El nombre del asistente no puede estar vacío.")
+    @Size(max = 100, message = "El nombre no puede exceder los 100 caracteres.")
+    private String nombre;
+
+    /**
+     * Email del asistente. Requerido y debe ser único.
+     */
+    @NotBlank(message = "El email del asistente не може бути порожнім.") // Corregido: mensaje en español
+    @Email(message = "El formato del email no es válido.")
+    @Size(max = 100, message = "El email no puede exceder los 100 caracteres.")
+    private String email;
+
+    /**
+     * Teléfono del asistente (opcional).
+     */
+    @Size(max = 20, message = "El teléfono no puede exceder los 20 caracteres.")
+    private String telefono;
+
+    /**
+     * Fecha de creación (informativo, generalmente no editable por el usuario).
+     */
+    private LocalDateTime fechaCreacion;
+
+    /**
+     * Constructor por defecto (necesario para frameworks como Jackson/JAX-RS).
+     */
     public AsistenteDTO() {
     }
 
-    // Getters y Setters
+    // --- Getters y Setters ---
     public Integer getIdAsistente() {
         return idAsistente;
     }
@@ -60,7 +97,7 @@ public class AsistenteDTO {
         this.fechaCreacion = fechaCreacion;
     }
 
-    // --- equals y hashCode basados en ID ---
+    // --- equals y hashCode basados en ID (útil si se usan en colecciones) ---
     @Override
     public boolean equals(Object o) {
         if (this == o) {
@@ -70,7 +107,8 @@ public class AsistenteDTO {
             return false;
         }
         AsistenteDTO that = (AsistenteDTO) o;
-        return Objects.equals(idAsistente, that.idAsistente);
+        // Compara por ID si ambos no son nulos
+        return idAsistente != null && Objects.equals(idAsistente, that.idAsistente);
     }
 
     @Override
@@ -78,13 +116,14 @@ public class AsistenteDTO {
         return Objects.hash(idAsistente);
     }
 
-    // --- toString ---
+    // --- toString (útil para debugging) ---
     @Override
     public String toString() {
         return "AsistenteDTO{"
                 + "idAsistente=" + idAsistente
                 + ", nombre='" + nombre + '\''
                 + ", email='" + email + '\''
+                + ", telefono='" + telefono + '\''
                 + '}';
     }
 }
