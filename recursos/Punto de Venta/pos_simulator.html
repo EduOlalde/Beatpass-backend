@@ -12,30 +12,42 @@
             padding: 20px;
             max-width: 800px;
             margin: auto;
-            background-color: #f4f4f4; /* Fondo ligeramente gris */
+            background-color: #f4f4f4;
+            /* Fondo ligeramente gris */
         }
 
         .container {
             margin-bottom: 20px;
-            padding: 20px; /* Más padding */
-            border: 1px solid #ddd; /* Borde más suave */
-            border-radius: 8px; /* Bordes más redondeados */
-            background-color: #fff; /* Fondo blanco */
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1); /* Sombra suave */
+            padding: 20px;
+            /* Más padding */
+            border: 1px solid #ddd;
+            /* Borde más suave */
+            border-radius: 8px;
+            /* Bordes más redondeados */
+            background-color: #fff;
+            /* Fondo blanco */
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            /* Sombra suave */
         }
 
-        h1, h2 {
-            color: #333; /* Color oscuro para títulos */
-            border-bottom: 2px solid #007bff; /* Línea azul bajo títulos */
+        h1,
+        h2 {
+            color: #333;
+            /* Color oscuro para títulos */
+            border-bottom: 2px solid #007bff;
+            /* Línea azul bajo títulos */
             padding-bottom: 5px;
             margin-bottom: 15px;
         }
 
         label {
             display: block;
-            margin-bottom: 8px; /* Más espacio bajo labels */
-            font-weight: bold; /* Labels en negrita */
-            color: #555; /* Color gris oscuro para labels */
+            margin-bottom: 8px;
+            /* Más espacio bajo labels */
+            font-weight: bold;
+            /* Labels en negrita */
+            color: #555;
+            /* Color gris oscuro para labels */
         }
 
         input[type="text"],
@@ -43,24 +55,32 @@
         input[type="number"],
         input[type="email"],
         select {
-            width: calc(100% - 22px); /* Ajuste para padding y borde */
-            padding: 10px; /* Inputs más altos */
-            margin-bottom: 15px; /* Más espacio bajo inputs */
+            width: calc(100% - 22px);
+            /* Ajuste para padding y borde */
+            padding: 10px;
+            /* Inputs más altos */
+            margin-bottom: 15px;
+            /* Más espacio bajo inputs */
             border: 1px solid #ccc;
-            border-radius: 4px; /* Bordes redondeados para inputs */
-            box-sizing: border-box; /* Incluir padding y borde en el width */
+            border-radius: 4px;
+            /* Bordes redondeados para inputs */
+            box-sizing: border-box;
+            /* Incluir padding y borde en el width */
         }
 
         button {
-            padding: 10px 20px; /* Botones más anchos */
+            padding: 10px 20px;
+            /* Botones más anchos */
             background-color: #007bff;
             color: white;
             border: none;
             border-radius: 4px;
             cursor: pointer;
             margin-right: 5px;
-            transition: background-color 0.2s ease; /* Transición suave */
-            font-size: 1em; /* Tamaño de fuente */
+            transition: background-color 0.2s ease;
+            /* Transición suave */
+            font-size: 1em;
+            /* Tamaño de fuente */
         }
 
         button:hover {
@@ -68,55 +88,79 @@
         }
 
         #logoutButton {
-            background-color: #dc3545; /* Botón logout rojo */
+            background-color: #dc3545;
+            /* Botón logout rojo */
         }
+
         #logoutButton:hover {
             background-color: #c82333;
         }
 
-
+        /* Estilo para el área general de resultados */
         #resultArea {
             margin-top: 20px;
             padding: 15px;
             border: 1px solid #eee;
-            background-color: #f9f9f9;
+            background-color: #f0f0f0;
+            /* Fondo gris más claro */
             border-radius: 5px;
-            white-space: pre-wrap; /* Mantiene formato pero ajusta línea */
-            word-wrap: break-word; /* Asegura que palabras largas no desborden */
-            font-family: monospace; /* Fuente monoespaciada para JSON */
-            min-height: 50px; /* Altura mínima */
+            white-space: pre-wrap;
+            /* Mantiene formato pero ajusta línea */
+            word-wrap: break-word;
+            /* Asegura que palabras largas no desborden */
+            font-family: monospace;
+            /* Fuente monoespaciada para JSON */
+            min-height: 50px;
+            /* Altura mínima */
+            font-size: 0.9em;
+            /* Tamaño de fuente ligeramente menor */
         }
 
-        .error {
-            color: #dc3545; /* Rojo para errores */
-            font-weight: bold;
-            background-color: #f8d7da; /* Fondo rosa claro */
-            border: 1px solid #f5c6cb;
+        /* Estilo para los resultados específicos de cada sección */
+        .section-result {
+            margin-top: 15px;
+            /* Espacio sobre el resultado */
             padding: 10px;
             border-radius: 4px;
+            font-size: 0.95em;
+            min-height: 20px;
+            /* Altura mínima para que sea visible incluso vacío */
         }
 
-        .success {
-            color: #28a745; /* Verde para éxito */
-            font-weight: bold;
-            background-color: #d4edda; /* Fondo verde claro */
+        /* Clases específicas para éxito/error en resultados de sección */
+        .section-result.success {
+            color: #155724;
+            /* Verde oscuro */
+            background-color: #d4edda;
+            /* Fondo verde claro */
             border: 1px solid #c3e6cb;
-            padding: 10px;
-            border-radius: 4px;
         }
+
+        .section-result.error {
+            color: #721c24;
+            /* Rojo oscuro */
+            background-color: #f8d7da;
+            /* Fondo rosa claro */
+            border: 1px solid #f5c6cb;
+        }
+
+        /* Clases para el estado del login */
         #loginStatus {
-             font-weight: bold;
-             padding: 5px 10px;
-             border-radius: 4px;
-             display: inline-block; /* Para que el fondo se ajuste */
+            font-weight: bold;
+            padding: 5px 10px;
+            border-radius: 4px;
+            display: inline-block;
+            /* Para que el fondo se ajuste */
         }
+
         #loginStatus.success {
-             background-color: #d4edda;
-             color: #155724;
+            background-color: #d4edda;
+            color: #155724;
         }
-         #loginStatus.error {
-             background-color: #f8d7da;
-             color: #721c24;
+
+        #loginStatus.error {
+            background-color: #f8d7da;
+            color: #721c24;
         }
     </style>
 </head>
@@ -140,7 +184,7 @@
         <button id="logoutButton" style="display: none;">Logout</button>
     </div>
 
-    <%-- Sección de operaciones POS, inicialmente oculta --%>
+    <!-- Sección de operaciones POS, inicialmente oculta -->
     <div id="posOperations" style="display: none;">
 
         <div class="container">
@@ -150,6 +194,8 @@
                 <input type="text" id="checkUid" name="codigoUid" placeholder="Ej: A1B2C3D4" required>
                 <button type="submit">Consultar</button>
             </form>
+            <!-- *** Div para mostrar resultado de la consulta *** -->
+            <div id="consultaResult" class="section-result"></div>
         </div>
 
         <div class="container">
@@ -159,7 +205,8 @@
                 <input type="text" id="rechargeUid" name="codigoUid" placeholder="Ej: A1B2C3D4" required>
 
                 <label for="rechargeAmount">Monto (€):</label>
-                <input type="number" id="rechargeAmount" name="monto" step="0.01" min="0.01" placeholder="Ej: 20.50" required>
+                <input type="number" id="rechargeAmount" name="monto" step="0.01" min="0.01" placeholder="Ej: 20.50"
+                    required>
 
                 <label for="rechargeMethod">Método de Pago:</label>
                 <select id="rechargeMethod" name="metodoPago">
@@ -170,6 +217,8 @@
 
                 <button type="submit">Recargar</button>
             </form>
+            <!-- *** Div para mostrar resultado de la recarga *** -->
+            <div id="recargaResult" class="section-result"></div>
         </div>
 
         <div class="container">
@@ -179,25 +228,31 @@
                 <input type="text" id="consumeUid" name="codigoUid" placeholder="Ej: A1B2C3D4" required>
 
                 <label for="consumeAmount">Monto (€):</label>
-                <input type="number" id="consumeAmount" name="monto" step="0.01" min="0.01" placeholder="Ej: 5.00" required>
+                <input type="number" id="consumeAmount" name="monto" step="0.01" min="0.01" placeholder="Ej: 5.00"
+                    required>
 
                 <label for="consumeDescription">Descripción:</label>
                 <input type="text" id="consumeDescription" name="descripcion" value="Bebida" required>
 
                 <label for="consumeFestivalId">ID Festival:</label>
-                <input type="number" id="consumeFestivalId" name="idFestival" placeholder="ID del festival actual" required>
+                <input type="number" id="consumeFestivalId" name="idFestival" placeholder="ID del festival actual"
+                    required>
 
                 <label for="consumePosId">ID Punto Venta (Opcional):</label>
                 <input type="number" id="consumePosId" name="idPuntoVenta" placeholder="ID de este POS (si aplica)">
 
                 <button type="submit">Consumir</button>
             </form>
-        </div>       
+            <!-- *** Div para mostrar resultado del consumo *** -->
+            <div id="consumoResult" class="section-result"></div>
+        </div>
+
+        <!-- Sección Asociación eliminada -->
 
     </div>
 
     <div class="container">
-        <h2>Resultados API</h2>
+        <h2>Resultados API (Respuesta Completa)</h2>
         <div id="resultArea">Esperando acciones...</div>
     </div>
 

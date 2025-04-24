@@ -7,11 +7,15 @@ const loginForm = document.getElementById('loginForm');
 const loginStatus = document.getElementById('loginStatus');
 const logoutButton = document.getElementById('logoutButton');
 const posOperationsDiv = document.getElementById('posOperations');
-const resultArea = document.getElementById('resultArea');
+const resultArea = document.getElementById('resultArea'); // Área general
 const checkBalanceForm = document.getElementById('checkBalanceForm');
 const rechargeForm = document.getElementById('rechargeForm');
 const consumeForm = document.getElementById('consumeForm');
-// const associateForm = document.getElementById('associateForm'); // ELIMINADO: Ya no se usa este formulario
+
+// *** NUEVO: Referencias a los divs de resultados específicos ***
+const consultaResultDiv = document.getElementById('consultaResult');
+const recargaResultDiv = document.getElementById('recargaResult');
+const consumoResultDiv = document.getElementById('consumoResult');
 
 // --- Funciones Auxiliares ---
 
@@ -22,7 +26,7 @@ const consumeForm = document.getElementById('consumeForm');
  */
 function storeToken(token) {
     jwtToken = token;
-    localStorage.setItem('jwtToken', token); // Guardar en localStorage para persistencia
+    localStorage.setItem('jwtToken', token);
     updateLoginStatus(true);
     console.log("Token JWT almacenado.");
 }
@@ -33,7 +37,7 @@ function storeToken(token) {
  */
 function clearToken() {
     jwtToken = null;
-    localStorage.removeItem('jwtToken'); // Limpiar de localStorage
+    localStorage.removeItem('jwtToken');
     updateLoginStatus(false);
     console.log("Token JWT eliminado.");
 }
@@ -59,38 +63,73 @@ function loadToken() {
 function updateLoginStatus(isLoggedIn) {
     if (isLoggedIn) {
         loginStatus.textContent = 'Autenticado';
-        loginStatus.className = 'success'; // Clase CSS para éxito
-        posOperationsDiv.style.display = 'block'; // Mostrar operaciones POS
-        logoutButton.style.display = 'inline-block'; // Mostrar botón logout
-        loginForm.style.display = 'none'; // Ocultar formulario de login
+        loginStatus.className = 'success';
+        posOperationsDiv.style.display = 'block';
+        logoutButton.style.display = 'inline-block';
+        loginForm.style.display = 'none';
     } else {
         loginStatus.textContent = 'No autenticado';
-        loginStatus.className = 'error'; // Clase CSS para error/no autenticado
-        posOperationsDiv.style.display = 'none'; // Ocultar operaciones POS
-        logoutButton.style.display = 'none'; // Ocultar botón logout
-        loginForm.style.display = 'block'; // Mostrar formulario de login
+        loginStatus.className = 'error';
+        posOperationsDiv.style.display = 'none';
+        logoutButton.style.display = 'none';
+        loginForm.style.display = 'block';
+        // Limpiar resultados al hacer logout
+        clearSpecificResults();
+        resultArea.innerHTML = 'Esperando acciones...';
+        resultArea.className = ''; // Resetear clase
     }
 }
 
 /**
- * Muestra resultados o mensajes de error en el área designada del HTML.
+ * Muestra resultados o mensajes de error en el área GENERAL designada del HTML.
  * @param {any} data - Los datos a mostrar (objeto, string).
  * @param {boolean} [isError=false] - Indica si es un mensaje de error.
  */
 function displayResult(data, isError = false) {
     resultArea.innerHTML = ''; // Limpiar contenido previo
     const content = document.createElement('div');
-    // Formatear objeto como JSON para legibilidad
     content.textContent = typeof data === 'object' ? JSON.stringify(data, null, 2) : data;
     if (isError) {
-        content.className = 'error'; // Aplicar clase CSS de error
-        console.error("API Error:", data); // Loguear error en consola
+        resultArea.className = 'error'; // Aplicar clase CSS de error al contenedor general
+        console.error("API Error:", data);
     } else {
-        content.className = 'success'; // Aplicar clase CSS de éxito
-        console.log("API Success:", data); // Loguear éxito en consola
+        resultArea.className = 'success'; // Aplicar clase CSS de éxito al contenedor general
+        console.log("API Success:", data);
     }
     resultArea.appendChild(content);
 }
+
+/**
+ * Muestra resultados o mensajes de error en un DIV ESPECÍFICO de sección.
+ * @param {HTMLElement} targetDiv - El elemento div donde mostrar el resultado.
+ * @param {string} message - El mensaje a mostrar.
+ * @param {boolean} isError - Indica si es un mensaje de error.
+ */
+function displaySpecificResult(targetDiv, message, isError) {
+    if (targetDiv) {
+        targetDiv.textContent = message;
+        targetDiv.className = `section-result ${isError ? 'error' : 'success'}`;
+    }
+}
+
+/**
+ * Limpia el contenido y las clases de los divs de resultados específicos.
+ */
+function clearSpecificResults() {
+    if (consultaResultDiv) {
+        consultaResultDiv.textContent = '';
+        consultaResultDiv.className = 'section-result';
+    }
+    if (recargaResultDiv) {
+        recargaResultDiv.textContent = '';
+        recargaResultDiv.className = 'section-result';
+    }
+    if (consumoResultDiv) {
+        consumoResultDiv.textContent = '';
+        consumoResultDiv.className = 'section-result';
+    }
+}
+
 
 /**
  * Realiza una llamada fetch a la API, añadiendo el token JWT si está disponible.
@@ -100,95 +139,57 @@ function displayResult(data, isError = false) {
  * @returns {Promise<any>} - Promesa que resuelve con los datos de la respuesta o rechaza con error.
  */
 async function fetchWithAuth(url, options = {}) {
-    // Clonar cabeceras existentes o crear un objeto vacío
-    const headers = {
-        ...(options.headers || {}),
-    };
-
-    // Añadir token de autorización si existe
+    const headers = { ...(options.headers || {}) };
     if (jwtToken) {
         headers['Authorization'] = `Bearer ${jwtToken}`;
     }
-
-    // Determinar Content-Type basado en el tipo de body
     if (options.body) {
         if (options.body instanceof URLSearchParams) {
-            // Si es form-urlencoded, asegurarse que la cabecera esté (o añadirla)
-            if (!headers['Content-Type']) {
-                headers['Content-Type'] = 'application/x-www-form-urlencoded';
-            }
-        } else if (typeof options.body === 'object' && !(options.body instanceof FormData)) { // Asegurarse que no sea FormData
-            // Si es un objeto JS (no FormData/URLSearchParams), asumir JSON
-            if (!headers['Content-Type']) {
-                headers['Content-Type'] = 'application/json';
-            }
-            // Convertir el objeto a string JSON solo si no es ya un string
-            if (typeof options.body !== 'string') {
-                options.body = JSON.stringify(options.body);
-            }
+            if (!headers['Content-Type']) headers['Content-Type'] = 'application/x-www-form-urlencoded';
+        } else if (typeof options.body === 'object' && !(options.body instanceof FormData)) {
+            if (!headers['Content-Type']) headers['Content-Type'] = 'application/json';
+            if (typeof options.body !== 'string') options.body = JSON.stringify(options.body);
         }
-        // Podrías añadir más casos para otros tipos de body si fuera necesario
     }
-
-
-    // Configurar opciones finales para fetch
-    const fetchOptions = {
-        ...options,
-        headers: headers
-    };
-
-    console.log(`Fetching: ${url}`, fetchOptions); // Loguear petición para depuración
+    const fetchOptions = { ...options, headers: headers };
+    console.log(`Fetching: ${url}`, fetchOptions);
 
     try {
         const response = await fetch(url, fetchOptions);
-
-        // Intentar obtener datos de la respuesta (JSON o texto)
         let responseData = null;
         const contentType = response.headers.get('content-type');
         if (contentType && contentType.includes('application/json')) {
-            try {
-                responseData = await response.json(); // Intentar parsear como JSON
-            } catch (jsonError) {
-                console.warn("Fallo al parsear JSON de la respuesta, obteniendo texto.", jsonError);
-                try {
-                    responseData = await response.text(); // Intentar obtener como texto
-                } catch (textError) {
-                    console.error("Fallo también al obtener texto de la respuesta.", textError);
-                    responseData = `Error ${response.status}: Respuesta no procesable.`; // Mensaje genérico
-                }
+            try { responseData = await response.json(); }
+            catch (jsonError) {
+                console.warn("Fallo al parsear JSON, obteniendo texto.", jsonError);
+                try { responseData = await response.text(); }
+                catch (textError) { console.error("Fallo al obtener texto.", textError); responseData = `Error ${response.status}: Respuesta no procesable.`; }
             }
         } else {
-            try {
-                responseData = await response.text(); // Obtener como texto si no es JSON
-            } catch (textError) {
-                console.error("Fallo al obtener texto de la respuesta no JSON.", textError);
-                responseData = `Error ${response.status}: Respuesta no procesable.`;
-            }
+            try { responseData = await response.text(); }
+            catch (textError) { console.error("Fallo al obtener texto no JSON.", textError); responseData = `Error ${response.status}: Respuesta no procesable.`; }
         }
 
-        // Verificar si la respuesta HTTP fue exitosa (status 2xx)
         if (!response.ok) {
             console.error(`HTTP Error: ${response.status} ${response.statusText}`, responseData);
-            // Extraer mensaje de error del cuerpo JSON si existe, si no usar statusText
             const errorMessage = (responseData && typeof responseData === 'object' && responseData.error)
-                ? responseData.error // Mensaje de error específico del backend
-                : (responseData && typeof responseData === 'string' && responseData.length < 200 ? responseData : `Error ${response.status}: ${response.statusText}`); // Mensaje genérico o texto corto
-
-            displayResult(errorMessage, true); // Mostrar error en la interfaz
-            throw new Error(errorMessage); // Lanzar error para detener la ejecución
+                ? responseData.error
+                : (responseData && typeof responseData === 'string' && responseData.length < 200 ? responseData : `Error ${response.status}: ${response.statusText}`);
+            // Mostrar error en el área GENERAL
+            displayResult(errorMessage, true);
+            // Lanzar error para detener la ejecución y ser capturado por el handler
+            throw new Error(errorMessage);
         }
-
-        console.log("Fetch successful", responseData); // Loguear respuesta exitosa
-        return responseData; // Devolver los datos
+        console.log("Fetch successful", responseData);
+        // Mostrar respuesta completa en el área GENERAL
+        displayResult(responseData, false);
+        return responseData; // Devolver los datos para uso específico
 
     } catch (error) {
         console.error('Error en fetchWithAuth:', error);
-        // Mostrar error de red o el error ya lanzado por !response.ok
-        if (!error.message.startsWith("Error ")) { // Evitar duplicar mensajes de error HTTP
-            // Solo mostrar si no fue un error HTTP ya mostrado
-            if (!error.message.includes("HTTP Error")) {
-                displayResult(`Error de red o fetch: ${error.message}`, true);
-            }
+        // El error HTTP ya se mostró en displayResult. Si es otro tipo de error, mostrarlo.
+        if (!error.message.includes("HTTP Error") && !error.message.startsWith("Error ")) {
+            displayResult(`Error de red o fetch: ${error.message}`, true);
         }
         throw error; // Re-lanzar para que la función llamante sepa que falló
     }
@@ -198,64 +199,65 @@ async function fetchWithAuth(url, options = {}) {
 
 /** Maneja el envío del formulario de login */
 async function handleLogin(event) {
-    event.preventDefault(); // Evitar recarga de página
+    event.preventDefault();
     const formData = new FormData(loginForm);
-    const email = formData.get('email');
-    const password = formData.get('password');
-
-    // Crear objeto para enviar como JSON
-    const credentials = {
-        email: email,
-        password: password
-    };
-
-    displayResult("Intentando iniciar sesión..."); // Mensaje inicial
-
+    const credentials = { email: formData.get('email'), password: formData.get('password') };
+    displayResult("Intentando iniciar sesión...");
+    clearSpecificResults(); // Limpiar resultados específicos al intentar login
     try {
-        // Llamar a fetchWithAuth, pasando el objeto 'credentials' en el body
-        const data = await fetchWithAuth(`${API_BASE_URL}/auth/login`, {
-            method: 'POST',
-            body: credentials // Enviar el objeto directamente
-        });
-
-        // Verificar si la respuesta contiene el token esperado
+        const data = await fetchWithAuth(`${API_BASE_URL}/auth/login`, { method: 'POST', body: credentials });
         if (data && data.token) {
-            storeToken(data.token); // Almacenar el token
-            displayResult("Login exitoso.", false); // Mostrar éxito
+            storeToken(data.token);
+            // No mostramos nada en específico aquí, displayResult ya mostró el token
         } else {
             console.error("Respuesta de login inesperada (sin token):", data);
             displayResult("Error: Respuesta de login inesperada del servidor.", true);
             clearToken();
         }
     } catch (error) {
-        // El error ya se mostró en displayResult dentro de fetchWithAuth
-        clearToken(); // Limpiar token en caso de error de login
+        clearToken();
+        // El error ya fue mostrado por fetchWithAuth
     }
 }
 
 /** Maneja el clic en el botón de logout */
 function handleLogout() {
-    clearToken(); // Limpiar el token
-    displayResult("Sesión cerrada."); // Mostrar mensaje
+    clearToken();
+    displayResult("Sesión cerrada.");
+    clearSpecificResults(); // Limpiar también los específicos
 }
 
 /** Maneja la consulta de datos de una pulsera */
 async function handleCheckBalance(event) {
     event.preventDefault();
     const uid = document.getElementById('checkUid').value;
+    // Limpiar resultados previos de esta sección y el general
+    clearSpecificResults();
+    resultArea.innerHTML = ''; resultArea.className = '';
+
     if (!uid) {
-        displayResult("Por favor, introduce un UID de pulsera.", true);
+        displaySpecificResult(consultaResultDiv, "Por favor, introduce un UID de pulsera.", true);
         return;
     }
-    displayResult(`Consultando pulsera UID: ${uid}...`);
+    displaySpecificResult(consultaResultDiv, `Consultando pulsera UID: ${uid}...`, false); // Mensaje inicial
+    resultArea.innerHTML = `Consultando pulsera UID: ${uid}...`; // También en general
+
     try {
-        // Llamada GET al endpoint específico de la pulsera
-        const data = await fetchWithAuth(`${API_BASE_URL}/pos/pulseras/${uid}`, {
-            method: 'GET'
-        });
-        displayResult(data, false); // Mostrar datos recibidos
+        const data = await fetchWithAuth(`${API_BASE_URL}/pos/pulseras/${uid}`, { method: 'GET' });
+        // *** NUEVO: Mostrar resultado específico ***
+        if (data && data.saldo !== undefined && data.activa !== undefined) {
+            const estado = data.activa ? 'Activa' : 'Inactiva';
+            // Usamos toLocaleString para formatear el número como moneda local
+            const saldoFormateado = data.saldo.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' });
+            displaySpecificResult(consultaResultDiv, `Saldo: ${saldoFormateado} | Estado: ${estado}`, false);
+        } else {
+            displaySpecificResult(consultaResultDiv, "Respuesta recibida, pero faltan datos de saldo o estado.", true);
+        }
+        // displayResult(data, false) // Ya se llama dentro de fetchWithAuth para el área general
     } catch (error) {
-        // El error ya fue mostrado por fetchWithAuth
+        // El error ya fue mostrado por fetchWithAuth en el área general
+        // Mostramos un error específico en la sección
+        displaySpecificResult(consultaResultDiv, `Error al consultar: ${error.message}`, true);
     }
 }
 
@@ -264,20 +266,27 @@ async function handleRecharge(event) {
     event.preventDefault();
     const formData = new FormData(rechargeForm);
     const uid = formData.get('codigoUid');
-    // Crear cuerpo como URLSearchParams ya que el endpoint espera form-urlencoded
     const body = new URLSearchParams(formData);
+    // Limpiar resultados previos de esta sección y el general
+    clearSpecificResults();
+    resultArea.innerHTML = ''; resultArea.className = '';
 
-    displayResult(`Intentando recargar pulsera UID: ${uid}...`);
+    displaySpecificResult(recargaResultDiv, `Intentando recargar pulsera UID: ${uid}...`, false);
+    resultArea.innerHTML = `Intentando recargar pulsera UID: ${uid}...`;
+
     try {
-        // Llamada POST al endpoint de recarga
-        const data = await fetchWithAuth(`${API_BASE_URL}/pos/pulseras/${uid}/recargar`, {
-            method: 'POST',
-            body: body // Enviar como form-urlencoded
-        });
-        displayResult(data, false); // Mostrar respuesta (DTO de pulsera actualizada)
+        const data = await fetchWithAuth(`${API_BASE_URL}/pos/pulseras/${uid}/recargar`, { method: 'POST', body: body });
+        // *** NUEVO: Mostrar resultado específico ***
+        if (data && data.saldo !== undefined) {
+            const nuevoSaldoFormateado = data.saldo.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' });
+            displaySpecificResult(recargaResultDiv, `Recarga exitosa. Nuevo Saldo: ${nuevoSaldoFormateado}`, false);
+        } else {
+            displaySpecificResult(recargaResultDiv, "Recarga procesada, pero no se recibió el nuevo saldo.", true);
+        }
+        // displayResult(data, false); // Ya se llama dentro de fetchWithAuth
         rechargeForm.reset(); // Limpiar formulario tras éxito
     } catch (error) {
-        // El error ya fue mostrado
+        displaySpecificResult(recargaResultDiv, `Error al recargar: ${error.message}`, true);
     }
 }
 
@@ -286,39 +295,36 @@ async function handleConsume(event) {
     event.preventDefault();
     const formData = new FormData(consumeForm);
     const uid = formData.get('codigoUid');
-    // Crear cuerpo como URLSearchParams
     const body = new URLSearchParams(formData);
+    // Limpiar resultados previos de esta sección y el general
+    clearSpecificResults();
+    resultArea.innerHTML = ''; resultArea.className = '';
 
-    // Validar que idFestival no esté vacío (importante para el backend)
     if (!formData.get('idFestival')) {
-        displayResult("El campo 'ID Festival' es obligatorio para registrar un consumo.", true);
+        displaySpecificResult(consumoResultDiv, "El campo 'ID Festival' es obligatorio.", true);
         return;
     }
 
-    displayResult(`Intentando registrar consumo en pulsera UID: ${uid}...`);
+    displaySpecificResult(consumoResultDiv, `Intentando registrar consumo en pulsera UID: ${uid}...`, false);
+    resultArea.innerHTML = `Intentando registrar consumo en pulsera UID: ${uid}...`;
+
     try {
-        // Llamada POST al endpoint de consumo
-        const data = await fetchWithAuth(`${API_BASE_URL}/pos/pulseras/${uid}/consumir`, {
-            method: 'POST',
-            body: body // Enviar como form-urlencoded
-        });
-        displayResult(data, false); // Mostrar respuesta (DTO de pulsera actualizada)
+        const data = await fetchWithAuth(`${API_BASE_URL}/pos/pulseras/${uid}/consumir`, { method: 'POST', body: body });
+        // *** NUEVO: Mostrar resultado específico ***
+        if (data && data.saldo !== undefined) {
+            const nuevoSaldoFormateado = data.saldo.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' });
+            displaySpecificResult(consumoResultDiv, `Consumo registrado. Nuevo Saldo: ${nuevoSaldoFormateado}`, false);
+        } else {
+            displaySpecificResult(consumoResultDiv, "Consumo procesado, pero no se recibió el nuevo saldo.", true);
+        }
+        // displayResult(data, false); // Ya se llama dentro de fetchWithAuth
         consumeForm.reset(); // Limpiar formulario tras éxito
     } catch (error) {
-        // El error ya fue mostrado
+        displaySpecificResult(consumoResultDiv, `Error al consumir: ${error.message}`, true);
     }
 }
 
-/**
- * ELIMINADO: Maneja el formulario de asociación de pulsera a entrada
-async function handleAssociate(event) {
-    // ... código eliminado ...
-}
-*/
-
-
 // --- Inicialización ---
-// Añadir listeners a los eventos cuando el DOM esté completamente cargado
 document.addEventListener('DOMContentLoaded', () => {
     loadToken(); // Intentar cargar token al inicio
 
@@ -328,5 +334,4 @@ document.addEventListener('DOMContentLoaded', () => {
     checkBalanceForm.addEventListener('submit', handleCheckBalance);
     rechargeForm.addEventListener('submit', handleRecharge);
     consumeForm.addEventListener('submit', handleConsume);
-    // associateForm.addEventListener('submit', handleAssociate); // ELIMINADO: Listener ya no necesario
 });
