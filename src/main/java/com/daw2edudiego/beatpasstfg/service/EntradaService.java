@@ -64,6 +64,23 @@ public interface EntradaService {
     List<EntradaDTO> obtenerEntradasPorFestival(Integer idFestival, Integer idPromotor);
 
     /**
+     * Obtiene todos los tipos de entrada asociados a un festival específico,
+     * diseñado para acceso público (ej: desde el simulador de asistente). Solo
+     * devuelve entradas si el festival existe y está en estado PUBLICADO. No
+     * requiere verificación de promotor.
+     *
+     * @param idFestival ID del festival cuyas entradas se quieren obtener.
+     * @return Una lista de {@link EntradaDTO} asociados al festival publicado.
+     * Puede estar vacía si no hay entradas o el festival no está publicado.
+     * @throws FestivalNotFoundException Si el festival no existe.
+     * @throws FestivalNoPublicadoException Si el festival existe pero no está
+     * publicado.
+     * @throws IllegalArgumentException Si idFestival es nulo.
+     * @throws RuntimeException Si ocurre un error inesperado.
+     */
+    List<EntradaDTO> obtenerEntradasPublicasPorFestival(Integer idFestival);
+
+    /**
      * Actualiza la información de un tipo de entrada existente. Verifica que la
      * entrada exista y que el usuario (promotor) que realiza la acción sea el
      * propietario del festival al que pertenece la entrada.

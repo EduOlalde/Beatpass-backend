@@ -1,9 +1,13 @@
 package com.daw2edudiego.beatpasstfg.web;
 
+import com.daw2edudiego.beatpasstfg.dto.EntradaDTO;
 import com.daw2edudiego.beatpasstfg.dto.FestivalDTO;
+import com.daw2edudiego.beatpasstfg.exception.FestivalNoPublicadoException;
 import com.daw2edudiego.beatpasstfg.exception.FestivalNotFoundException;
 import com.daw2edudiego.beatpasstfg.model.EstadoFestival;
 import com.daw2edudiego.beatpasstfg.model.RolUsuario;
+import com.daw2edudiego.beatpasstfg.service.EntradaService;
+import com.daw2edudiego.beatpasstfg.service.EntradaServiceImpl;
 import com.daw2edudiego.beatpasstfg.service.FestivalService;
 import com.daw2edudiego.beatpasstfg.service.FestivalServiceImpl;
 
@@ -45,6 +49,7 @@ public class FestivalResource {
 
     // Inyección manual de dependencias (o usar @Inject con CDI/Spring)
     private final FestivalService festivalService;
+    private final EntradaService entradaService;
 
     // Inyección de contexto JAX-RS
     @Context
@@ -57,6 +62,59 @@ public class FestivalResource {
      */
     public FestivalResource() {
         this.festivalService = new FestivalServiceImpl();
+        this.entradaService = new EntradaServiceImpl();
+    }
+
+    /**
+     * Endpoint público GET para obtener los tipos de entrada disponibles para
+     * un festival específico. Solo devuelve entradas de festivales PUBLICADOS.
+     *
+     * @param id El ID del festival.
+     * @return Respuesta HTTP:
+     * <ul>
+     * <li><b>200 OK:</b> con una lista (posiblemente vacía) de DTOs de tipos de
+     * entrada.</li>
+     * <li><b>400 Bad Request:</b> si el ID es inválido.</li>
+     * <li><b>404 Not Found:</b> si el festival no existe o no está
+     * publicado.</li>
+     * <li><b>500 Internal Server Error:</b> si ocurre un error interno.</li>
+     * </ul>
+     */
+    @GET
+    @Path("/{id}/entradas") // Ruta para obtener entradas de un festival
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response obtenerTiposEntradaPublico(@PathParam("id") Integer id) {
+        log.info("GET /festivales/{}/entradas (Público) recibido", id);
+        if (id == null) {
+            return Response.status(Response.Status.BAD_REQUEST).entity("{\"error\": \"ID de festival inválido.\"}").build();
+        }
+
+        try {
+            // Llamar al NUEVO método del servicio que no requiere promotor
+            List<EntradaDTO> entradas = entradaService.obtenerEntradasPublicasPorFestival(id);
+
+            log.info("Devolviendo {} tipos de entrada para festival público ID {}", entradas.size(), id);
+            return Response.ok(entradas).build(); // 200 OK
+
+        } catch (FestivalNotFoundException | FestivalNoPublicadoException e) {
+            // Si el festival no existe o no está publicado, devolver 404
+            log.warn("No se pueden obtener entradas públicas para festival ID {}: {}", id, e.getMessage());
+            return Response.status(Response.Status.NOT_FOUND)
+                    .entity("{\"error\": \"" + e.getMessage() + "\"}")
+                    .build();
+        } catch (IllegalArgumentException e) {
+            // Si el ID era inválido (aunque ya lo chequeamos)
+            log.warn("Argumento inválido al obtener entradas públicas para festival ID {}: {}", id, e.getMessage());
+            return Response.status(Response.Status.BAD_REQUEST)
+                    .entity("{\"error\": \"" + e.getMessage() + "\"}")
+                    .build();
+        } catch (Exception e) {
+            // Otros errores inesperados
+            log.error("Error interno al obtener tipos de entrada públicos para festival ID {}: {}", id, e.getMessage(), e);
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+                    .entity("{\"error\": \"Error interno al obtener tipos de entrada.\"}")
+                    .build();
+        }
     }
 
     /**

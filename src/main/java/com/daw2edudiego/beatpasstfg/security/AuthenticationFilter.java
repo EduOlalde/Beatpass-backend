@@ -15,6 +15,7 @@ import jakarta.ws.rs.core.HttpHeaders;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.SecurityContext;
+import jakarta.ws.rs.core.UriInfo; // Importar UriInfo
 import jakarta.ws.rs.ext.Provider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,30 +23,24 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
+import java.util.regex.Pattern; // Importar Pattern
 
 /**
  * Filtro JAX-RS {@link ContainerRequestFilter} para la autenticación basada en
  * JSON Web Tokens (JWT).
  * <p>
- * Intercepta las peticiones entrantes a la API (rutas bajo `/api/*`, excluyendo
- * las definidas en {@code EXCLUDED_PATHS_PREFIXES}) para validar el token JWT
- * presente en la cabecera {@code Authorization: Bearer <token>}.
- * </p>
- * <p>
- * Si el token es válido:
- * <ul>
- * <li>Extrae el ID de usuario (subject) y el rol (claim personalizado).</li>
- * <li>Establece un {@link UserSecurityContext} personalizado para la petición,
- * haciendo que la identidad y el rol estén disponibles para los endpoints
- * JAX-RS mediante {@code @Context SecurityContext}.</li>
- * </ul>
- * Si el token falta, es inválido, ha expirado o contiene información
- * incompleta, la petición es abortada con una respuesta HTTP 401 Unauthorized.
- * </p>
- * <p>
- * Las peticiones OPTIONS (usadas para preflight CORS) y las rutas
- * explícitamente excluidas (como login o paneles web basados en sesión) no son
- * procesadas por este filtro JWT.
+ * Intercepta las peticiones entrantes a la API (rutas bajo `/api/*`) y aplica
+ * la siguiente lógica:
+ * <ol>
+ * <li>Ignora las peticiones OPTIONS (preflight CORS) abortando con OK.</li>
+ * <li>Ignora las rutas cuyos prefijos están en
+ * {@code EXCLUDED_PATHS_PREFIXES}.</li>
+ * <li>Ignora las peticiones GET a rutas públicas específicas (festivales/id,
+ * festivales/id/entradas).</li>
+ * <li>Para todas las demás peticiones, valida el token JWT.</li>
+ * </ol>
+ * Si el token es válido, establece un {@link UserSecurityContext}. Si no,
+ * aborta con 401 Unauthorized.
  * </p>
  *
  * @see JwtUtil
@@ -54,8 +49,8 @@ import java.util.List;
  * @see Priority
  * @author Eduardo Olalde
  */
-@Provider // Marca esta clase como un proveedor de extensión JAX-RS (descubrible automáticamente)
-@Priority(Priorities.AUTHENTICATION) // Define una alta prioridad para que se ejecute antes que otros filtros/endpoints
+@Provider
+@Priority(Priorities.AUTHENTICATION)
 public class AuthenticationFilter implements ContainerRequestFilter {
 
     private static final Logger log = LoggerFactory.getLogger(AuthenticationFilter.class);
@@ -65,66 +60,80 @@ public class AuthenticationFilter implements ContainerRequestFilter {
 
     /**
      * Lista de prefijos de rutas que deben ser excluidas de la validación JWT.
-     * Incluye típicamente endpoints de login públicos y rutas de paneles web
-     * que usan otros mecanismos de autenticación (ej: sesión HTTP). TODO:
-     * Considerar hacer esta lista configurable externamente.
      */
     private static final List<String> EXCLUDED_PATHS_PREFIXES = Arrays.asList(
             "auth/login", // Endpoint de login API
-            "admin", // Prefijo para el panel web de admin (asume gestión por sesión)
-            "promotor" // Prefijo para el panel web de promotor (asume gestión por sesión)
-    // Añadir aquí otros prefijos si es necesario (ej: "public/", "assets/")
+            "admin", // Prefijo para el panel web de admin
+            "promotor", // Prefijo para el panel web de promotor
+            "public/" // Rutas públicas generales
     );
+
+    // --- NUEVO: Patrones para rutas GET públicas específicas ---
+    /**
+     * Patrón regex para la ruta GET pública de detalles de un festival.
+     * Coincide con "festivales/" seguido de uno o más dígitos y nada más.
+     */
+    private static final Pattern PUBLIC_GET_FESTIVAL_DETAIL_PATTERN = Pattern.compile("^festivales/\\d+$");
+    /**
+     * Patrón regex para la ruta GET pública de tipos de entrada de un festival.
+     * Coincide con "festivales/" seguido de dígitos, "/entradas" y nada más.
+     */
+    private static final Pattern PUBLIC_GET_FESTIVAL_TICKETS_PATTERN = Pattern.compile("^festivales/\\d+/entradas$");
+    // --- FIN NUEVO ---
 
     /**
      * Método principal del filtro que procesa cada petición entrante.
-     *
-     * @param requestContext El contexto de la petición JAX-RS, permite acceder
-     * a cabeceras, URI, etc., y modificar el flujo de la petición.
-     * @throws IOException Si ocurre un error de E/S (raro en este contexto).
      */
     @Override
     public void filter(ContainerRequestContext requestContext) throws IOException {
-        String path = requestContext.getUriInfo().getPath();
+        UriInfo uriInfo = requestContext.getUriInfo(); // Obtener UriInfo
+        String path = uriInfo.getPath(); // Obtener ruta relativa
         String method = requestContext.getMethod();
 
-        log.trace("AuthenticationFilter procesando petición: {} {}", method, path);
+        log.trace("AuthenticationFilter procesando petición: {} /api/{}", method, path);
 
         // 1. Permitir peticiones CORS preflight (OPTIONS) sin autenticación
+        //    (Mantenemos tu lógica original de abortar con OK)
         if ("OPTIONS".equalsIgnoreCase(method)) {
-            log.debug("Petición OPTIONS para ruta: {}. Permitida para preflight CORS.", path);
-            // Abortar con respuesta OK permite que otros filtros (como CorsFilter) actúen
-            requestContext.abortWith(Response.ok().build());
+            log.debug("Petición OPTIONS para ruta: /api/{}. Abortando con OK para preflight CORS.", path);
             return;
         }
 
-        // 2. Comprobar si la ruta debe ser excluida de la validación JWT
+        // 2. Comprobar si la ruta debe ser excluida por prefijo
         if (isPathExcluded(path)) {
-            log.debug("Ruta {} excluida del filtro de autenticación JWT.", path);
-            return; // Continuar con el siguiente filtro o el endpoint
+            log.debug("Ruta '/api/{}' excluida del filtro JWT por prefijo.", path);
+            return; // Continuar sin validar token
         }
 
-        // 3. Obtener la cabecera Authorization
+        // 3. --- NUEVO: Comprobar si es una ruta GET pública específica ---
+        if ("GET".equalsIgnoreCase(method) && isPublicGetPath(path)) {
+            log.debug("Ruta GET pública específica '/api/{}' permitida sin token JWT.", path);
+            return; // Permitir acceso público sin token
+        }
+        // --- FIN NUEVO ---
+
+        // 4. (Antes paso 3) Obtener la cabecera Authorization
         String authorizationHeader = requestContext.getHeaderString(HttpHeaders.AUTHORIZATION);
 
-        // 4. Validar presencia y formato del Header ("Bearer <token>")
+        // 5. (Antes paso 4) Validar presencia y formato del Header ("Bearer <token>")
         if (authorizationHeader == null || !authorizationHeader.toLowerCase().startsWith("bearer ")) {
-            log.warn("Cabecera Authorization ausente o mal formada para la ruta protegida: {}", path);
+            log.warn("Cabecera Authorization ausente o mal formada para la ruta protegida: /api/{}", path);
             abortUnauthorized(requestContext, "Se requiere cabecera Authorization: Bearer <token>.");
             return; // Abortar petición
         }
 
-        // 5. Extraer la cadena del token
+        // 6. (Antes paso 5) Extraer la cadena del token
         String token = authorizationHeader.substring("Bearer".length()).trim();
         if (token.isEmpty()) {
-            log.warn("Cabecera Authorization presente pero el token está vacío para la ruta: {}", path);
+            log.warn("Cabecera Authorization presente pero el token está vacío para la ruta: /api/{}", path);
             abortUnauthorized(requestContext, "El token Bearer proporcionado está vacío.");
             return; // Abortar petición
         }
 
-        // 6. Validar el token y extraer claims
+        // 7. (Antes paso 6) Validar el token y extraer claims
         try {
-            Claims claims = jwtUtil.validarTokenYObtenerClaims(token); // Valida firma y expiración
+            // Usar la instancia jwtUtil (como en tu código original)
+            Claims claims = jwtUtil.validarTokenYObtenerClaims(token);
             String userId = jwtUtil.obtenerUserIdDeClaims(claims);
             String role = jwtUtil.obtenerRolDeClaims(claims);
 
@@ -135,9 +144,9 @@ public class AuthenticationFilter implements ContainerRequestFilter {
                 return;
             }
 
-            log.debug("JWT validado exitosamente para userId: {}, role: {} en ruta: {}", userId, role, path);
+            log.debug("JWT validado exitosamente para userId: {}, role: {} en ruta: /api/{}", userId, role, path);
 
-            // 7. Establecer el SecurityContext personalizado para la petición actual
+            // 8. (Antes paso 7) Establecer el SecurityContext personalizado
             final SecurityContext currentSecurityContext = requestContext.getSecurityContext();
             UserSecurityContext userSecurityContext = new UserSecurityContext(
                     userId,
@@ -147,22 +156,17 @@ public class AuthenticationFilter implements ContainerRequestFilter {
             requestContext.setSecurityContext(userSecurityContext);
             log.trace("UserSecurityContext establecido para la petición.");
 
-            // Si todo es correcto, la petición continúa hacia el endpoint JAX-RS
         } catch (ExpiredJwtException eje) {
-            log.warn("Validación JWT fallida para ruta {}: Token expirado.", path);
+            log.warn("Validación JWT fallida para ruta /api/{}: Token expirado.", path);
             abortUnauthorized(requestContext, "El token ha expirado.");
         } catch (SignatureException | MalformedJwtException | UnsupportedJwtException | IllegalArgumentException e) {
-            // Capturar errores específicos de formato, firma o soporte JWT
-            log.warn("Validación JWT fallida para ruta {}: Token inválido ({}).", path, e.getClass().getSimpleName());
+            log.warn("Validación JWT fallida para ruta /api/{}: Token inválido ({}).", path, e.getClass().getSimpleName());
             abortUnauthorized(requestContext, "Token inválido o mal formado.");
         } catch (JwtException e) {
-            // Capturar otros errores genéricos de la librería JWT
-            log.error("Error inesperado procesando JWT para ruta {}: {}", path, e.getMessage(), e);
+            log.error("Error inesperado procesando JWT para ruta /api/{}: {}", path, e.getMessage(), e);
             abortUnauthorized(requestContext, "Error procesando token.");
         } catch (Exception e) {
-            // Capturar cualquier otro error inesperado dentro del filtro
-            log.error("Error inesperado en AuthenticationFilter para ruta {}: {}", path, e.getMessage(), e);
-            // Devolver una respuesta de error genérica del servidor 500
+            log.error("Error inesperado en AuthenticationFilter para ruta /api/{}: {}", path, e.getMessage(), e);
             requestContext.abortWith(Response.status(Response.Status.INTERNAL_SERVER_ERROR)
                     .entity("{\"error\": \"Error interno del servidor durante la autenticación.\"}")
                     .type(MediaType.APPLICATION_JSON).build());
@@ -170,43 +174,40 @@ public class AuthenticationFilter implements ContainerRequestFilter {
     }
 
     /**
-     * Comprueba si la ruta de la petición actual comienza con alguno de los
-     * prefijos definidos en {@link #EXCLUDED_PATHS_PREFIXES}.
-     *
-     * @param path La ruta de la petición (ej: "admin/dashboard",
-     * "api/festivales").
-     * @return {@code true} si la ruta coincide con algún prefijo excluido,
-     * {@code false} en caso contrario.
+     * Comprueba si la ruta relativa coincide con algún prefijo excluido.
      */
-    private boolean isPathExcluded(String path) {
-        if (path == null) {
+    private boolean isPathExcluded(String relativePath) {
+        if (relativePath == null) {
             return false;
         }
-        // Comprueba si la ruta (sin la barra inicial si existe) empieza con algún prefijo excluido
-        String cleanPath = path.startsWith("/") ? path.substring(1) : path;
-        return EXCLUDED_PATHS_PREFIXES.stream().anyMatch(prefix -> cleanPath.startsWith(prefix));
+        String cleanPath = relativePath.startsWith("/") ? relativePath.substring(1) : relativePath;
+        return EXCLUDED_PATHS_PREFIXES.stream().anyMatch(cleanPath::startsWith);
     }
 
     /**
-     * Aborta el procesamiento de la petición actual devolviendo una respuesta
-     * HTTP 401 Unauthorized. Incluye la cabecera {@code WWW-Authenticate}
-     * requerida por el estándar para indicar el esquema de autenticación
-     * esperado (Bearer).
-     *
-     * @param requestContext El contexto de la petición JAX-RS.
-     * @param message Mensaje descriptivo del error a incluir en el cuerpo JSON
-     * de la respuesta.
+     * --- NUEVO: Comprueba si la ruta relativa coincide con patrones GET
+     * públicos específicos. ---
+     */
+    private boolean isPublicGetPath(String relativePath) {
+        if (relativePath == null) {
+            return false;
+        }
+        String cleanPath = relativePath.startsWith("/") ? relativePath.substring(1) : relativePath;
+        // Comprobar si coincide con alguno de los patrones definidos
+        return PUBLIC_GET_FESTIVAL_DETAIL_PATTERN.matcher(cleanPath).matches()
+                || PUBLIC_GET_FESTIVAL_TICKETS_PATTERN.matcher(cleanPath).matches();
+    }
+
+    /**
+     * Aborta la petición con 401 Unauthorized.
      */
     private void abortUnauthorized(ContainerRequestContext requestContext, String message) {
         log.debug("Abortando petición con 401 Unauthorized. Mensaje: {}", message);
         Response unauthorizedResponse = Response.status(Response.Status.UNAUTHORIZED)
-                // Cabecera estándar para indicar el desafío de autenticación
                 .header(HttpHeaders.WWW_AUTHENTICATE, "Bearer realm=\"BeatpassTFG API\"")
-                // Cuerpo de respuesta JSON simple
                 .entity("{\"error\": \"" + message + "\"}")
                 .type(MediaType.APPLICATION_JSON)
                 .build();
         requestContext.abortWith(unauthorizedResponse);
     }
-
 }

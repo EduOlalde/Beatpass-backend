@@ -50,6 +50,8 @@ public class ApplicationConfig extends Application {
         resources.add(UsuarioResource.class);       // Endpoints para /api/usuarios
         resources.add(AuthResource.class);          // Endpoints para /api/auth (login JWT)
         resources.add(PuntoVentaResource.class);    // Endpoints para /api/pos (operaciones POS/NFC)
+        resources.add(PublicVentaResource.class);   // Endpoints para /api/public/venta ---
+
 
         // Recursos que actúan como controladores para paneles web (usan JSPs)
         // Aunque usen Servlets/JSP internamente, se registran si tienen anotaciones JAX-RS (@Path, @GET, etc.)
