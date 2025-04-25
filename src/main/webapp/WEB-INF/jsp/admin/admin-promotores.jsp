@@ -13,14 +13,39 @@
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
         <style>
+            /* Estilos generales */
             body {
                 font-family: 'Inter', sans-serif;
             }
+            /* Clases base para botones */
+            .btn {
+                font-weight: bold; /* font-bold */
+                padding-top: 0.5rem; /* py-2 */
+                padding-bottom: 0.5rem; /* py-2 */
+                padding-left: 1rem; /* px-4 */
+                padding-right: 1rem; /* px-4 */
+                border-radius: 0.375rem; /* rounded */
+                box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); /* shadow */
+                transition-property: background-color, border-color, color, fill, stroke, opacity, box-shadow, transform; /* transition */
+                transition-duration: 150ms; /* duration-150 */
+                transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1); /* ease-in-out */
+                display: inline-flex; /* inline-flex */
+                align-items: center; /* items-center */
+                font-size: 0.875rem; /* text-sm */
+            }
+            .btn-primary {
+                background-color: #8B5CF6; /* bg-purple-600 */
+                color: white; /* text-white */
+            }
+            .btn-primary:hover {
+                background-color: #7C3AED; /* hover:bg-purple-700 */
+            }
+            /* Estilos para badges de estado */
             .badge {
                 padding: 0.1em 0.6em;
                 border-radius: 9999px;
-                font-size: 0.75rem;
-                font-weight: 600;
+                font-size: 0.75rem; /* text-xs */
+                font-weight: 600; /* font-semibold */
                 display: inline-flex;
                 align-items: center;
             }
@@ -31,6 +56,46 @@
             .badge-inactivo {
                 background-color: #FEE2E2; /* Tailwind red-100 */
                 color: #991B1B; /* Tailwind red-800 */
+            }
+            /* Estilos para acciones en tablas */
+            .action-link {
+                text-decoration: underline;
+                font-size: 0.75rem; /* text-xs */
+            }
+            .action-link-view {
+                color: #4F46E5; /* text-indigo-600 */
+                font-weight: 500; /* font-medium */
+            }
+            .action-link-view:hover {
+                color: #3730A3; /* hover:text-indigo-900 */
+            }
+            .action-link-edit {
+                color: #D97706; /* text-yellow-600 */
+                font-weight: 600; /* font-semibold */
+            }
+            .action-link-edit:hover {
+                color: #92400E; /* hover:text-yellow-900 */
+            }
+            .action-button { /* Para botones dentro de formularios en la tabla */
+                background: none;
+                border: none;
+                padding: 0;
+                cursor: pointer;
+                text-decoration: underline;
+                font-size: 0.75rem; /* text-xs */
+                font-weight: 600; /* font-semibold */
+            }
+            .action-button-activate {
+                color: #059669; /* text-green-600 */
+            }
+            .action-button-activate:hover {
+                color: #047857; /* hover:text-green-900 */
+            }
+            .action-button-deactivate {
+                color: #DC2626; /* text-red-600 */
+            }
+            .action-button-deactivate:hover {
+                color: #991B1B; /* hover:text-red-900 */
             }
         </style>
     </head>
@@ -45,13 +110,12 @@
 
             <h2 class="text-2xl font-semibold text-gray-700 mb-5">Gestionar Promotores</h2>
 
-            <%-- *** CAMBIO: Eliminado el botón "+ Crear Festival (Asignar)" *** --%>
+            <%-- Botón Añadir Promotor (Estilo Homogeneizado) --%>
             <div class="flex justify-end mb-4 space-x-3">
                 <a href="${pageContext.request.contextPath}/api/admin/promotores/crear"
-                   class="font-bold py-2 px-4 rounded shadow transition duration-150 ease-in-out bg-purple-600 hover:bg-purple-700 text-white">
+                   class="btn btn-primary">
                     + Añadir Nuevo Promotor
                 </a>
-                <%-- Botón Crear Festival eliminado --%>
             </div>
 
             <%-- Mensajes flash --%>
@@ -82,7 +146,7 @@
                     <tbody class="bg-white divide-y divide-gray-200">
                         <c:choose>
                             <c:when test="${empty promotores}">
-                                <tr> <td colspan="6" class="px-6 py-4 text-center text-sm text-gray-500">No hay promotores registrados.</td> </tr>
+                                <tr> <td colspan="6" class="px-6 py-4 text-center text-sm text-gray-500 italic">No hay promotores registrados.</td> </tr>
                             </c:when>
                             <c:otherwise>
                                 <c:forEach var="p" items="${promotores}">
@@ -98,18 +162,19 @@
                                             </span>
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap text-center text-sm font-medium">
-                                            <a href="${pageContext.request.contextPath}/api/admin/promotores/${p.idUsuario}/festivales" class="text-indigo-600 hover:text-indigo-900 underline font-medium" title="Ver festivales de ${p.nombre}">
+                                            <%-- Enlace Ver Festivales (Estilo Homogeneizado) --%>
+                                            <a href="${pageContext.request.contextPath}/api/admin/promotores/${p.idUsuario}/festivales" class="action-link action-link-view" title="Ver festivales de ${p.nombre}">
                                                 Ver Festivales
                                             </a>
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap text-center text-sm font-medium space-x-2">
-                                            <%-- Enlace para editar datos del promotor --%>
-                                            <a href="${pageContext.request.contextPath}/api/admin/promotores/${p.idUsuario}/editar" class="text-yellow-600 hover:text-yellow-900 underline font-semibold" title="Editar datos de ${p.nombre}">Editar</a>
-                                            <%-- Formulario para activar/desactivar --%>
+                                            <%-- Enlace Editar (Estilo Homogeneizado) --%>
+                                            <a href="${pageContext.request.contextPath}/api/admin/promotores/${p.idUsuario}/editar" class="action-link action-link-edit" title="Editar datos de ${p.nombre}">Editar</a>
+                                            <%-- Formulario para activar/desactivar (Estilo Homogeneizado) --%>
                                             <form action="${pageContext.request.contextPath}/api/admin/promotores/cambiar-estado" method="post" class="inline">
                                                 <input type="hidden" name="idPromotor" value="${p.idUsuario}">
                                                 <input type="hidden" name="nuevoEstado" value="${!p.estado}">
-                                                <button type="submit" class="${p.estado ? 'text-red-600 hover:text-red-900' : 'text-green-600 hover:text-green-900'} underline font-semibold" title="${p.estado ? 'Desactivar cuenta' : 'Activar cuenta'}">
+                                                <button type="submit" class="action-button ${p.estado ? 'action-button-deactivate' : 'action-button-activate'}" title="${p.estado ? 'Desactivar cuenta' : 'Activar cuenta'}">
                                                     ${p.estado ? 'Desactivar' : 'Activar'}
                                                 </button>
                                             </form>

@@ -1,9 +1,3 @@
-<%-- 
-    Document   : promotor-entradas-detalle
-    Created on : 21 abr 2025, 17:03:20
-    Author     : Eduardo Olalde
---%>
-
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%@ taglib uri="jakarta.tags.core" prefix="c" %>
 <%@ taglib uri="jakarta.tags.fmt" prefix="fmt" %>
@@ -19,14 +13,38 @@
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
         <style>
-            /* Estilos generales que NO usan @apply */
+            /* Estilos generales */
             body {
                 font-family: 'Inter', sans-serif;
             }
             textarea {
                 min-height: 6rem;
             }
-            /* Las clases para label, input, textarea, required-star y botones se aplicarán directamente */
+            /* Clases base para botones */
+            .btn {
+                font-weight: bold;
+                padding: 0.5rem 1rem;
+                border-radius: 0.375rem;
+                box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+                transition: all 150ms ease-in-out;
+                display: inline-flex;
+                align-items: center;
+                font-size: 0.875rem;
+            }
+            .btn-primary {
+                background-color: #4F46E5;
+                color: white;
+            } /* indigo-600 */
+            .btn-primary:hover {
+                background-color: #4338CA;
+            } /* indigo-700 */
+            .btn-secondary {
+                background-color: #E5E7EB;
+                color: #1F2937;
+            } /* gray-200 */
+            .btn-secondary:hover {
+                background-color: #D1D5DB;
+            } /* gray-300 */
         </style>
     </head>
     <body class="bg-gray-100 text-gray-800">
@@ -67,11 +85,9 @@
                 <p class="text-sm text-gray-500">Editando entrada para Festival ID: ${entrada.idFestival}</p>
 
                 <div>
-                    <%-- Aplicar clases directamente a label --%>
                     <label for="tipo" class="block text-sm font-medium text-gray-700 mb-1">
-                        Tipo <span class="text-red-500 ml-1">*</span> <%-- Clase para asterisco --%>
+                        Tipo <span class="text-red-500 ml-1">*</span>
                     </label>
-                    <%-- Aplicar clases directamente a input --%>
                     <input type="text" id="tipo" name="tipo" value="${entrada.tipo}" required maxlength="50"
                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-500 focus:ring-opacity-50 sm:text-sm">
                 </div>
@@ -95,21 +111,18 @@
 
                 <div>
                     <label for="descripcion" class="block text-sm font-medium text-gray-700 mb-1">Descripción (Opcional)</label>
-                    <%-- Aplicar clases directamente a textarea --%>
                     <textarea id="descripcion" name="descripcion" rows="3"
                               class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-500 focus:ring-opacity-50 sm:text-sm">${entrada.descripcion}</textarea>
                 </div>
 
-                <%-- Botones --%>
+                <%-- Botones (Estilos Homogeneizados) --%>
                 <div class="mt-6 flex justify-end space-x-3 pt-4 border-t border-gray-200">
-                    <%-- Botón Cancelar con clases aplicadas directamente --%>
                     <a href="${pageContext.request.contextPath}/api/promotor/festivales/ver/${entrada.idFestival}"
-                       class="font-bold py-2 px-4 rounded shadow transition duration-150 ease-in-out inline-flex items-center bg-gray-200 hover:bg-gray-300 text-gray-800">
+                       class="btn btn-secondary">
                         Cancelar
                     </a>
-                    <%-- Botón Guardar Cambios con clases aplicadas directamente --%>
                     <button type="submit"
-                            class="font-bold py-2 px-4 rounded shadow transition duration-150 ease-in-out inline-flex items-center bg-indigo-600 hover:bg-indigo-700 text-white">
+                            class="btn btn-primary">
                         Guardar Cambios
                     </button>
                 </div>

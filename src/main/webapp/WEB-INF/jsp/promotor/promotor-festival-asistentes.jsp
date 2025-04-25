@@ -1,9 +1,3 @@
-<%-- 
-    Document   : promotor-festival-asistentes
-    Created on : 21 abr 2025, 19:52:48
-    Author     : Eduardo Olalde
---%>
-
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%@ taglib uri="jakarta.tags.core" prefix="c" %>
 <%@ taglib uri="jakarta.tags.fmt" prefix="fmt" %>
@@ -19,17 +13,26 @@
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
         <style>
+            /* Estilos generales */
             body {
                 font-family: 'Inter', sans-serif;
             }
-            /* Estilos aplicados directamente */
+            /* Estilo para código UID */
+            .uid-code {
+                font-family: monospace;
+                background-color: #f3f4f6;
+                padding: 0.1rem 0.3rem;
+                border-radius: 0.25rem;
+                font-size: 0.8rem;
+                display: inline-block;
+            }
         </style>
     </head>
     <body class="bg-gray-100 text-gray-800">
 
         <div class="container mx-auto p-4 md:p-8 max-w-7xl">
 
-            <%-- Incluir Menú Promotor (si existiera) o cabecera básica --%>
+            <%-- Cabecera Promotor (Estilo Homogeneizado) --%>
             <header class="flex flex-col sm:flex-row justify-between items-center mb-6 pb-4 border-b border-gray-300">
                 <h1 class="text-3xl font-bold text-indigo-700 mb-4 sm:mb-0">Panel de Promotor</h1>
                 <div class="flex items-center space-x-4">
@@ -37,7 +40,6 @@
                         <span class="text-sm text-gray-600">Hola, ${sessionScope.userName}</span>
                     </c:if>
                     <a href="${pageContext.request.contextPath}/api/promotor/festivales" class="text-sm text-indigo-600 hover:underline font-medium">Mis Festivales</a>
-                    <%-- Podríamos añadir más enlaces si el promotor tuviera más secciones --%>
                     <form action="${pageContext.request.contextPath}/logout" method="post" class="inline">
                         <button type="submit" class="text-sm text-gray-500 hover:text-red-600 underline">Cerrar Sesión</button>
                     </form>
@@ -70,33 +72,47 @@
                             <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nombre</th>
                             <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
                             <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Teléfono</th>
-                                <%-- Podríamos añadir columnas como "Nº Entradas" si el DTO lo incluyera --%>
+                                <%-- *** NUEVA COLUMNA *** --%>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pulsera Asociada (UID)</th>
                         </tr>
                     </thead>
                     <tbody class="bg-white divide-y divide-gray-200">
-                    <c:choose>
-                        <c:when test="${empty asistentes}">
-                            <tr>
-                                <td colspan="4" class="px-6 py-4 text-center text-sm text-gray-500 italic">
-                                    No hay asistentes registrados para este festival (o con entradas asignadas).
-                                </td>
-                            </tr>
-                        </c:when>
-                        <c:otherwise>
-                            <c:forEach var="a" items="${asistentes}">
+                        <c:choose>
+                            <c:when test="${empty asistentes}">
                                 <tr>
-                                    <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-500">${a.idAsistente}</td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${a.nombre}</td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${a.email}</td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${not empty a.telefono ? a.telefono : '-'}</td>
+                                    <%-- *** Colspan ajustado *** --%>
+                                    <td colspan="5" class="px-6 py-4 text-center text-sm text-gray-500 italic">
+                                        No hay asistentes registrados para este festival (o con entradas asignadas).
+                                    </td>
                                 </tr>
-                            </c:forEach>
-                        </c:otherwise>
-                    </c:choose>
+                            </c:when>
+                            <c:otherwise>
+                                <c:forEach var="a" items="${asistentes}">
+                                    <tr>
+                                        <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-500">${a.idAsistente}</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${a.nombre}</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${a.email}</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${not empty a.telefono ? a.telefono : '-'}</td>
+                                        <%-- *** CELDA ACTUALIZADA PARA PULSERA (accede al mapa) *** --%>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                            <%-- Accede al mapa usando el nombre del festival actual como clave --%>
+                                            <c:set var="pulseraUid" value="${a.festivalPulseraInfo[festival.nombre]}" />
+                                            <c:choose>
+                                                <c:when test="${not empty pulseraUid}">
+                                                    <span class="uid-code" title="${pulseraUid}">${pulseraUid}</span>
+                                                </c:when>
+                                                <c:otherwise>
+                                                    - <%-- Mostrar guión si no hay pulsera asociada para este festival --%>
+                                                </c:otherwise>
+                                            </c:choose>
+                                        </td>
+                                    </tr>
+                                </c:forEach>
+                            </c:otherwise>
+                        </c:choose>
                     </tbody>
                 </table>
             </div>
-            <%-- Paginación si fuera necesaria --%>
 
         </div>
 

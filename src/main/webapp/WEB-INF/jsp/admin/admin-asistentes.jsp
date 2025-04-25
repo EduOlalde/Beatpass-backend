@@ -13,8 +13,70 @@
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
         <style>
+            /* Estilos generales */
             body {
                 font-family: 'Inter', sans-serif;
+            }
+            /* Clases base para botones */
+            .btn {
+                font-weight: bold;
+                padding: 0.5rem 1rem;
+                border-radius: 0.375rem;
+                box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+                transition: all 150ms ease-in-out;
+                display: inline-flex;
+                align-items: center;
+                font-size: 0.875rem;
+            }
+            .btn-primary {
+                background-color: #8B5CF6;
+                color: white;
+            }
+            .btn-primary:hover {
+                background-color: #7C3AED;
+            }
+            .btn-secondary {
+                background-color: #E5E7EB;
+                color: #1F2937;
+            }
+            .btn-secondary:hover {
+                background-color: #D1D5DB;
+            }
+            .btn-filter {
+                background-color: #2563EB;
+                color: white;
+            }
+            .btn-filter:hover {
+                background-color: #1D4ED8;
+            }
+            /* Estilos para acciones en tablas */
+            .action-link {
+                text-decoration: underline;
+                font-size: 0.75rem;
+            }
+            .action-link-view {
+                color: #4F46E5;
+                font-weight: 500;
+            }
+            .action-link-view:hover {
+                color: #3730A3;
+            }
+            .action-link-edit {
+                color: #D97706;
+                font-weight: 600;
+            }
+            .action-link-edit:hover {
+                color: #92400E;
+            }
+            /* Estilo para código UID */
+            .uid-code {
+                font-family: monospace;
+                background-color: #f3f4f6;
+                padding: 0.1rem 0.3rem;
+                border-radius: 0.25rem;
+                font-size: 0.8rem;
+                display: inline-block;
+                margin-left: 0.25rem;
             }
         </style>
     </head>
@@ -49,15 +111,12 @@
                         <input type="search" id="searchTerm" name="buscar" value="${requestScope.searchTerm}" placeholder="Nombre o email..."
                                class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md shadow-sm">
                     </div>
-                    <button type="submit" class="font-bold py-2 px-4 rounded shadow transition duration-150 ease-in-out inline-flex items-center text-sm bg-blue-600 hover:bg-blue-700 text-white">
+                    <button type="submit" class="btn btn-filter">
                         Buscar
                     </button>
-                    <a href="${pageContext.request.contextPath}/api/admin/asistentes" class="font-bold py-2 px-4 rounded shadow transition duration-150 ease-in-out inline-flex items-center text-sm bg-gray-200 hover:bg-gray-300 text-gray-800">Limpiar</a>
+                    <a href="${pageContext.request.contextPath}/api/admin/asistentes" class="btn btn-secondary">Limpiar</a>
                 </form>
             </div>
-
-            <%-- TODO: Añadir botón para Crear Asistente --%>
-            <%-- <div class="mb-4 flex justify-end"> <a href="..." class="...">+ Añadir Asistente</a> </div> --%>
 
             <%-- Tabla de Asistentes --%>
             <div class="bg-white shadow-md rounded-lg overflow-x-auto">
@@ -69,6 +128,8 @@
                             <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
                             <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Teléfono</th>
                             <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha Registro</th>
+                                <%-- *** COLUMNA ACTUALIZADA *** --%>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Festivales / Pulseras</th>
                             <th scope="col" class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
                         </tr>
                     </thead>
@@ -76,7 +137,8 @@
                         <c:choose>
                             <c:when test="${empty asistentes}">
                                 <tr>
-                                    <td colspan="6" class="px-6 py-4 text-center text-sm text-gray-500 italic">
+                                    <%-- *** Colspan ajustado *** --%>
+                                    <td colspan="7" class="px-6 py-4 text-center text-sm text-gray-500 italic">
                                         <c:choose>
                                             <c:when test="${not empty requestScope.searchTerm}">No se encontraron asistentes para "${requestScope.searchTerm}".</c:when>
                                             <c:otherwise>No hay asistentes registrados.</c:otherwise>
@@ -96,14 +158,36 @@
                                                 <fmt:formatDate value="${a.fechaCreacion}" pattern="dd/MM/yyyy HH:mm"/>
                                             </c:catch>
                                             <c:if test="${not empty formatError}">
-                                                ${a.fechaCreacion} <%-- Fallback a toString() --%>
+                                                ${a.fechaCreacion}
                                             </c:if>
                                         </td>
+                                        <%-- *** CELDA ACTUALIZADA PARA MAPA FESTIVAL/PULSERA *** --%>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                            <c:choose>
+                                                <c:when test="${not empty a.festivalPulseraInfo}">
+                                                    <%-- Itera sobre el mapa (clave=festival, valor=pulseraUID) --%>
+                                                    <c:forEach var="entry" items="${a.festivalPulseraInfo}">
+                                                        <div class="mb-1"> <%-- Div para cada par --%>
+                                                            <span class="font-medium text-gray-700">${entry.key}:</span> <%-- Nombre Festival --%>
+                                                            <c:choose>
+                                                                <c:when test="${not empty entry.value}">
+                                                                    <span class="uid-code" title="${entry.value}">${entry.value}</span> <%-- UID Pulsera --%>
+                                                                </c:when>
+                                                                <c:otherwise>
+                                                                    <span class="text-xs italic">(Sin pulsera)</span>
+                                                                </c:otherwise>
+                                                            </c:choose>
+                                                        </div>
+                                                    </c:forEach>
+                                                </c:when>
+                                                <c:otherwise>
+                                                    - <%-- Mostrar guión si no hay mapa o está vacío --%>
+                                                </c:otherwise>
+                                            </c:choose>
+                                        </td>
                                         <td class="px-4 py-4 whitespace-nowrap text-center text-sm space-x-2">
-                                            <%-- Enlace Ver --%>
-                                            <a href="${pageContext.request.contextPath}/api/admin/asistentes/${a.idAsistente}" class="text-indigo-600 hover:text-indigo-900 underline font-medium p-0 bg-transparent shadow-none text-xs">Ver</a>
-                                            <%-- *** CAMBIO: Enlace Editar funcional *** --%>
-                                            <a href="${pageContext.request.contextPath}/api/admin/asistentes/${a.idAsistente}/editar" class="text-yellow-600 hover:text-yellow-900 underline font-semibold p-0 bg-transparent shadow-none text-xs">Editar</a>
+                                            <a href="${pageContext.request.contextPath}/api/admin/asistentes/${a.idAsistente}" class="action-link action-link-view" title="Ver detalles de ${a.nombre}">Ver</a>
+                                            <a href="${pageContext.request.contextPath}/api/admin/asistentes/${a.idAsistente}/editar" class="action-link action-link-edit" title="Editar datos de ${a.nombre}">Editar</a>
                                         </td>
                                     </tr>
                                 </c:forEach>

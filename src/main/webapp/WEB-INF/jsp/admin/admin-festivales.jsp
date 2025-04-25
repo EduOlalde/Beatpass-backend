@@ -52,14 +52,7 @@
                 <jsp:param name="activePage" value="festivales"/>
             </jsp:include>
 
-            <h2 class="text-2xl font-semibold text-gray-700 mb-5">Gestionar Todos los Festivales</h2>
-
-            <div class="flex justify-end mb-4">
-                <a href="${pageContext.request.contextPath}/api/admin/festivales/crear"
-                   class="font-bold py-2 px-4 rounded shadow transition duration-150 ease-in-out inline-flex items-center bg-green-600 hover:bg-green-700 text-white">
-                    + Crear Festival (Asignar a Promotor)
-                </a>
-            </div>
+            <h2 class="text-2xl font-semibold text-gray-700 mb-5">Gestionar Todos los Festivales</h2>           
 
             <%-- Mensajes flash --%>
             <c:if test="${not empty requestScope.mensajeExito}">

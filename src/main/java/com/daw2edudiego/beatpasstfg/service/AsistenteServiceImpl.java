@@ -4,6 +4,7 @@ import com.daw2edudiego.beatpasstfg.dto.AsistenteDTO;
 import com.daw2edudiego.beatpasstfg.exception.AsistenteNotFoundException;
 import com.daw2edudiego.beatpasstfg.exception.FestivalNotFoundException;
 import com.daw2edudiego.beatpasstfg.model.Asistente;
+import com.daw2edudiego.beatpasstfg.model.EstadoEntradaAsignada;
 import com.daw2edudiego.beatpasstfg.model.Festival;
 import com.daw2edudiego.beatpasstfg.repository.AsistenteRepository;
 import com.daw2edudiego.beatpasstfg.repository.AsistenteRepositoryImpl;
@@ -12,10 +13,15 @@ import com.daw2edudiego.beatpasstfg.repository.FestivalRepositoryImpl;
 import com.daw2edudiego.beatpasstfg.util.JPAUtil;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityTransaction;
+import jakarta.persistence.NoResultException;
 import jakarta.persistence.PersistenceException;
+import jakarta.persistence.Tuple; // Importar Tuple
 import jakarta.persistence.TypedQuery;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.LinkedHashMap; // Usar LinkedHashMap para mantener orden
 import java.util.List;
+import java.util.Map; // Importar Map
 import java.util.Optional;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
@@ -24,7 +30,8 @@ import org.slf4j.LoggerFactory;
 /**
  * Implementación de la interfaz {@link AsistenteService}. Gestiona la lógica de
  * negocio para los asistentes, coordinando las operaciones del repositorio y
- * manejando las transacciones JPA.
+ * manejando las transacciones JPA. Incluye la obtención del mapa Festival ->
+ * UID Pulsera asociada.
  *
  * @author Eduardo Olalde
  */
@@ -32,7 +39,6 @@ public class AsistenteServiceImpl implements AsistenteService {
 
     private static final Logger log = LoggerFactory.getLogger(AsistenteServiceImpl.class);
 
-    // Inyección manual de dependencias (en un entorno con CDI/Spring se usaría @Inject/@Autowired)
     private final AsistenteRepository asistenteRepository;
     private final FestivalRepository festivalRepository;
 
@@ -45,57 +51,47 @@ public class AsistenteServiceImpl implements AsistenteService {
     }
 
     /**
-     * {@inheritDoc} Nota: Este método debería tener control de acceso (ej: solo
-     * ADMIN). Actualmente no implementa paginación.
+     * {@inheritDoc} Ahora recupera el mapa festival-pulsera para cada
+     * asistente.
      */
     @Override
     public List<AsistenteDTO> obtenerTodosLosAsistentes() {
-        log.debug("Service: Obteniendo todos los asistentes.");
+        log.debug("Service: Obteniendo todos los asistentes (con mapa festival-pulsera).");
         EntityManager em = null;
         try {
             em = JPAUtil.createEntityManager();
-            // Utilizar el método findAll del repositorio si existe, sino la query directa
-            List<Asistente> asistentes;
-            if (asistenteRepository instanceof AsistenteRepositoryImpl) { // Asumiendo que tiene findAll
-                asistentes = ((AsistenteRepositoryImpl) asistenteRepository).findAll(em);
-            } else {
-                // Fallback a query directa si findAll no está en la interfaz/impl
-                TypedQuery<Asistente> query = em.createQuery("SELECT a FROM Asistente a ORDER BY a.nombre", Asistente.class);
-                asistentes = query.getResultList();
-            }
-
+            List<Asistente> asistentes = asistenteRepository.findAll(em); // Usa el método del repo original
             log.info("Encontrados {} asistentes en total.", asistentes.size());
-            // Mapear la lista de entidades a DTOs
+            EntityManager finalEm = em; // Necesario para lambda
             return asistentes.stream()
-                    .map(this::mapEntityToDto)
+                    .map(a -> mapEntityToDto(a, finalEm)) // Usar el método de mapeo actualizado
                     .collect(Collectors.toList());
         } catch (Exception e) {
             log.error("Error obteniendo todos los asistentes: {}", e.getMessage(), e);
-            return Collections.emptyList(); // Devolver lista vacía en caso de error
+            return Collections.emptyList();
         } finally {
             closeEntityManager(em);
         }
     }
 
     /**
-     * {@inheritDoc}
+     * {@inheritDoc} Ahora recupera el mapa festival-pulsera para el asistente.
      */
     @Override
     public Optional<AsistenteDTO> obtenerAsistentePorId(Integer idAsistente) {
-        log.debug("Service: Obteniendo asistente por ID: {}", idAsistente);
+        log.debug("Service: Obteniendo asistente por ID (con mapa festival-pulsera): {}", idAsistente);
         if (idAsistente == null) {
-            log.warn("Intento de obtener asistente con ID nulo.");
             return Optional.empty();
         }
         EntityManager em = null;
         try {
             em = JPAUtil.createEntityManager();
-            // Buscar en el repositorio y mapear si se encuentra
+            EntityManager finalEm = em; // Necesario para lambda
             return asistenteRepository.findById(em, idAsistente)
-                    .map(this::mapEntityToDto);
+                    .map(a -> mapEntityToDto(a, finalEm)); // Usar el método de mapeo actualizado
         } catch (Exception e) {
             log.error("Error obteniendo asistente por ID {}: {}", idAsistente, e.getMessage(), e);
-            return Optional.empty(); // Devolver vacío en caso de error
+            return Optional.empty();
         } finally {
             closeEntityManager(em);
         }
@@ -106,85 +102,62 @@ public class AsistenteServiceImpl implements AsistenteService {
      */
     @Override
     public Asistente obtenerOcrearAsistentePorEmail(String email, String nombre, String telefono) {
+        // (Sin cambios respecto a la versión original)
         log.info("Service: Obteniendo o creando asistente por email: {}", email);
-        // Validación inicial de argumentos
         if (email == null || email.isBlank()) {
             throw new IllegalArgumentException("El email es obligatorio para obtener o crear un asistente.");
         }
-        // Nota: La obligatoriedad del nombre se valida más adelante si se necesita crear
-
         EntityManager em = null;
         EntityTransaction tx = null;
         try {
             em = JPAUtil.createEntityManager();
-            // 1. Intentar buscar por email (no requiere transacción activa)
             Optional<Asistente> existenteOpt = asistenteRepository.findByEmail(em, email);
-
             if (existenteOpt.isPresent()) {
-                // 2a. Si existe, devolverlo
-                Asistente existente = existenteOpt.get();
-                log.debug("Asistente encontrado con email {}: ID {}", email, existente.getIdAsistente());
-                return existente;
+                return existenteOpt.get();
             } else {
-                // 2b. Si no existe, proceder a crearlo (requiere transacción)
-                log.info("Asistente con email {} no encontrado, se procederá a crear uno nuevo.", email);
                 if (nombre == null || nombre.isBlank()) {
-                    // Validar nombre solo si se va a crear
                     throw new IllegalArgumentException("El nombre es obligatorio al crear un nuevo asistente.");
                 }
-
-                tx = em.getTransaction(); // Iniciar transacción para la creación
+                tx = em.getTransaction();
                 tx.begin();
-
                 Asistente nuevoAsistente = new Asistente();
-                nuevoAsistente.setEmail(email.trim().toLowerCase()); // Normalizar email
+                nuevoAsistente.setEmail(email.trim().toLowerCase());
                 nuevoAsistente.setNombre(nombre.trim());
-                nuevoAsistente.setTelefono(telefono != null ? telefono.trim() : null); // Limpiar teléfono
-
-                // Guardar el nuevo asistente usando el repositorio
+                nuevoAsistente.setTelefono(telefono != null ? telefono.trim() : null);
                 nuevoAsistente = asistenteRepository.save(em, nuevoAsistente);
-
-                tx.commit(); // Confirmar la transacción
-                log.info("Nuevo asistente creado con ID {} para email {}", nuevoAsistente.getIdAsistente(), email);
+                tx.commit();
                 return nuevoAsistente;
             }
         } catch (Exception e) {
-            // Manejo de excepciones y rollback
             handleException(e, tx, "obtener o crear asistente por email");
-            // Relanzar excepción mapeada o específica
-            if (e instanceof IllegalArgumentException) {
-                throw (IllegalArgumentException) e;
-            }
-            // Podríamos mapear PersistenceException (ej: email duplicado por concurrencia) a una excepción más específica
-            throw new RuntimeException("Error inesperado al obtener o crear asistente: " + e.getMessage(), e);
+            throw mapException(e);
         } finally {
             closeEntityManager(em);
         }
     }
 
     /**
-     * {@inheritDoc}
+     * {@inheritDoc} Ahora recupera el mapa festival-pulsera para cada asistente
+     * encontrado.
      */
     @Override
     public List<AsistenteDTO> buscarAsistentes(String searchTerm) {
-        log.debug("Service: Buscando asistentes con término: '{}'", searchTerm);
-        // Si el término es vacío, podríamos devolver todos o ninguno, aquí devolvemos todos
+        log.debug("Service: Buscando asistentes con término (con mapa festival-pulsera): '{}'", searchTerm);
         if (searchTerm == null || searchTerm.isBlank()) {
-            log.debug("Término de búsqueda vacío, devolviendo todos los asistentes.");
             return obtenerTodosLosAsistentes();
         }
         EntityManager em = null;
         try {
             em = JPAUtil.createEntityManager();
-            // Query JPQL para buscar por nombre o email (case-insensitive)
+            // Usamos la consulta del repositorio que proporcionaste
             String jpql = "SELECT a FROM Asistente a WHERE lower(a.nombre) LIKE :term OR lower(a.email) LIKE :term ORDER BY a.nombre";
             TypedQuery<Asistente> query = em.createQuery(jpql, Asistente.class);
-            // Añadir wildcards y convertir a minúsculas para la búsqueda LIKE
             query.setParameter("term", "%" + searchTerm.toLowerCase() + "%");
             List<Asistente> asistentes = query.getResultList();
             log.info("Encontrados {} asistentes para el término '{}'", asistentes.size(), searchTerm);
+            EntityManager finalEm = em; // Necesario para lambda
             return asistentes.stream()
-                    .map(this::mapEntityToDto)
+                    .map(a -> mapEntityToDto(a, finalEm)) // Usar el método de mapeo actualizado
                     .collect(Collectors.toList());
         } catch (Exception e) {
             log.error("Error buscando asistentes con término '{}': {}", searchTerm, e.getMessage(), e);
@@ -195,27 +168,20 @@ public class AsistenteServiceImpl implements AsistenteService {
     }
 
     /**
-     * {@inheritDoc}
+     * {@inheritDoc} Ahora recupera el mapa festival-pulsera para el asistente
+     * actualizado.
      */
     @Override
     public AsistenteDTO actualizarAsistente(Integer idAsistente, AsistenteDTO asistenteDTO) {
-        log.info("Service: Actualizando asistente ID {}", idAsistente);
-        // Validación de argumentos
-        if (idAsistente == null) {
-            throw new IllegalArgumentException("El ID del asistente es requerido para actualizar.");
+        log.info("Service: Actualizando asistente ID {} (con mapa festival-pulsera)", idAsistente);
+        if (idAsistente == null || asistenteDTO == null) {
+            throw new IllegalArgumentException("ID y DTO del asistente son requeridos para actualizar.");
         }
-        if (asistenteDTO == null) {
-            throw new IllegalArgumentException("Los datos del asistente (DTO) son requeridos para actualizar.");
-        }
-        // Validar datos dentro del DTO
         if (asistenteDTO.getNombre() == null || asistenteDTO.getNombre().isBlank()) {
             throw new IllegalArgumentException("El nombre del asistente no puede estar vacío.");
         }
-        // No permitir actualizar email a través de este método
         if (asistenteDTO.getEmail() != null) {
             log.warn("Se intentó actualizar el email del asistente ID {}, lo cual no está permitido por este método.", idAsistente);
-            // Opcionalmente, lanzar excepción o simplemente ignorar el campo email del DTO
-            // throw new IllegalArgumentException("No se permite actualizar el email del asistente.");
         }
 
         EntityManager em = null;
@@ -225,26 +191,21 @@ public class AsistenteServiceImpl implements AsistenteService {
             tx = em.getTransaction();
             tx.begin();
 
-            // 1. Buscar el asistente existente
             Asistente asistente = asistenteRepository.findById(em, idAsistente)
                     .orElseThrow(() -> new AsistenteNotFoundException("Asistente no encontrado con ID: " + idAsistente));
 
-            // 2. Actualizar los campos permitidos desde el DTO
             asistente.setNombre(asistenteDTO.getNombre().trim());
             asistente.setTelefono(asistenteDTO.getTelefono() != null ? asistenteDTO.getTelefono().trim() : null);
-            // La fecha de modificación se actualiza automáticamente por la BD
 
-            // 3. Guardar (merge) la entidad actualizada
-            // save se encarga de llamar a merge si el ID no es nulo
             asistente = asistenteRepository.save(em, asistente);
 
-            tx.commit(); // Confirmar transacción
+            tx.commit();
             log.info("Asistente ID {} actualizado correctamente.", idAsistente);
-            return mapEntityToDto(asistente); // Devolver DTO actualizado
+            // Mapear la entidad actualizada a DTO, incluyendo el mapa festival-pulsera
+            return mapEntityToDto(asistente, em); // Usar el método de mapeo actualizado
 
         } catch (Exception e) {
             handleException(e, tx, "actualizar asistente");
-            // Relanzar excepción mapeada o específica
             throw mapException(e);
         } finally {
             closeEntityManager(em);
@@ -252,51 +213,79 @@ public class AsistenteServiceImpl implements AsistenteService {
     }
 
     /**
-     * {@inheritDoc}
+     * {@inheritDoc} Recupera el UID de la pulsera asociada a cada asistente
+     * *para este festival específico* y lo almacena en el mapa del DTO.
      */
     @Override
     public List<AsistenteDTO> obtenerAsistentesPorFestival(Integer idFestival, Integer idPromotor) {
         log.debug("Service: Obteniendo asistentes para festival ID {} por promotor ID {}", idFestival, idPromotor);
-        // Validación de argumentos
-        if (idFestival == null) {
-            throw new IllegalArgumentException("El ID del festival es requerido.");
-        }
-        if (idPromotor == null) {
-            throw new IllegalArgumentException("El ID del promotor es requerido.");
+        if (idFestival == null || idPromotor == null) {
+            throw new IllegalArgumentException("ID de festival e ID de promotor son requeridos.");
         }
 
         EntityManager em = null;
-        // No se necesita transacción para esta lectura, pero la mantenemos por si
-        // se accede a relaciones LAZY que requieran sesión activa.
         EntityTransaction tx = null;
+        List<AsistenteDTO> resultadoDTOs = new ArrayList<>();
+
         try {
             em = JPAUtil.createEntityManager();
             tx = em.getTransaction();
-            tx.begin(); // Iniciar transacción (principalmente para la verificación)
+            tx.begin();
 
-            // 1. Verificar que el festival existe y pertenece al promotor
             Festival festival = festivalRepository.findById(em, idFestival)
                     .orElseThrow(() -> new FestivalNotFoundException("Festival no encontrado con ID: " + idFestival));
-
-            // Verificar propiedad (lanza SecurityException si no coincide)
             verificarPropiedadFestival(festival, idPromotor);
-            log.debug("Permiso verificado para promotor {} sobre festival {}", idPromotor, idFestival);
 
-            // 2. Obtener los asistentes usando el método del repositorio
+            // Usamos el método del repositorio original
             List<Asistente> asistentes = asistenteRepository.findAsistentesByFestivalId(em, idFestival);
+            log.info("Encontrados {} asistentes base para el festival ID {}", asistentes.size(), idFestival);
 
-            tx.commit(); // Commit (aunque sea lectura)
+            for (Asistente asistente : asistentes) {
+                // Mapeo básico inicial
+                AsistenteDTO dto = new AsistenteDTO();
+                dto.setIdAsistente(asistente.getIdAsistente());
+                dto.setNombre(asistente.getNombre());
+                dto.setEmail(asistente.getEmail());
+                dto.setTelefono(asistente.getTelefono());
+                dto.setFechaCreacion(asistente.getFechaCreacion());
 
-            // 3. Mapear a DTOs y devolver
-            log.info("Encontrados {} asistentes para el festival ID {}", asistentes.size(), idFestival);
-            return asistentes.stream()
-                    .map(this::mapEntityToDto)
-                    .collect(Collectors.toList());
+                // Buscar el UID de la pulsera asociada a este asistente DENTRO de este festival
+                String jpqlPulsera = "SELECT p.codigoUid "
+                        + "FROM PulseraNFC p "
+                        + "JOIN p.entradaAsignada ea "
+                        + "WHERE ea.asistente = :asistente "
+                        + "AND ea.compraEntrada.entrada.festival.idFestival = :idFestival "
+                        // Considerar añadir: AND ea.estado = :estadoActiva AND p.activa = true
+                        + "ORDER BY p.idPulsera DESC"; // Coger la última si hay varias
+
+                TypedQuery<String> queryPulsera = em.createQuery(jpqlPulsera, String.class);
+                queryPulsera.setParameter("asistente", asistente);
+                queryPulsera.setParameter("idFestival", idFestival);
+                // queryPulsera.setParameter("estadoActiva", EstadoEntradaAsignada.ACTIVA); // Si se añade filtro de estado
+                queryPulsera.setMaxResults(1);
+
+                Map<String, String> festivalPulseraMap = new LinkedHashMap<>(); // Crear el mapa
+                try {
+                    String codigoUid = queryPulsera.getSingleResult();
+                    festivalPulseraMap.put(festival.getNombre(), codigoUid); // Añadir la entrada al mapa
+                    log.trace("Pulsera UID {} encontrada para asistente ID {} en festival ID {}", codigoUid, asistente.getIdAsistente(), idFestival);
+                } catch (NoResultException e) {
+                    log.trace("No se encontró pulsera asociada para asistente ID {} en festival ID {}", asistente.getIdAsistente(), idFestival);
+                    festivalPulseraMap.put(festival.getNombre(), null); // Añadir entrada con valor null
+                } catch (Exception eQuery) {
+                    log.error("Error buscando pulsera para asistente ID {} en festival ID {}: {}",
+                            asistente.getIdAsistente(), idFestival, eQuery.getMessage());
+                    festivalPulseraMap.put(festival.getNombre(), null); // Añadir entrada con valor null en caso de error
+                }
+                dto.setFestivalPulseraInfo(festivalPulseraMap); // Establecer el mapa en el DTO
+                resultadoDTOs.add(dto);
+            }
+
+            tx.commit();
+            return resultadoDTOs;
 
         } catch (Exception e) {
-            // Manejo de excepciones y rollback si aplica
-            handleException(e, tx, "obtener asistentes por festival");
-            // Relanzar excepción mapeada o específica
+            handleException(e, tx, "obtener asistentes por festival ID " + idFestival);
             throw mapException(e);
         } finally {
             closeEntityManager(em);
@@ -305,24 +294,79 @@ public class AsistenteServiceImpl implements AsistenteService {
 
     // --- Métodos de Ayuda (Helpers) ---
     /**
-     * Mapea una entidad Asistente a su correspondiente AsistenteDTO.
+     * Mapea una entidad Asistente a su correspondiente AsistenteDTO, incluyendo
+     * la consulta para obtener el mapa de festivales y UIDs de pulseras
+     * asociadas.
      *
-     * @param a La entidad Asistente.
-     * @return El AsistenteDTO mapeado, o null si la entidad es null.
+     * @param a La entidad {@link Asistente} a mapear. No debe ser {@code null}.
+     * @param em El {@link EntityManager} activo para realizar la consulta
+     * adicional. No debe ser {@code null}.
+     * @return El {@link AsistenteDTO} mapeado, incluyendo el mapa
+     * {@code festivalPulseraInfo}. Retorna {@code null} si la entidad de
+     * entrada es {@code null}. El mapa puede estar vacío si no se encuentran
+     * festivales/pulseras o si ocurre un error durante la consulta.
      */
-    private AsistenteDTO mapEntityToDto(Asistente a) {
+    private AsistenteDTO mapEntityToDto(Asistente a, EntityManager em) {
         if (a == null) {
             return null;
         }
+        // Mapeo básico
         AsistenteDTO dto = new AsistenteDTO();
         dto.setIdAsistente(a.getIdAsistente());
         dto.setNombre(a.getNombre());
         dto.setEmail(a.getEmail());
         dto.setTelefono(a.getTelefono());
-        dto.setFechaCreacion(a.getFechaCreacion()); // Incluir fecha creación
+        dto.setFechaCreacion(a.getFechaCreacion());
+
+        // *** Consulta para obtener mapa Festival -> Pulsera UID ***
+        Map<String, String> festivalPulseraMap = new LinkedHashMap<>(); // Usar LinkedHashMap para mantener orden
+        if (em != null && a.getIdAsistente() != null) { // Asegurarse de tener EM y ID
+            try {
+                // Consulta que devuelve pares (nombreFestival, codigoUidPulsera)
+                // Usa LEFT JOIN para incluir festivales aunque el asistente no tenga pulsera asociada
+                // Filtra por entradas ACTIVAS del asistente
+                String jpql = "SELECT e.festival.nombre, p.codigoUid "
+                        + "FROM EntradaAsignada ea "
+                        + "JOIN ea.compraEntrada ce "
+                        + "JOIN ce.entrada e "
+                        + "LEFT JOIN ea.pulseraAsociada p " // LEFT JOIN para pulsera opcional
+                        + "WHERE ea.asistente = :asistente "
+                        + "AND ea.estado = :estadoActiva " // Considerar solo entradas activas
+                        + "ORDER BY e.festival.nombre"; // Ordenar alfabéticamente por festival
+
+                TypedQuery<Tuple> query = em.createQuery(jpql, Tuple.class);
+                query.setParameter("asistente", a); // Pasar la entidad completa
+                query.setParameter("estadoActiva", EstadoEntradaAsignada.ACTIVA);
+
+                List<Tuple> results = query.getResultList();
+
+                // Poblar el mapa
+                for (Tuple tuple : results) {
+                    String festivalNombre = tuple.get(0, String.class);
+                    String pulseraUid = tuple.get(1, String.class); // Será null si no hay pulsera en el LEFT JOIN
+                    // Si ya existe una entrada para este festival (poco probable si la lógica es correcta),
+                    // esta implementación sobrescribirá con la última encontrada.
+                    festivalPulseraMap.put(festivalNombre, pulseraUid);
+                }
+                log.trace("Mapa Festival-Pulsera obtenido para asistente ID {}: {}", a.getIdAsistente(), festivalPulseraMap);
+
+            } catch (Exception e) {
+                log.error("Error al obtener mapa festival-pulsera para asistente ID {}: {}", a.getIdAsistente(), e.getMessage());
+                // Dejar el mapa vacío en caso de error en la consulta
+                festivalPulseraMap = Collections.emptyMap();
+            }
+        } else {
+            // Si no hay EntityManager o ID, devolver mapa vacío
+            festivalPulseraMap = Collections.emptyMap();
+        }
+        dto.setFestivalPulseraInfo(festivalPulseraMap); // Establecer el mapa (posiblemente vacío)
+        // *** Fin Consulta Mapa ***
+
         return dto;
     }
 
+    // Métodos auxiliares
+    
     /**
      * Cierra el EntityManager si está abierto.
      *
@@ -352,8 +396,7 @@ public class AsistenteServiceImpl implements AsistenteService {
     }
 
     /**
-     * Manejador genérico de excepciones para métodos de servicio. Loggea el
-     * error y realiza rollback si hay transacción activa.
+     * Manejador genérico de excepciones para métodos de servicio.
      *
      * @param e La excepción capturada.
      * @param tx La transacción activa (puede ser null).
@@ -361,7 +404,7 @@ public class AsistenteServiceImpl implements AsistenteService {
      */
     private void handleException(Exception e, EntityTransaction tx, String action) {
         log.error("Error durante la acción '{}': {}", action, e.getMessage(), e);
-        rollbackTransaction(tx, action); // Intentar rollback
+        rollbackTransaction(tx, action);
     }
 
     /**
@@ -371,24 +414,20 @@ public class AsistenteServiceImpl implements AsistenteService {
      * @return La excepción mapeada o una RuntimeException genérica.
      */
     private RuntimeException mapException(Exception e) {
-        // Si ya es una de nuestras excepciones de negocio o RuntimeException, la relanzamos tal cual
         if (e instanceof AsistenteNotFoundException
                 || e instanceof FestivalNotFoundException
                 || e instanceof IllegalArgumentException
                 || e instanceof SecurityException
                 || e instanceof IllegalStateException
                 || e instanceof PersistenceException
-                || // Incluir PersistenceException
-                e instanceof RuntimeException) { // Incluir RuntimeException genéricas
+                || e instanceof RuntimeException) {
             return (RuntimeException) e;
         }
-        // Para otras excepciones no esperadas, envolvemos en RuntimeException
         return new RuntimeException("Error inesperado en la capa de servicio: " + e.getMessage(), e);
     }
 
     /**
-     * Verifica que el promotor dado sea el propietario del festival. Lanza
-     * SecurityException si no lo es.
+     * Verifica que el promotor dado sea el propietario del festival.
      *
      * @param festival El festival a verificar.
      * @param idPromotor El ID del promotor que se espera sea el propietario.
@@ -398,7 +437,6 @@ public class AsistenteServiceImpl implements AsistenteService {
      */
     private void verificarPropiedadFestival(Festival festival, Integer idPromotor) {
         if (festival == null) {
-            // Esto no debería ocurrir si se busca antes, pero por seguridad
             throw new IllegalArgumentException("El festival no puede ser nulo para verificar propiedad.");
         }
         if (idPromotor == null) {
