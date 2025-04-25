@@ -17,12 +17,14 @@
         <class>com.daw2edudiego.beatpasstfg.model.Recarga</class>
         <class>com.daw2edudiego.beatpasstfg.model.Consumo</class>
         <class>com.daw2edudiego.beatpasstfg.model.EstadisticasFestival</class>
+
         <properties>
             <property name="jakarta.persistence.jdbc.driver" value="com.mysql.cj.jdbc.Driver"/>
-            <property name="jakarta.persistence.jdbc.url" value="jdbc:mysql://mysql-beatpasstfg.alwaysdata.net:3306/beatpasstfg_db?useSSL=true"/>
-            <property name="jakarta.persistence.jdbc.user" value="410645"/>
-            <property name="jakarta.persistence.jdbc.password" value="LFghQnDehb8Eo$"/> <property name="hibernate.dialect" value="org.hibernate.dialect.MySQLDialect"/> <property name="hibernate.show_sql" value="true"/>
-            <property name="hibernate.format_sql" value="true"/>
-            <property name="hibernate.hbm2ddl.auto" value="update"/> </properties>
+
+            <property name="hibernate.dialect" value="org.hibernate.dialect.MySQLDialect"/>
+            <property name="hibernate.show_sql" value="true"/> 
+			<property name="hibernate.format_sql" value="true"/> 
+			<property name="hibernate.hbm2ddl.auto" value="update"/> 
+		</properties>
     </persistence-unit>
 </persistence>

@@ -38,7 +38,7 @@ public class JwtUtil {
      * ser apropiada para el algoritmo elegido (HS256 requiere >= 256 bits / 32
      * bytes).
      */
-    private static final String SECRET_KEY_STRING = "MiClaveSuperSecretaLargaParaQueFuncioneBien1234567890"; // Ejemplo >= 32 bytes ASCII
+    private static final String SECRET_KEY_STRING = System.getenv("TFG_TOKEN_KEY");
 
     /**
      * Tiempo de expiración del token en milisegundos (ej., 1 hora).
