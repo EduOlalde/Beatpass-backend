@@ -12,7 +12,7 @@ dist/
 *.orig
 
 # Maven target directory
-target/
+/target/*
 # Include WAR for deployment
 !target/BeatpassTFG.war
 
