@@ -13,6 +13,8 @@ dist/
 
 # Maven target directory
 target/
+# Include WAR for deployment
+!target/BeatpassTFG.war
 
 # Maven backup files
 pom.xml.tag
