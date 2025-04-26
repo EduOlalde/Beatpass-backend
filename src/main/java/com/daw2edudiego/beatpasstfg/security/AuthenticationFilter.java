@@ -68,7 +68,6 @@ public class AuthenticationFilter implements ContainerRequestFilter {
             "public/" // Rutas públicas generales
     );
 
-    // --- NUEVO: Patrones para rutas GET públicas específicas ---
     /**
      * Patrón regex para la ruta GET pública de detalles de un festival.
      * Coincide con "festivales/" seguido de uno o más dígitos y nada más.
@@ -79,10 +78,10 @@ public class AuthenticationFilter implements ContainerRequestFilter {
      * Coincide con "festivales/" seguido de dígitos, "/entradas" y nada más.
      */
     private static final Pattern PUBLIC_GET_FESTIVAL_TICKETS_PATTERN = Pattern.compile("^festivales/\\d+/entradas$");
-    // --- FIN NUEVO ---
 
     /**
      * Método principal del filtro que procesa cada petición entrante.
+     * @param requestContext
      */
     @Override
     public void filter(ContainerRequestContext requestContext) throws IOException {
@@ -93,7 +92,6 @@ public class AuthenticationFilter implements ContainerRequestFilter {
         log.trace("AuthenticationFilter procesando petición: {} /api/{}", method, path);
 
         // 1. Permitir peticiones CORS preflight (OPTIONS) sin autenticación
-        //    (Mantenemos tu lógica original de abortar con OK)
         if ("OPTIONS".equalsIgnoreCase(method)) {
             log.debug("Petición OPTIONS para ruta: /api/{}. Abortando con OK para preflight CORS.", path);
             return;
@@ -105,24 +103,23 @@ public class AuthenticationFilter implements ContainerRequestFilter {
             return; // Continuar sin validar token
         }
 
-        // 3. --- NUEVO: Comprobar si es una ruta GET pública específica ---
+        // 3. Comprobar si es una ruta GET pública específica ---
         if ("GET".equalsIgnoreCase(method) && isPublicGetPath(path)) {
             log.debug("Ruta GET pública específica '/api/{}' permitida sin token JWT.", path);
             return; // Permitir acceso público sin token
         }
-        // --- FIN NUEVO ---
 
-        // 4. (Antes paso 3) Obtener la cabecera Authorization
+        // 4. Obtener la cabecera Authorization
         String authorizationHeader = requestContext.getHeaderString(HttpHeaders.AUTHORIZATION);
 
-        // 5. (Antes paso 4) Validar presencia y formato del Header ("Bearer <token>")
+        // 5. Validar presencia y formato del Header ("Bearer <token>")
         if (authorizationHeader == null || !authorizationHeader.toLowerCase().startsWith("bearer ")) {
             log.warn("Cabecera Authorization ausente o mal formada para la ruta protegida: /api/{}", path);
             abortUnauthorized(requestContext, "Se requiere cabecera Authorization: Bearer <token>.");
             return; // Abortar petición
         }
 
-        // 6. (Antes paso 5) Extraer la cadena del token
+        // 6. Extraer la cadena del token
         String token = authorizationHeader.substring("Bearer".length()).trim();
         if (token.isEmpty()) {
             log.warn("Cabecera Authorization presente pero el token está vacío para la ruta: /api/{}", path);
@@ -130,7 +127,7 @@ public class AuthenticationFilter implements ContainerRequestFilter {
             return; // Abortar petición
         }
 
-        // 7. (Antes paso 6) Validar el token y extraer claims
+        // 7. Validar el token y extraer claims
         try {
             // Usar la instancia jwtUtil (como en tu código original)
             Claims claims = jwtUtil.validarTokenYObtenerClaims(token);
@@ -146,7 +143,7 @@ public class AuthenticationFilter implements ContainerRequestFilter {
 
             log.debug("JWT validado exitosamente para userId: {}, role: {} en ruta: /api/{}", userId, role, path);
 
-            // 8. (Antes paso 7) Establecer el SecurityContext personalizado
+            // 8. Establecer el SecurityContext personalizado
             final SecurityContext currentSecurityContext = requestContext.getSecurityContext();
             UserSecurityContext userSecurityContext = new UserSecurityContext(
                     userId,
@@ -185,7 +182,7 @@ public class AuthenticationFilter implements ContainerRequestFilter {
     }
 
     /**
-     * --- NUEVO: Comprueba si la ruta relativa coincide con patrones GET
+     * Comprueba si la ruta relativa coincide con patrones GET
      * públicos específicos. ---
      */
     private boolean isPublicGetPath(String relativePath) {
