@@ -1,4 +1,4 @@
-FESTIVAL_IDFESTIVAL_ID/**
+/**
  * festival_simulator.js
  * Lógica para el simulador de compra y nominación de entradas,
  * interactuando con los endpoints públicos /api/public/venta/*
