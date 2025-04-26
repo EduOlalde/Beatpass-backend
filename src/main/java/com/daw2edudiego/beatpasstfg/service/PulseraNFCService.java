@@ -10,7 +10,8 @@ import java.util.Optional;
 /**
  * Define la interfaz para la lógica de negocio relacionada con las entidades
  * {@link PulseraNFC}. Gestiona operaciones como asociación, consulta, recarga y
- * consumo, aplicando reglas de negocio y control de permisos.
+ * consumo, aplicando reglas de negocio y control de permisos. **Modificado para
+ * requerir idFestival en operaciones POS y vincular pulseras a festivales.**
  *
  * @see PulseraNFC
  * @see PulseraNFCDTO
@@ -19,10 +20,12 @@ import java.util.Optional;
  */
 public interface PulseraNFCService {
 
+    // --- Asociación ---
     /**
      * Asocia una pulsera NFC (identificada por su UID) a una entrada asignada
      * específica. Si la pulsera con el UID proporcionado no existe en la base
-     * de datos, se crea una nueva.
+     * de datos, se crea una nueva y se le asigna el festival de la entrada. Si
+     * existe, verifica que pertenezca al mismo festival antes de asociarla.
      * <p>
      * Se realizan las siguientes verificaciones antes de la asociación:
      * <ul>
@@ -35,6 +38,7 @@ public interface PulseraNFCService {
      * <li>Si la pulsera (por UID) ya existe:
      * <ul>
      * <li>Que esté ACTIVA.</li>
+     * <li>Que pertenezca al mismo festival que la entrada asignada.</li>
      * <li>Que no esté ya asociada a OTRA entrada ACTIVA del MISMO
      * festival.</li>
      * </ul>
@@ -59,13 +63,13 @@ public interface PulseraNFCService {
      * @throws EntradaAsignadaNoNominadaException Si la entrada no está
      * nominada.
      * @throws PulseraNFCNotFoundException Si se produce un error inesperado al
-     * buscar la pulsera por UID (poco probable).
+     * buscar la pulsera por UID.
      * @throws PulseraYaAsociadaException Si la pulsera ya está asociada a otra
      * entrada activa del mismo festival.
      * @throws IllegalStateException Si la entrada o la pulsera (si existe) no
      * están en estado ACTIVA, o si la entrada ya tiene una pulsera.
      * @throws SecurityException Si el usuario actor no tiene los permisos
-     * necesarios.
+     * necesarios o si la pulsera pertenece a otro festival.
      * @throws IllegalArgumentException Si alguno de los parámetros requeridos
      * es {@code null} o inválido.
      * @throws RuntimeException Si ocurre un error inesperado durante la
@@ -73,6 +77,7 @@ public interface PulseraNFCService {
      */
     PulseraNFCDTO asociarPulseraEntrada(String codigoUid, Integer idEntradaAsignada, Integer idActor);
 
+    // --- Consultas ---
     /**
      * Obtiene los detalles de una pulsera NFC específica por su ID de base de
      * datos. Se verifica que el usuario solicitante ({@code idActor}) tenga
@@ -125,27 +130,26 @@ public interface PulseraNFCService {
      * {@code null}.
      * @return El {@link BigDecimal} que representa el saldo actual de la
      * pulsera. Devuelve {@code BigDecimal.ZERO} si el saldo es nulo en la BD.
-     * @throws PulseraNFCNotFoundException Si la pulsera no se encuentra.
+     * @throws PulseraNFCNotFoundException Si la pulsera no se encuentra o el
+     * actor no tiene permisos.
      * @throws UsuarioNotFoundException Si el usuario actor no existe.
-     * @throws SecurityException Si el actor no tiene permisos para consultar el
-     * saldo de esta pulsera.
      * @throws IllegalArgumentException Si alguno de los IDs es {@code null}.
      * @throws RuntimeException Si ocurre un error inesperado.
      */
     BigDecimal obtenerSaldo(Integer idPulsera, Integer idActor);
 
     /**
-     * Obtiene una lista de todas las pulseras NFC que están asociadas (a través
-     * de su EntradaAsignada vinculada) a un festival específico. Se verifica
-     * que el usuario solicitante ({@code idActor}) tenga permisos para ver esta
-     * información (ADMIN o el PROMOTOR propietario del festival).
+     * Obtiene una lista de todas las pulseras NFC que están asociadas a un
+     * festival específico. Se verifica que el usuario solicitante
+     * ({@code idActor}) tenga permisos para ver esta información (ADMIN o el
+     * PROMOTOR propietario del festival).
      *
      * @param idFestival ID del festival cuyas pulseras asociadas se quieren
      * listar. No debe ser {@code null}.
      * @param idActor ID del usuario (ADMIN o PROMOTOR dueño) que realiza la
      * solicitud. No debe ser {@code null}.
      * @return Una lista de {@link PulseraNFCDTO} de las pulseras asociadas al
-     * festival. Puede estar vacía si no hay pulseras o si ocurre un error.
+     * festival. Puede estar vacía.
      * @throws FestivalNotFoundException Si el festival no se encuentra.
      * @throws UsuarioNotFoundException Si el usuario actor no existe.
      * @throws SecurityException Si el actor no tiene permisos (no es ADMIN ni
@@ -155,61 +159,60 @@ public interface PulseraNFCService {
      */
     List<PulseraNFCDTO> obtenerPulserasPorFestival(Integer idFestival, Integer idActor);
 
+    // --- Operaciones POS ---
     /**
      * Registra una operación de recarga de saldo para una pulsera NFC. Busca la
-     * pulsera por su UID, verifica que esté activa y que el usuario
-     * (cajero/admin) tenga permisos. Actualiza el saldo de la pulsera de forma
-     * atómica (usando bloqueo pesimista) y crea un registro de la recarga.
+     * pulsera por UID, verifica que esté activa, que pertenezca al festival
+     * indicado (obligatorio) y que el usuario (cajero/admin/promotor) tenga
+     * permisos (si es promotor, debe ser dueño del festival al que pertenece la
+     * pulsera). Actualiza el saldo y crea un registro de Recarga.
      * <p>
-     * La operación es transaccional.
-     * </p>
+     * La operación es transaccional.</p>
      *
      * @param codigoUid UID de la pulsera a recargar. No debe ser {@code null}
      * ni vacío.
-     * @param monto Cantidad a recargar. Debe ser un valor {@link BigDecimal}
-     * estrictamente positivo.
-     * @param metodoPago Descripción del método de pago (ej: "Efectivo",
-     * "Tarjeta"). Puede ser {@code null} o vacío.
-     * @param idUsuarioCajero ID del usuario (con rol CAJERO, ADMIN o PROMOTOR)
-     * que registra la recarga. No debe ser {@code null}.
+     * @param monto Cantidad a recargar (positiva). No debe ser {@code null} y
+     * debe ser > 0.
+     * @param metodoPago Método de pago (opcional).
+     * @param idUsuarioCajero ID del usuario (CAJERO, ADMIN o PROMOTOR) que
+     * registra la recarga. No debe ser {@code null}.
+     * @param idFestival ID del festival en cuyo contexto se realiza la recarga.
+     * No debe ser {@code null}.
      * @return El {@link PulseraNFCDTO} de la pulsera con el saldo actualizado.
      * @throws PulseraNFCNotFoundException Si no se encuentra una pulsera con el
      * UID especificado.
      * @throws UsuarioNotFoundException Si el usuario cajero no existe.
-     * @throws SecurityException Si el usuario cajero no tiene el rol adecuado
-     * (CAJERO, ADMIN o PROMOTOR).
+     * @throws SecurityException Si el usuario cajero no tiene el rol adecuado o
+     * si es PROMOTOR y la pulsera no pertenece a su festival.
      * @throws IllegalStateException Si la pulsera no está activa.
-     * @throws IllegalArgumentException Si {@code codigoUid}, {@code monto} o
-     * {@code idUsuarioCajero} son {@code null} o inválidos (ej: monto no
-     * positivo).
+     * @throws IllegalArgumentException Si alguno de los parámetros requeridos
+     * es {@code null} o inválido.
      * @throws RuntimeException Si ocurre un error inesperado durante la
      * operación.
      */
-    PulseraNFCDTO registrarRecarga(String codigoUid, BigDecimal monto, String metodoPago, Integer idUsuarioCajero);
+    PulseraNFCDTO registrarRecarga(String codigoUid, BigDecimal monto, String metodoPago, Integer idUsuarioCajero, Integer idFestival);
 
     /**
      * Registra una operación de consumo (gasto) realizada con una pulsera NFC
      * en un festival específico. Busca la pulsera por UID, verifica que esté
-     * activa y tenga saldo suficiente. Verifica la existencia del festival y
-     * los permisos del actor. Actualiza el saldo de la pulsera de forma atómica
-     * (usando bloqueo pesimista) y crea un registro del consumo asociado al
-     * festival.
+     * activa, que pertenezca al festival indicado, que tenga saldo suficiente y
+     * que el actor tenga permisos (si es promotor, debe ser dueño del
+     * festival). Actualiza el saldo y crea un registro de Consumo.
      * <p>
-     * La operación es transaccional.
-     * </p>
+     * La operación es transaccional.</p>
      *
      * @param codigoUid UID de la pulsera que realiza el consumo. No debe ser
      * {@code null} ni vacío.
-     * @param monto Cantidad a consumir. Debe ser un valor {@link BigDecimal}
-     * estrictamente positivo.
+     * @param monto Cantidad a consumir (positiva). No debe ser {@code null} y
+     * debe ser > 0.
      * @param descripcion Descripción del bien o servicio consumido (ej:
      * "Cerveza"). No debe ser {@code null} ni vacía.
      * @param idFestival ID del festival donde se realiza el consumo. No debe
      * ser {@code null}.
      * @param idPuntoVenta ID opcional del punto de venta donde se efectuó el
      * consumo. Puede ser {@code null}.
-     * @param idActor ID del usuario (con rol CAJERO, ADMIN o PROMOTOR) que
-     * registra el consumo. No debe ser {@code null}.
+     * @param idActor ID del usuario (CAJERO, ADMIN o PROMOTOR) que registra el
+     * consumo. No debe ser {@code null}.
      * @return El {@link PulseraNFCDTO} de la pulsera con el saldo actualizado.
      * @throws PulseraNFCNotFoundException Si no se encuentra una pulsera con el
      * UID especificado.
@@ -217,12 +220,11 @@ public interface PulseraNFCService {
      * @throws UsuarioNotFoundException Si el usuario actor no existe.
      * @throws SaldoInsuficienteException Si la pulsera no tiene saldo
      * suficiente para cubrir el monto del consumo.
-     * @throws SecurityException Si el usuario actor no tiene el rol adecuado
-     * (CAJERO, ADMIN o PROMOTOR).
+     * @throws SecurityException Si el usuario actor no tiene el rol adecuado o
+     * si la pulsera no pertenece al festival indicado.
      * @throws IllegalStateException Si la pulsera no está activa.
-     * @throws IllegalArgumentException Si {@code codigoUid}, {@code monto},
-     * {@code descripcion}, {@code idFestival} o {@code idActor} son
-     * {@code null} o inválidos (ej: monto no positivo).
+     * @throws IllegalArgumentException Si alguno de los parámetros requeridos
+     * es {@code null} o inválido.
      * @throws RuntimeException Si ocurre un error inesperado durante la
      * operación.
      */
