@@ -1,4 +1,4 @@
-/**
+FESTIVAL_IDFESTIVAL_ID/**
  * festival_simulator.js
  * Lógica para el simulador de compra y nominación de entradas,
  * interactuando con los endpoints públicos /api/public/venta/*
@@ -7,7 +7,7 @@
 
 // URL base de la API
 const API_BASE_URL = 'http://localhost:8080/BeatpassTFG/api'; // Asegúrate que el puerto y contexto son correctos
-const FESTIVAL_ID = 1; // ID del festival para esta simulación
+const FESTIVAL_ID = 7; // ID del festival para esta simulación
 
 // --- Estado (Simulación) ---
 // Usaremos localStorage para persistir las entradas compradas en esta sesión del navegador
