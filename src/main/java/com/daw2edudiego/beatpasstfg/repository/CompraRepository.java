@@ -2,7 +2,7 @@ package com.daw2edudiego.beatpasstfg.repository;
 
 import com.daw2edudiego.beatpasstfg.model.Compra;
 import jakarta.persistence.EntityManager;
-import java.util.List; // Importar List
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -56,7 +56,20 @@ public interface CompraRepository {
      * el asistente. Devuelve una lista vacía si el idAsistente es nulo o si
      * ocurre un error.
      */
-    List<Compra> findByAsistenteId(EntityManager em, Integer idAsistente); // Método añadido
+    List<Compra> findByAsistenteId(EntityManager em, Integer idAsistente);
+
+    /**
+     * Busca y devuelve todas las compras asociadas a un festival específico. La
+     * consulta navega a través de CompraEntrada y Entrada para filtrar por el
+     * ID del festival. Se devuelven las compras únicas (DISTINCT).
+     *
+     * @param em El EntityManager activo.
+     * @param idFestival El ID del festival cuyas compras se quieren obtener.
+     * @return Una lista (posiblemente vacía) de entidades Compra únicas
+     * asociadas al festival, ordenadas por fecha descendente. Devuelve lista
+     * vacía si el idFestival es nulo o si ocurre un error.
+     */
+    List<Compra> findByFestivalId(EntityManager em, Integer idFestival); // NUEVO MÉTODO
 
     // Podrían añadirse otros métodos como:
     // List<Compra> findByFechaBetween(EntityManager em, LocalDateTime inicio, LocalDateTime fin);

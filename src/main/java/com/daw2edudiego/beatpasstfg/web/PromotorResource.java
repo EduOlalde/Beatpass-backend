@@ -66,6 +66,7 @@ import java.util.Optional;
  * @see AsistenteService
  * @see PulseraNFCService
  * @see UsuarioService
+ * @see CompraService
  * @author Eduardo Olalde
  */
 @Path("/promotor")
@@ -81,6 +82,7 @@ public class PromotorResource {
     private final VentaService ventaService;
     private final AsistenteService asistenteService;
     private final PulseraNFCService pulseraNFCService;
+    private final CompraService compraService;
 
     // JAX-RS Context Injection
     @Context
@@ -101,6 +103,7 @@ public class PromotorResource {
         this.ventaService = new VentaServiceImpl();
         this.asistenteService = new AsistenteServiceImpl();
         this.pulseraNFCService = new PulseraNFCServiceImpl();
+        this.compraService = new CompraServiceImpl();
     }
 
     // --- Endpoints para Gestión de Festivales del Promotor ---
@@ -1042,7 +1045,6 @@ public class PromotorResource {
         return Response.seeOther(redirectUri).build(); // 303 See Other
     }
 
-    // --- Endpoint para Listar Asistentes por Festival ---
     /**
      * Endpoint GET para mostrar la lista de asistentes únicos con entradas para
      * un festival específico del promotor autenticado. Realiza forward al JSP
@@ -1098,83 +1100,68 @@ public class PromotorResource {
         }
     }
 
-    // --- Endpoint para Simular Venta ---
     /**
-     * Endpoint POST para simular el registro de una venta de entradas. Útil
-     * para pruebas durante el desarrollo para generar entradas asignadas.
-     * Espera idEntrada, idAsistente y cantidad como parámetros de formulario.
-     * Redirige a la vista de detalle del festival. Requiere rol PROMOTOR en
-     * sesión y ser dueño del festival asociado a la entrada.
+     * Endpoint GET para mostrar la lista de compras realizadas para un festival
+     * específico del promotor autenticado. Realiza forward al JSP
+     * {@code /WEB-INF/jsp/promotor/promotor-festival-compras.jsp}. Requiere rol
+     * PROMOTOR en sesión y ser dueño del festival.
      *
-     * @param idFestival ID del festival (usado para validación y redirección).
-     * @param idEntrada ID del tipo de entrada a "vender".
-     * @param idAsistente ID del asistente al que se "vende".
-     * @param cantidad Número de entradas a "vender".
-     * @return Una respuesta de redirección (303) a la vista de detalle del
-     * festival.
-     * @throws BadRequestException Si faltan parámetros o la cantidad es
-     * inválida.
+     * @param idFestival ID del festival cuyas compras se listarán.
+     * @return Una respuesta JAX-RS (implícitamente OK si el forward tiene
+     * éxito).
+     * @throws BadRequestException Si el ID no es válido.
+     * @throws NotFoundException Si el festival no se encuentra.
+     * @throws ForbiddenException Si el promotor no es dueño del festival.
+     * @throws InternalServerErrorException Si ocurre un error interno al cargar
+     * datos.
+     * @throws ServletException Si ocurre un error durante el forward del JSP.
+     * @throws IOException Si ocurre un error de E/S durante el forward.
      */
-    @POST
-    @Path("/festivales/{idFestival}/simular-venta")
-    @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
-    public Response simularVenta(
-            @PathParam("idFestival") Integer idFestival,
-            @FormParam("idEntrada") Integer idEntrada,
-            @FormParam("idAsistente") Integer idAsistente,
-            @FormParam("cantidad") Integer cantidad) {
-
-        log.info("POST /promotor/festivales/{}/simular-venta recibido -> Entrada ID: {}, Asistente ID: {}, Cantidad: {}",
-                idFestival, idEntrada, idAsistente, cantidad);
+    @GET
+    @Path("/festivales/{idFestival}/compras") // Nueva ruta
+    @Produces(MediaType.TEXT_HTML)
+    public Response listarComprasPorFestival(@PathParam("idFestival") Integer idFestival) throws ServletException, IOException {
+        log.debug("GET /promotor/festivales/{}/compras recibido", idFestival);
         Integer idPromotor = verificarAccesoPromotor(request); // Verifica sesión y rol
-
-        // Validaciones básicas
-        if (idFestival == null || idEntrada == null || idAsistente == null || cantidad == null) {
-            throw new BadRequestException("Faltan parámetros requeridos (idFestival, idEntrada, idAsistente, cantidad).");
+        if (idFestival == null) {
+            throw new BadRequestException("ID de festival no válido.");
         }
-        if (cantidad <= 0) {
-            throw new BadRequestException("La cantidad debe ser positiva.");
-        }
-
-        String mensajeFlash = null;
-        String errorFlash = null;
 
         try {
-            // Antes de llamar a ventaService, verificar que el promotor es dueño del festival
-            Optional<FestivalDTO> festivalOpt = festivalService.obtenerFestivalPorId(idFestival);
-            if (festivalOpt.isEmpty() || !festivalOpt.get().getIdPromotor().equals(idPromotor)) {
-                throw new SecurityException("No tiene permiso para operar sobre este festival.");
-            }
+            // Obtener datos del festival y verificar propiedad
+            FestivalDTO festival = festivalService.obtenerFestivalPorId(idFestival)
+                    .filter(f -> f.getIdPromotor().equals(idPromotor))
+                    .orElseThrow(() -> new ForbiddenException("Festival no encontrado o no pertenece a este promotor."));
 
-            // Llamar al servicio de venta
-            ventaService.registrarVenta(idAsistente, idEntrada, cantidad);
-            mensajeFlash = cantidad + " entrada(s) del tipo ID " + idEntrada + " generada(s) exitosamente para el asistente ID " + idAsistente + ".";
+            // Obtener lista de compras DTOs para este festival (servicio verifica permiso)
+            List<CompraDTO> listaCompras = compraService.obtenerComprasPorFestival(idFestival, idPromotor);
 
-        } catch (AsistenteNotFoundException | EntradaNotFoundException | FestivalNotFoundException
-                | FestivalNoPublicadoException | StockInsuficienteException | IllegalArgumentException | SecurityException e) {
-            // Errores de negocio o validación esperados
-            log.warn("Error al simular venta para festival {}: {}", idFestival, e.getMessage());
-            errorFlash = "Error al simular venta: " + e.getMessage();
+            // Pasar datos al JSP
+            request.setAttribute("festival", festival);
+            request.setAttribute("compras", listaCompras); // Pasar lista de compras
+            request.setAttribute("idPromotorAutenticado", idPromotor);
+            mostrarMensajeFlash(request);
+
+            // Forward al NUEVO JSP
+            RequestDispatcher dispatcher = request.getRequestDispatcher("/WEB-INF/jsp/promotor/promotor-festival-compras.jsp");
+            dispatcher.forward(request, response);
+            return Response.ok().build();
+
+        } catch (ForbiddenException | NotFoundException e) {
+            throw e; // Dejar que JAX-RS maneje 403/404
         } catch (Exception e) {
-            // Errores inesperados
-            log.error("Error interno inesperado al simular venta para festival {}: {}", idFestival, e.getMessage(), e);
-            errorFlash = "Error interno inesperado durante la simulación de venta.";
+            log.error("Error al listar compras para festival ID {}: {}", idFestival, e.getMessage(), e);
+            // Redirigir a la página de VISTA del festival con un mensaje de error
+            setFlashMessage(request, "error", "Error al cargar las compras del festival.");
+            URI detailUri = uriInfo.getBaseUriBuilder()
+                    .path(PromotorResource.class)
+                    .path(PromotorResource.class, "mostrarDetallesFestival") // VISTA festival
+                    .resolveTemplate("id", idFestival)
+                    .build();
+            return Response.seeOther(detailUri).build();
         }
-
-        // Guardar mensaje/error en sesión
-        setFlashMessage(request, mensajeFlash != null ? "mensaje" : "error", mensajeFlash != null ? mensajeFlash : errorFlash);
-
-        // Redirigir siempre a la página de VISTA del festival donde se hizo la simulación
-        URI detailUri = uriInfo.getBaseUriBuilder()
-                .path(PromotorResource.class) // Clase actual
-                .path(PromotorResource.class, "mostrarDetallesFestival") // Método GET de VISTA
-                .resolveTemplate("id", idFestival) // Reemplazar {id}
-                .build();
-        log.debug("Redirigiendo a: {}", detailUri);
-        return Response.seeOther(detailUri).build(); // 303 See Other
     }
 
-    // --- Endpoints para Cambio de Contraseña Obligatorio ---
     /**
      * Endpoint GET para mostrar el formulario de cambio de contraseña
      * obligatorio. Se accede típicamente después de un login exitoso si el flag
@@ -1292,7 +1279,6 @@ public class PromotorResource {
         }
     }
 
-    // --- Endpoint para Listar Pulseras por Festival ---
     /**
      * Endpoint GET para mostrar la lista de pulseras NFC asociadas a un
      * festival específico del promotor autenticado. Realiza forward al JSP

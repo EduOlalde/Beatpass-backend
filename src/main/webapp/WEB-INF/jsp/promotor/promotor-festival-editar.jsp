@@ -31,6 +31,7 @@
                 display: inline-flex;
                 align-items: center;
                 font-size: 0.875rem;
+                justify-content: center;
             }
             .btn-primary {
                 background-color: #4F46E5;
@@ -46,6 +47,13 @@
             .btn-secondary:hover {
                 background-color: #D1D5DB;
             } /* gray-300 */
+            .btn-success {
+                background-color: #10B981;
+                color: white;
+            } /* green-500 */
+            .btn-success:hover {
+                background-color: #059669;
+            } /* green-600 */
         </style>
     </head>
     <body class="bg-gray-100 text-gray-800">
@@ -87,6 +95,13 @@
             <c:if test="${not empty requestScope.error}">
                 <div class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-4 rounded-md shadow-sm" role="alert">
                     <p class="font-bold">Error al guardar festival:</p>
+                    <p>${requestScope.error}</p>
+                </div>
+            </c:if>
+            <%-- Mensaje de error específico para añadir entrada (si se redirige aquí) --%>
+            <c:if test="${not empty requestScope.error and not empty requestScope.errorEntrada}">
+                <div class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-4 rounded-md shadow-sm" role="alert">
+                    <p class="font-bold">Error al añadir tipo de entrada:</p>
                     <p>${requestScope.error}</p>
                 </div>
             </c:if>
@@ -140,7 +155,7 @@
                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-500 focus:ring-opacity-50 sm:text-sm">
                     </div>
                 </div>
-                <%-- Botones (Estilos Homogeneizados) --%>
+                <%-- Botones Guardar/Cancelar Festival --%>
                 <div class="mt-6 flex justify-end space-x-3 pt-4 border-t border-gray-200">
                     <c:choose>
                         <c:when test="${esNuevo}">
@@ -155,6 +170,48 @@
                     </button>
                 </div>
             </form>
+
+            <%-- Sección Añadir Nuevo Tipo de Entrada --%>
+            <%-- Solo se muestra si estamos editando un festival existente (ya tiene ID) --%>
+            <c:if test="${not esNuevo}">
+                <div class="mt-10 pt-6 border-t border-gray-300">
+                    <h3 class="text-xl font-semibold mb-4 text-gray-700">Añadir Nuevo Tipo de Entrada</h3>
+                    <%-- Mensaje de error específico para añadir entrada --%>
+                    <c:if test="${not empty requestScope.error and not empty requestScope.errorEntrada}">
+                        <div class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-4 rounded-md shadow-sm" role="alert">
+                            <p class="font-bold">Error al añadir tipo de entrada:</p>
+                            <p>${requestScope.error}</p>
+                        </div>
+                    </c:if>
+                    <div class="bg-white p-4 md:p-6 rounded-lg shadow-md">
+                        <form action="${pageContext.request.contextPath}/api/promotor/festivales/${festival.idFestival}/entradas" method="post" class="space-y-3">
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div>
+                                    <label for="tipoEntrada" class="block text-sm font-medium text-gray-700 mb-1">Tipo <span class="text-red-500 ml-1">*</span></label>
+                                    <%-- Usar el valor de nuevaEntrada si existe (viene de un error previo), sino vacío --%>
+                                    <input type="text" id="tipoEntrada" name="tipo" value="${nuevaEntrada.tipo}" required maxlength="50" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-500 focus:ring-opacity-50 sm:text-sm" placeholder="Ej: General">
+                                </div>
+                                <div>
+                                    <label for="precioEntrada" class="block text-sm font-medium text-gray-700 mb-1">Precio (€) <span class="text-red-500 ml-1">*</span></label>
+                                    <input type="number" id="precioEntrada" name="precio" value="${nuevaEntrada.precio}" required min="0" step="0.01" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-500 focus:ring-opacity-50 sm:text-sm" placeholder="Ej: 25.50">
+                                </div>
+                                <div>
+                                    <label for="stockEntrada" class="block text-sm font-medium text-gray-700 mb-1">Stock <span class="text-red-500 ml-1">*</span></label>
+                                    <input type="number" id="stockEntrada" name="stock" value="${nuevaEntrada.stock}" required min="0" step="1" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-500 focus:ring-opacity-50 sm:text-sm" placeholder="Ej: 1000">
+                                </div>
+                            </div>
+                            <div>
+                                <label for="descEntrada" class="block text-sm font-medium text-gray-700 mb-1">Descripción (Opcional)</label>
+                                <textarea id="descEntrada" name="descripcion" rows="2" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-500 focus:ring-opacity-50 sm:text-sm" placeholder="Detalles sobre este tipo de entrada...">${nuevaEntrada.descripcion}</textarea>
+                            </div>
+                            <div class="flex justify-end pt-2">
+                                <%-- Botón Añadir con estilo homogeneizado --%>
+                                <button type="submit" class="btn btn-success text-sm"> Añadir Tipo de Entrada </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </c:if> <%-- Fin del if (not esNuevo) --%>
 
         </div> <%-- Fin container --%>
 

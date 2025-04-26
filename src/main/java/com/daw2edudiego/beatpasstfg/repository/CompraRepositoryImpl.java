@@ -3,9 +3,9 @@ package com.daw2edudiego.beatpasstfg.repository;
 import com.daw2edudiego.beatpasstfg.model.Compra;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceException;
-import jakarta.persistence.TypedQuery; // Importar TypedQuery
-import java.util.Collections; // Importar Collections
-import java.util.List; // Importar List
+import jakarta.persistence.TypedQuery;
+import java.util.Collections;
+import java.util.List;
 import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -98,6 +98,36 @@ public class CompraRepositoryImpl implements CompraRepository {
         } catch (Exception e) {
             log.error("Error buscando Compras para Asistente ID {}: {}", idAsistente, e.getMessage(), e);
             return Collections.emptyList(); // Devuelve lista vacía en caso de error
+        }
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public List<Compra> findByFestivalId(EntityManager em, Integer idFestival) {
+        log.debug("Buscando Compras para Festival ID: {}", idFestival);
+        if (idFestival == null) {
+            log.warn("Intento de buscar compras para un ID de festival nulo.");
+            return Collections.emptyList();
+        }
+        try {
+            // Consulta JPQL para buscar compras únicas asociadas a un festival
+            // Se une Compra -> CompraEntrada -> Entrada -> Festival
+            String jpql = "SELECT DISTINCT c FROM Compra c "
+                    + "JOIN c.detallesCompra ce "
+                    + "JOIN ce.entrada e "
+                    + "WHERE e.festival.idFestival = :festivalId "
+                    + "ORDER BY c.fechaCompra DESC"; // Ordenar por fecha de compra descendente
+
+            TypedQuery<Compra> query = em.createQuery(jpql, Compra.class);
+            query.setParameter("festivalId", idFestival);
+            List<Compra> compras = query.getResultList();
+            log.debug("Encontradas {} compras para Festival ID: {}", compras.size(), idFestival);
+            return compras;
+        } catch (Exception e) {
+            log.error("Error buscando Compras para Festival ID {}: {}", idFestival, e.getMessage(), e);
+            return Collections.emptyList();
         }
     }
 }

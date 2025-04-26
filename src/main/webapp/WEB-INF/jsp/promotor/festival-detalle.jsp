@@ -74,59 +74,66 @@
             .btn-primary {
                 background-color: #4F46E5;
                 color: white;
-            } /* indigo-600 */
+            }
             .btn-primary:hover {
                 background-color: #4338CA;
-            } /* indigo-700 */
+            }
             .btn-secondary {
                 background-color: #6B7280;
                 color: white;
-            } /* gray-500 */
+            }
             .btn-secondary:hover {
                 background-color: #4B5563;
-            } /* gray-600 */
+            }
             .btn-edit {
                 background-color: #F59E0B;
                 color: white;
-            } /* yellow-500 */
+            }
             .btn-edit:hover {
                 background-color: #D97706;
-            } /* yellow-600 */
+            }
             .btn-success {
                 background-color: #10B981;
                 color: white;
-            } /* green-500 */
+            }
             .btn-success:hover {
                 background-color: #059669;
-            } /* green-600 */
+            }
             .btn-info {
                 background-color: #3B82F6;
                 color: white;
-            } /* blue-600 */
+            }
             .btn-info:hover {
                 background-color: #2563EB;
-            } /* blue-700 */
+            }
             .btn-teal {
                 background-color: #0D9488;
                 color: white;
-            } /* teal-600 */
+            }
             .btn-teal:hover {
                 background-color: #0F766E;
-            } /* teal-700 */
+            }
             .btn-orange {
                 background-color: #EA580C;
                 color: white;
-            } /* orange-600 */
+            }
             .btn-orange:hover {
                 background-color: #C2410C;
-            } /* orange-700 */
+            }
             .btn-warning {
                 background-color: #F59E0B;
                 color: white;
-            } /* yellow-500 */
+            }
             .btn-warning:hover {
                 background-color: #D97706;
-            } /* yellow-600 */
+            }
+            .btn-purple {
+                background-color: #7e22ce;
+                color: white;
+            } /* NUEVO: Botón Morado */
+            .btn-purple:hover {
+                background-color: #6b21a8;
+            }
             /* Estilos para acciones en tablas */
             .action-link {
                 text-decoration: underline;
@@ -257,16 +264,9 @@
                 </div>
             </div>
 
-            <%-- Sección Tipos de Entrada --%>
+            <%-- Sección Tipos de Entrada (Solo Tabla) --%>
             <div class="mt-10 pt-6 border-t border-gray-300">
                 <h3 class="text-xl font-semibold mb-4 text-gray-700">Tipos de Entrada</h3>
-                <%-- Mensaje de error específico para añadir entrada --%>
-                <c:if test="${not empty requestScope.error and not empty requestScope.errorEntrada}">
-                    <div class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-4 rounded-md shadow-sm" role="alert">
-                        <p class="font-bold">Error al añadir tipo de entrada:</p>
-                        <p>${requestScope.error}</p>
-                    </div>
-                </c:if>
                 <%-- Tabla de Tipos de Entrada Existentes --%>
                 <div class="bg-white p-4 md:p-6 rounded-lg shadow-md mb-6">
                     <h4 class="text-lg font-medium text-gray-800 mb-3">Entradas Definidas</h4>
@@ -284,7 +284,7 @@
                             <tbody class="bg-white divide-y divide-gray-200">
                                 <c:choose>
                                     <c:when test="${empty tiposEntrada}">
-                                        <tr><td colspan="5" class="px-4 py-3 text-center text-sm text-gray-500 italic">Aún no has añadido ningún tipo de entrada.</td></tr>
+                                        <tr><td colspan="5" class="px-4 py-3 text-center text-sm text-gray-500 italic">Aún no hay tipos de entrada definidos para este festival.</td></tr>
                                     </c:when>
                                     <c:otherwise>
                                         <c:forEach var="entrada" items="${tiposEntrada}">
@@ -308,97 +308,42 @@
                         </table>
                     </div>
                 </div>
-                <%-- Formulario para Añadir Nuevo Tipo de Entrada --%>
-                <div class="bg-white p-4 md:p-6 rounded-lg shadow-md">
-                    <h4 class="text-lg font-medium text-gray-800 mb-3 border-b pb-2">Añadir Nuevo Tipo de Entrada</h4>
-                    <form action="${pageContext.request.contextPath}/api/promotor/festivales/${festival.idFestival}/entradas" method="post" class="space-y-3">
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <div>
-                                <label for="tipoEntrada" class="block text-sm font-medium text-gray-700 mb-1">Tipo <span class="text-red-500 ml-1">*</span></label>
-                                <input type="text" id="tipoEntrada" name="tipo" value="${nuevaEntrada.tipo}" required maxlength="50" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-500 focus:ring-opacity-50 sm:text-sm" placeholder="Ej: General">
-                            </div>
-                            <div>
-                                <label for="precioEntrada" class="block text-sm font-medium text-gray-700 mb-1">Precio (€) <span class="text-red-500 ml-1">*</span></label>
-                                <input type="number" id="precioEntrada" name="precio" value="${nuevaEntrada.precio}" required min="0" step="0.01" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-500 focus:ring-opacity-50 sm:text-sm" placeholder="Ej: 25.50">
-                            </div>
-                            <div>
-                                <label for="stockEntrada" class="block text-sm font-medium text-gray-700 mb-1">Stock <span class="text-red-500 ml-1">*</span></label>
-                                <input type="number" id="stockEntrada" name="stock" value="${nuevaEntrada.stock}" required min="0" step="1" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-500 focus:ring-opacity-50 sm:text-sm" placeholder="Ej: 1000">
-                            </div>
-                        </div>
-                        <div>
-                            <label for="descEntrada" class="block text-sm font-medium text-gray-700 mb-1">Descripción (Opcional)</label>
-                            <textarea id="descEntrada" name="descripcion" rows="2" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-500 focus:ring-opacity-50 sm:text-sm" placeholder="Detalles sobre este tipo de entrada...">${nuevaEntrada.descripcion}</textarea>
-                        </div>
-                        <div class="flex justify-end pt-2">
-                            <%-- Botón Añadir con estilo homogeneizado --%>
-                            <button type="submit" class="btn btn-success text-sm"> Añadir Tipo de Entrada </button>
-                        </div>
-                    </form>
-                </div>
             </div>
 
-            <%-- Gestión de Entradas Vendidas/Asignadas y Asistentes (Botones Homogeneizados) --%>
+            <%-- Gestión de Entradas, Asistentes y Compras (Botones Homogeneizados) --%>
             <div class="mt-10 pt-6 border-t border-gray-300">
-                <h3 class="text-xl font-semibold mb-4 text-gray-700">Gestión de Entradas y Asistentes</h3>
-                <div class="bg-white p-6 rounded-lg shadow-md grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div class="md:col-span-1">
-                        <p class="text-gray-600 mb-2 text-sm">Ver/gestionar entradas individuales generadas y nominarlas.</p>
+                <h3 class="text-xl font-semibold mb-4 text-gray-700">Gestión del Festival</h3>
+                <%-- Ajustar grid a 4 columnas para el nuevo botón --%>
+                <div class="bg-white p-6 rounded-lg shadow-md grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div>
+                        <p class="text-gray-600 mb-2 text-sm">Ver/gestionar entradas individuales y nominarlas.</p>
                         <a href="${pageContext.request.contextPath}/api/promotor/festivales/${festival.idFestival}/entradas-asignadas"
                            class="btn btn-info w-full">
                             Gestionar Entradas
                         </a>
                     </div>
-                    <div class="md:col-span-1">
+                    <div>
                         <p class="text-gray-600 mb-2 text-sm">Consultar asistentes con entradas para este festival.</p>
                         <a href="${pageContext.request.contextPath}/api/promotor/festivales/${festival.idFestival}/asistentes"
                            class="btn btn-teal w-full">
                             Ver Asistentes
                         </a>
                     </div>
-                    <div class="md:col-span-1">
-                        <p class="text-gray-600 mb-2 text-sm">Consultar pulseras NFC asociadas a entradas de este festival.</p>
+                    <div>
+                        <p class="text-gray-600 mb-2 text-sm">Consultar pulseras NFC asociadas a entradas.</p>
                         <a href="${pageContext.request.contextPath}/api/promotor/festivales/${festival.idFestival}/pulseras"
                            class="btn btn-orange w-full">
                             Ver Pulseras NFC
                         </a>
                     </div>
-                </div>
-            </div>
-
-            <%-- Simular Venta (Pruebas) (Botón Homogeneizado) --%>
-            <div class="mt-10 pt-6 border-t border-gray-300">
-                <h3 class="text-xl font-semibold mb-4 text-yellow-700">Simular Venta (SOLO PRUEBAS)</h3>
-                <div class="bg-yellow-50 p-6 rounded-lg shadow-md border border-yellow-300">
-                    <p class="text-sm text-yellow-800 mb-4">Utiliza este formulario para simular la venta de entradas y probar la generación de Entradas Asignadas y QRs. Necesitas un ID de Asistente válido existente en la base de datos.</p>
-                    <form action="${pageContext.request.contextPath}/api/promotor/festivales/${festival.idFestival}/simular-venta" method="post" class="space-y-3">
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <div>
-                                <label for="simIdEntrada" class="block text-sm font-medium text-gray-700 mb-1">ID Tipo Entrada <span class="text-red-500 ml-1">*</span></label>
-                                <select id="simIdEntrada" name="idEntrada" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-500 focus:ring-opacity-50 sm:text-sm">
-                                    <option value="">-- Selecciona Tipo --</option>
-                                    <c:forEach var="t" items="${tiposEntrada}">
-                                        <option value="${t.idEntrada}">${t.tipo} (Stock: ${t.stock})</option>
-                                    </c:forEach>
-                                </select>
-                            </div>
-                            <div>
-                                <label for="simIdAsistente" class="block text-sm font-medium text-gray-700 mb-1">ID Asistente <span class="text-red-500 ml-1">*</span></label>
-                                <input type="number" id="simIdAsistente" name="idAsistente" required min="1"
-                                       class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-500 focus:ring-opacity-50 sm:text-sm" placeholder="ID Asistente existente">
-                            </div>
-                            <div>
-                                <label for="simCantidad" class="block text-sm font-medium text-gray-700 mb-1">Cantidad <span class="text-red-500 ml-1">*</span></label>
-                                <input type="number" id="simCantidad" name="cantidad" required min="1" step="1" value="1"
-                                       class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-500 focus:ring-opacity-50 sm:text-sm">
-                            </div>
-                        </div>
-                        <div class="flex justify-end pt-2">
-                            <button type="submit" class="btn btn-warning">
-                                Simular Venta
-                            </button>
-                        </div>
-                    </form>
+                    <%-- NUEVO BOTÓN --%>
+                    <div>
+                        <p class="text-gray-600 mb-2 text-sm">Consultar el historial de compras realizadas.</p>
+                        <a href="${pageContext.request.contextPath}/api/promotor/festivales/${festival.idFestival}/compras"
+                           class="btn btn-purple w-full"> <%-- Usando nuevo estilo btn-purple --%>
+                            Ver Compras
+                        </a>
+                    </div>
                 </div>
             </div>
 
