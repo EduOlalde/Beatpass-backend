@@ -12,73 +12,7 @@
         <link rel="preconnect" href="https://fonts.googleapis.com">
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
-        <style>
-            /* Estilos generales */
-            body {
-                font-family: 'Inter', sans-serif;
-            }
-            /* Clases base para botones */
-            .btn {
-                font-weight: bold;
-                padding: 0.5rem 1rem;
-                border-radius: 0.375rem;
-                box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-                transition: all 150ms ease-in-out;
-                display: inline-flex;
-                align-items: center;
-                font-size: 0.875rem;
-            }
-            .btn-primary {
-                background-color: #8B5CF6;
-                color: white;
-            }
-            .btn-primary:hover {
-                background-color: #7C3AED;
-            }
-            .btn-secondary {
-                background-color: #E5E7EB;
-                color: #1F2937;
-            }
-            .btn-secondary:hover {
-                background-color: #D1D5DB;
-            }
-            .btn-filter {
-                background-color: #2563EB;
-                color: white;
-            }
-            .btn-filter:hover {
-                background-color: #1D4ED8;
-            }
-            /* Estilos para acciones en tablas */
-            .action-link {
-                text-decoration: underline;
-                font-size: 0.75rem;
-            }
-            .action-link-view {
-                color: #4F46E5;
-                font-weight: 500;
-            }
-            .action-link-view:hover {
-                color: #3730A3;
-            }
-            .action-link-edit {
-                color: #D97706;
-                font-weight: 600;
-            }
-            .action-link-edit:hover {
-                color: #92400E;
-            }
-            /* Estilo para código UID */
-            .uid-code {
-                font-family: monospace;
-                background-color: #f3f4f6;
-                padding: 0.1rem 0.3rem;
-                border-radius: 0.25rem;
-                font-size: 0.8rem;
-                display: inline-block;
-                margin-left: 0.25rem;
-            }
-        </style>
+        <link rel="stylesheet" href="${pageContext.request.contextPath}/css/estilos.css">
     </head>
     <body class="bg-gray-100 text-gray-800">
 
@@ -91,7 +25,7 @@
 
             <h2 class="text-2xl font-semibold text-gray-700 mb-5">Gestionar Asistentes</h2>
 
-            <%-- Mensajes flash --%>
+            <%-- Mensajes flash (se mantienen clases de Tailwind) --%>
             <c:if test="${not empty requestScope.mensajeExito}">
                 <div class="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 mb-4 rounded-md shadow-sm" role="alert">
                     <p>${requestScope.mensajeExito}</p>
@@ -103,7 +37,7 @@
                 </div>
             </c:if>
 
-            <%-- Formulario de Búsqueda --%>
+            <%-- Formulario de Búsqueda (botones con clases CSS externas) --%>
             <div class="mb-4 bg-white p-4 rounded shadow-sm">
                 <form action="${pageContext.request.contextPath}/api/admin/asistentes" method="get" class="flex items-end space-x-3">
                     <div>
@@ -128,7 +62,6 @@
                             <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
                             <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Teléfono</th>
                             <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha Registro</th>
-                                <%-- *** COLUMNA ACTUALIZADA *** --%>
                             <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Festivales / Pulseras</th>
                             <th scope="col" class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
                         </tr>
@@ -137,7 +70,6 @@
                         <c:choose>
                             <c:when test="${empty asistentes}">
                                 <tr>
-                                    <%-- *** Colspan ajustado *** --%>
                                     <td colspan="7" class="px-6 py-4 text-center text-sm text-gray-500 italic">
                                         <c:choose>
                                             <c:when test="${not empty requestScope.searchTerm}">No se encontraron asistentes para "${requestScope.searchTerm}".</c:when>
@@ -161,17 +93,16 @@
                                                 ${a.fechaCreacion}
                                             </c:if>
                                         </td>
-                                        <%-- *** CELDA ACTUALIZADA PARA MAPA FESTIVAL/PULSERA *** --%>
+                                        <%-- Celda con UID de pulsera usando clase CSS externa --%>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                             <c:choose>
                                                 <c:when test="${not empty a.festivalPulseraInfo}">
-                                                    <%-- Itera sobre el mapa (clave=festival, valor=pulseraUID) --%>
                                                     <c:forEach var="entry" items="${a.festivalPulseraInfo}">
-                                                        <div class="mb-1"> <%-- Div para cada par --%>
-                                                            <span class="font-medium text-gray-700">${entry.key}:</span> <%-- Nombre Festival --%>
+                                                        <div class="mb-1">
+                                                            <span class="font-medium text-gray-700">${entry.key}:</span>
                                                             <c:choose>
                                                                 <c:when test="${not empty entry.value}">
-                                                                    <span class="uid-code" title="${entry.value}">${entry.value}</span> <%-- UID Pulsera --%>
+                                                                    <span class="uid-code" title="${entry.value}">${entry.value}</span>
                                                                 </c:when>
                                                                 <c:otherwise>
                                                                     <span class="text-xs italic">(Sin pulsera)</span>
@@ -181,10 +112,11 @@
                                                     </c:forEach>
                                                 </c:when>
                                                 <c:otherwise>
-                                                    - <%-- Mostrar guión si no hay mapa o está vacío --%>
+                                                    -
                                                 </c:otherwise>
                                             </c:choose>
                                         </td>
+                                        <%-- Acciones con clases CSS externas --%>
                                         <td class="px-4 py-4 whitespace-nowrap text-center text-sm space-x-2">
                                             <a href="${pageContext.request.contextPath}/api/admin/asistentes/${a.idAsistente}" class="action-link action-link-view" title="Ver detalles de ${a.nombre}">Ver</a>
                                             <a href="${pageContext.request.contextPath}/api/admin/asistentes/${a.idAsistente}/editar" class="action-link action-link-edit" title="Editar datos de ${a.nombre}">Editar</a>

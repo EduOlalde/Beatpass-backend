@@ -183,4 +183,20 @@ public interface UsuarioService {
      */
     void cambiarPasswordYMarcarActualizada(Integer userId, String passwordNueva);
 
+    /**
+     * Actualiza el nombre de un usuario existente. Diseñado principalmente para
+     * que el Admin pueda editar el nombre de un Promotor.
+     *
+     * @param id ID del usuario a actualizar. No debe ser {@code null}.
+     * @param nuevoNombre El nuevo nombre para el usuario. No debe ser
+     * {@code null} ni vacío.
+     * @return El {@link UsuarioDTO} del usuario con el nombre actualizado.
+     * @throws UsuarioNotFoundException Si no se encuentra un usuario con el ID
+     * especificado.
+     * @throws IllegalArgumentException Si el ID o el nuevoNombre son inválidos.
+     * @throws RuntimeException Si ocurre un error inesperado durante la
+     * actualización.
+     */
+    UsuarioDTO actualizarNombreUsuario(Integer id, String nuevoNombre);
+
 }

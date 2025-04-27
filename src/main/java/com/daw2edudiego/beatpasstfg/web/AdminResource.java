@@ -12,7 +12,7 @@ import com.daw2edudiego.beatpasstfg.exception.FestivalNotFoundException;
 import com.daw2edudiego.beatpasstfg.exception.UsuarioNotFoundException;
 import com.daw2edudiego.beatpasstfg.model.EstadoFestival;
 import com.daw2edudiego.beatpasstfg.model.RolUsuario;
-import com.daw2edudiego.beatpasstfg.service.*; // Importar todos los servicios
+import com.daw2edudiego.beatpasstfg.service.*;
 
 // Imports Jakarta EE para Servlets y JAX-RS
 import jakarta.servlet.RequestDispatcher;
@@ -20,11 +20,11 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
-import jakarta.ws.rs.*; // Anotaciones JAX-RS (@Path, @GET, @POST, etc.)
-import jakarta.ws.rs.core.Context; // Para inyectar contexto HTTP/Seguridad
-import jakarta.ws.rs.core.MediaType; // Tipos MIME (APPLICATION_FORM_URLENCODED, TEXT_HTML)
-import jakarta.ws.rs.core.Response; // Respuesta HTTP (ok, seeOther, status)
-import jakarta.ws.rs.core.UriInfo; // Información sobre la URI de la petición
+import jakarta.ws.rs.*;
+import jakarta.ws.rs.core.Context;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
+import jakarta.ws.rs.core.UriInfo;
 
 // Logging
 import org.slf4j.Logger;
@@ -37,7 +37,7 @@ import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
 import java.util.Collections;
 import java.util.List;
-import java.util.Optional; 
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 /**
@@ -47,7 +47,8 @@ import java.util.stream.Collectors;
  * Proporciona funcionalidades para que los usuarios con rol
  * {@link RolUsuario#ADMIN} gestionen:
  * <ul>
- * <li>Usuarios Promotores (listar, crear, cambiar estado).</li>
+ * <li>Usuarios (listar por rol, crear cualquier rol, editar, cambiar
+ * estado).</li>
  * <li>Festivales (listar todos, listar por promotor, crear, confirmar/publicar,
  * cambiar estado a cancelado/finalizado).</li>
  * <li>Asistentes (listar, ver detalle, editar).</li>
@@ -76,16 +77,16 @@ public class AdminResource {
     private final AsistenteService asistenteService;
     private final PulseraNFCService pulseraNFCService;
 
-    // Inyección de contexto JAX-RS para acceder a información de la petición HTTP
+    // Inyección de contexto JAX-RS
     @Context
-    private UriInfo uriInfo; // Información sobre la URI (para construir URIs de redirección)
+    private UriInfo uriInfo;
     @Context
-    private HttpServletRequest request; // Petición HTTP (para acceder a sesión, atributos, dispatcher)
+    private HttpServletRequest request;
     @Context
-    private HttpServletResponse response; // Respuesta HTTP (usada por RequestDispatcher)
+    private HttpServletResponse response;
 
     /**
-     * Constructor que inicializa las instancias de los servicios necesarios.
+     * Constructor que inicializa los servicios.
      */
     public AdminResource() {
         this.usuarioService = new UsuarioServiceImpl();
@@ -94,67 +95,73 @@ public class AdminResource {
         this.pulseraNFCService = new PulseraNFCServiceImpl();
     }
 
-    // --- Endpoints para Gestión de Promotores por Admin ---
+    // --- Endpoints para Gestión de Usuarios por Admin ---
     /**
-     * Endpoint GET para listar todos los usuarios con rol PROMOTOR.
-     * Realiza forward a un JSP para mostrar la lista.
-     * Requiere rol ADMIN en sesión.
-     *
-     * @return Una respuesta JAX-RS (implícitamente OK si el forward tiene éxito).
-     * @throws ServletException Si ocurre un error durante el forward del JSP.
-     * @throws IOException Si ocurre un error de E/S durante el forward.
-     * @throws NotAuthorizedException Si no hay sesión activa.
-     * @throws ForbiddenException Si el usuario en sesión no es ADMIN.
+     * Endpoint GET para listar usuarios con rol ADMIN. Realiza forward a
+     * admin-admins.jsp.
+     */
+    @GET
+    @Path("/admins/listar")
+    @Produces(MediaType.TEXT_HTML)
+    public Response listarAdmins() throws ServletException, IOException {
+        return listarUsuariosPorRol(RolUsuario.ADMIN, "admins");
+    }
+
+    /**
+     * Endpoint GET para listar usuarios con rol PROMOTOR. Realiza forward a
+     * admin-promotores.jsp.
      */
     @GET
     @Path("/promotores/listar")
     @Produces(MediaType.TEXT_HTML)
     public Response listarPromotores() throws ServletException, IOException {
-        log.debug("GET /admin/promotores/listar recibido");
-        Integer idAdmin = verificarAccesoAdmin(request); // Verifica sesión y rol
+        return listarUsuariosPorRol(RolUsuario.PROMOTOR, "promotores");
+    }
 
-        log.debug("Listando usuarios con rol PROMOTOR para Admin ID: {}", idAdmin);
-        List<UsuarioDTO> listaPromotores = usuarioService.obtenerUsuariosPorRol(RolUsuario.PROMOTOR);
+    /**
+     * Endpoint GET para listar usuarios con rol CAJERO. Realiza forward a
+     * admin-cajeros.jsp.
+     */
+    @GET
+    @Path("/cajeros/listar")
+    @Produces(MediaType.TEXT_HTML)
+    public Response listarCajeros() throws ServletException, IOException {
+        return listarUsuariosPorRol(RolUsuario.CAJERO, "cajeros");
+    }
 
-        request.setAttribute("promotores", listaPromotores);
-        request.setAttribute("idAdminAutenticado", idAdmin); // Para usar en el JSP
-        mostrarMensajeFlash(request); // Muestra mensajes de éxito/error de acciones previas
+    /**
+     * Método genérico para listar usuarios de un rol específico.
+     *
+     * @param rol El RolUsuario a listar.
+     * @param activePage Clave para resaltar el menú activo.
+     * @return Respuesta JAX-RS.
+     * @throws ServletException Error en forward.
+     * @throws IOException Error en forward.
+     */
+    private Response listarUsuariosPorRol(RolUsuario rol, String activePage) throws ServletException, IOException {
+        log.debug("GET /admin/{}/listar recibido", activePage);
+        Integer idAdmin = verificarAccesoAdmin(request);
 
-        // Delega la generación de la respuesta HTML al JSP
-        RequestDispatcher dispatcher = request.getRequestDispatcher("/WEB-INF/jsp/admin/admin-promotores.jsp");
+        log.debug("Listando usuarios con rol {} para Admin ID: {}", rol, idAdmin);
+        List<UsuarioDTO> listaUsuarios = usuarioService.obtenerUsuariosPorRol(rol);
+
+        request.setAttribute("usuarios", listaUsuarios); // Nombre genérico del atributo
+        request.setAttribute("rolListado", rol.name()); // Pasar el rol al JSP
+        request.setAttribute("tituloPagina", "Gestionar " + activePage.substring(0, 1).toUpperCase() + activePage.substring(1)); // Título dinámico
+        request.setAttribute("idAdminAutenticado", idAdmin);
+        mostrarMensajeFlash(request);
+
+        // Determinar el JSP basado en el rol
+        String jspPath = "/WEB-INF/jsp/admin/admin-" + activePage + ".jsp";
+        log.debug("Forwarding to: {}", jspPath);
+        RequestDispatcher dispatcher = request.getRequestDispatcher(jspPath);
         dispatcher.forward(request, response);
-
-        // El forward ya maneja la respuesta, devolvemos OK para JAX-RS
         return Response.ok().build();
     }
 
     /**
-     * Endpoint GET alternativo para listar promotores (acceso desde /admin/promotores).
-     * Simplemente llama a {@link #listarPromotores()}.
-     *
-     * @return Respuesta de {@link #listarPromotores()}.
-     * @throws ServletException Ver {@link #listarPromotores()}.
-     * @throws IOException Ver {@link #listarPromotores()}.
-     */
-    @GET
-    @Path("/promotores")
-    @Produces(MediaType.TEXT_HTML)
-    public Response listarPromotoresRoot() throws ServletException, IOException {
-        return listarPromotores();
-    }
-
-    /**
-     * Endpoint GET para listar los festivales asociados a un promotor específico.
-     * Útil para que el administrador vea los eventos de un promotor concreto.
-     * Realiza forward a un JSP. Requiere rol ADMIN en sesión.
-     *
-     * @param idPromotor El ID del promotor cuyos festivales se quieren listar.
-     * @return Una respuesta JAX-RS (implícitamente OK si el forward tiene éxito).
-     * @throws BadRequestException Si {@code idPromotor} no es válido o no se proporciona.
-     * @throws NotFoundException Si no se encuentra un promotor con el ID dado.
-     * @throws InternalServerErrorException Si ocurre un error interno al cargar los datos.
-     * @throws ServletException Si ocurre un error durante el forward del JSP.
-     * @throws IOException Si ocurre un error de E/S durante el forward.
+     * Endpoint GET para listar los festivales asociados a un promotor
+     * específico. (Se mantiene igual, ya que es específico de promotores)
      */
     @GET
     @Path("/promotores/{idPromotor}/festivales")
@@ -168,28 +175,24 @@ public class AdminResource {
         }
 
         try {
-            // Obtener datos del promotor para mostrar su nombre en la vista
             UsuarioDTO promotor = usuarioService.obtenerUsuarioPorId(idPromotor)
-                    .filter(u -> u.getRol() == RolUsuario.PROMOTOR) // Asegurarse que es promotor
+                    .filter(u -> u.getRol() == RolUsuario.PROMOTOR)
                     .orElseThrow(() -> new NotFoundException("Promotor no encontrado con ID: " + idPromotor));
 
-            // Obtener la lista de festivales para ese promotor
             List<FestivalDTO> listaFestivales = festivalService.obtenerFestivalesPorPromotor(idPromotor);
 
-            // Pasar datos al JSP a través de atributos de la request
             request.setAttribute("promotor", promotor);
             request.setAttribute("festivales", listaFestivales);
             request.setAttribute("idAdminAutenticado", idAdmin);
             mostrarMensajeFlash(request);
 
-            // Forward al JSP que mostrará la lista
             RequestDispatcher dispatcher = request.getRequestDispatcher("/WEB-INF/jsp/admin/admin-promotor-festivales.jsp");
             dispatcher.forward(request, response);
             return Response.ok().build();
 
         } catch (NotFoundException e) {
             log.warn("Promotor ID {} no encontrado al intentar listar sus festivales.", idPromotor);
-            throw e; // JAX-RS mapeará esto a 404 Not Found
+            throw e;
         } catch (Exception e) {
             log.error("Error al obtener festivales para promotor ID {}: {}", idPromotor, e.getMessage(), e);
             throw new InternalServerErrorException("Error interno al cargar los festivales del promotor.", e);
@@ -197,169 +200,246 @@ public class AdminResource {
     }
 
     /**
-     * Endpoint GET para el dashboard principal del administrador.
-     * Actualmente redirige a la lista de promotores.
-     *
-     * @return Una respuesta de redirección (303 See Other).
+     * Endpoint GET para el dashboard principal del administrador. (Se mantiene
+     * igual, redirige a listar promotores por ahora)
      */
     @GET
     @Path("/dashboard")
     @Produces(MediaType.TEXT_HTML)
     public Response mostrarDashboard() {
         log.debug("GET /admin/dashboard recibido");
-        verificarAccesoAdmin(request); // Solo verifica acceso
+        verificarAccesoAdmin(request);
         log.info("Dashboard de Admin no implementado, redirigiendo a lista de promotores.");
-        // Construye la URI para el método listarPromotores dentro de esta misma clase
         URI listUri = uriInfo.getBaseUriBuilder().path(AdminResource.class).path(AdminResource.class, "listarPromotores").build();
-        // Devuelve una respuesta 303 See Other para redirigir el navegador
         return Response.seeOther(listUri).build();
     }
 
     /**
-     * Endpoint GET para mostrar el formulario de creación de un nuevo promotor.
-     * Realiza forward a un JSP. Requiere rol ADMIN en sesión.
-     *
-     * @return Una respuesta JAX-RS (implícitamente OK si el forward tiene éxito).
-     * @throws ServletException Si ocurre un error durante el forward del JSP.
-     * @throws IOException Si ocurre un error de E/S durante el forward.
+     * Endpoint GET para mostrar el formulario de creación de un nuevo usuario
+     * (cualquier rol). Pasa la lista de roles posibles al JSP. Realiza forward
+     * a admin-usuario-detalle.jsp. Requiere rol ADMIN.
      */
     @GET
-    @Path("/promotores/crear")
+    @Path("/usuarios/crear") // Ruta generalizada
     @Produces(MediaType.TEXT_HTML)
-    public Response mostrarFormularioCrearPromotor() throws ServletException, IOException {
-        log.debug("GET /admin/promotores/crear recibido");
+    public Response mostrarFormularioCrearUsuario() throws ServletException, IOException {
+        log.debug("GET /admin/usuarios/crear recibido");
         Integer idAdmin = verificarAccesoAdmin(request);
-        log.debug("Mostrando formulario de creación de promotor por Admin ID: {}", idAdmin);
+        log.debug("Mostrando formulario de creación de usuario por Admin ID: {}", idAdmin);
 
-        // Prepara un DTO vacío para el formulario y lo pasa al JSP
-        request.setAttribute("promotor", new UsuarioCreacionDTO());
-        request.setAttribute("esNuevo", true); // Indicador para el JSP
+        request.setAttribute("usuario", new UsuarioCreacionDTO()); // DTO para el formulario
+        request.setAttribute("esNuevo", true);
+        request.setAttribute("rolesPosibles", RolUsuario.values()); // Pasar todos los roles al JSP
         request.setAttribute("idAdminAutenticado", idAdmin);
 
-        RequestDispatcher dispatcher = request.getRequestDispatcher("/WEB-INF/jsp/admin/admin-promotor-detalle.jsp");
+        // Usar el JSP renombrado
+        RequestDispatcher dispatcher = request.getRequestDispatcher("/WEB-INF/jsp/admin/admin-usuario-detalle.jsp");
         dispatcher.forward(request, response);
         return Response.ok().build();
     }
 
     /**
-     * Endpoint POST para procesar la creación de un nuevo promotor.
-     * Recibe los datos del formulario, llama al servicio para crear el usuario,
-     * y redirige a la lista de promotores en caso de éxito, o vuelve a mostrar
-     * el formulario con errores en caso de fallo.
-     * Requiere rol ADMIN en sesión.
-     *
-     * @param nombre Nombre del nuevo promotor.
-     * @param email Email del nuevo promotor (debe ser único).
-     * @param password Contraseña inicial para el promotor (texto plano).
-     * @return Una respuesta de redirección (303) a la lista si éxito, o una
-     * respuesta OK (200) mostrando el formulario con error si falla.
-     * @throws ServletException Si ocurre un error durante el forward en caso de error.
-     * @throws IOException Si ocurre un error de E/S durante el forward en caso de error.
-     * @throws InternalServerErrorException Si ocurre un error interno inesperado.
+     * Endpoint GET para mostrar el formulario de edición de un usuario
+     * existente (cualquier rol). Carga los datos del usuario y realiza forward
+     * a admin-usuario-detalle.jsp. Requiere rol ADMIN.
      */
-    @POST
-    @Path("/promotores/guardar")
-    @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
-    public Response guardarPromotor(
-            @FormParam("nombre") String nombre,
-            @FormParam("email") String email,
-            @FormParam("password") String password) throws ServletException, IOException {
-
-        log.info("POST /admin/promotores/guardar (CREACIÓN) recibido para email: {}", email);
-        Integer idAdmin = verificarAccesoAdmin(request); // Verifica sesión y rol
-
-        // Crear DTO con los datos del formulario
-        UsuarioCreacionDTO dto = new UsuarioCreacionDTO();
-        dto.setNombre(nombre);
-        dto.setEmail(email);
-        dto.setPassword(password);
-        dto.setRol(RolUsuario.PROMOTOR); // Rol fijo para este endpoint
+    @GET
+    @Path("/usuarios/{idUsuario}/editar") // Ruta generalizada
+    @Produces(MediaType.TEXT_HTML)
+    public Response mostrarFormularioEditarUsuario(@PathParam("idUsuario") Integer idUsuario) throws ServletException, IOException {
+        log.debug("GET /admin/usuarios/{}/editar recibido", idUsuario);
+        Integer idAdmin = verificarAccesoAdmin(request);
+        if (idUsuario == null) {
+            throw new BadRequestException("ID Usuario no válido.");
+        }
 
         try {
-            // Validaciones básicas (podrían estar en el DTO con Bean Validation)
-            if (nombre == null || nombre.isBlank() || email == null || email.isBlank() || password == null || password.isEmpty()) {
-                throw new IllegalArgumentException("Nombre, email y contraseña son obligatorios.");
-            }
-            if (password.length() < 8) { // Ejemplo de validación de longitud
-                throw new IllegalArgumentException("La contraseña debe tener al menos 8 caracteres.");
-            }
+            // Obtener datos actuales del usuario
+            UsuarioDTO usuario = usuarioService.obtenerUsuarioPorId(idUsuario)
+                    .orElseThrow(() -> new NotFoundException("Usuario no encontrado con ID: " + idUsuario));
 
-            // Llamar al servicio para crear el usuario
-            log.info("Llamando a usuarioService.crearUsuario (Promotor) por Admin ID: {}", idAdmin);
-            UsuarioDTO creado = usuarioService.crearUsuario(dto);
+            // Pasar datos al JSP renombrado
+            request.setAttribute("usuario", usuario); // Pasa el DTO existente
+            request.setAttribute("idAdminAutenticado", idAdmin);
+            request.setAttribute("esNuevo", false); // Estamos editando
+            // No pasamos roles posibles aquí, ya que el rol no se edita
+            mostrarMensajeFlash(request);
 
-            // Guardar mensaje de éxito en sesión para mostrarlo después de redirigir (Flash message)
-            String mensajeExito = "Promotor '" + creado.getNombre() + "' creado con éxito.";
-            setFlashMessage(request, "mensaje", mensajeExito);
+            RequestDispatcher dispatcher = request.getRequestDispatcher("/WEB-INF/jsp/admin/admin-usuario-detalle.jsp");
+            dispatcher.forward(request, response);
+            return Response.ok().build();
 
-            // Redirigir a la lista de promotores
-            URI listUri = uriInfo.getBaseUriBuilder().path(AdminResource.class).path(AdminResource.class, "listarPromotores").build();
-            log.debug("Redirigiendo a: {}", listUri);
-            return Response.seeOther(listUri).build(); // 303 See Other
-
-        } catch (EmailExistenteException e) {
-            log.warn("Error de negocio al crear promotor (email existente): {}", e.getMessage());
-            // Volver a mostrar el formulario con el error
-            forwardToPromotorFormWithError(dto, idAdmin, e.getMessage());
-            return Response.ok().build(); // 200 OK (mostrando el form con error)
-        } catch (IllegalArgumentException e) {
-            log.warn("Error de validación al crear promotor: {}", e.getMessage());
-            // Volver a mostrar el formulario con el error
-            forwardToPromotorFormWithError(dto, idAdmin, e.getMessage());
-            return Response.ok().build(); // 200 OK
+        } catch (NotFoundException e) {
+            throw e;
         } catch (Exception e) {
-            log.error("Error interno inesperado al crear promotor: {}", e.getMessage(), e);
-            // Error grave, devolver 500 Internal Server Error
-            throw new InternalServerErrorException("Error interno al crear el promotor.", e);
+            log.error("Error al mostrar formulario editar usuario ID {}: {}", idUsuario, e.getMessage(), e);
+            throw new InternalServerErrorException("Error al cargar datos del usuario para editar.", e);
         }
     }
 
     /**
-     * Endpoint POST para cambiar el estado (activo/inactivo) de un promotor.
-     * Recibe el ID del promotor y el nuevo estado deseado.
-     * Redirige a la lista de promotores. Requiere rol ADMIN en sesión.
-     *
-     * @param idPromotor ID del promotor a modificar.
-     * @param nuevoEstado {@code true} para activar, {@code false} para desactivar.
-     * @return Una respuesta de redirección (303) a la lista de promotores.
-     * @throws BadRequestException Si faltan parámetros.
+     * Endpoint POST para procesar la creación o actualización de un usuario
+     * (cualquier rol). Si recibe {@code idUsuario}, intenta actualizar (solo el
+     * nombre). Si no, intenta crear. Para creación, requiere nombre, email,
+     * password y rol. Redirige a la lista del rol correspondiente en caso de
+     * éxito. Requiere rol ADMIN.
      */
     @POST
-    @Path("/promotores/cambiar-estado")
+    @Path("/usuarios/guardar") // Ruta generalizada
     @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
-    public Response cambiarEstadoPromotor(
-            @FormParam("idPromotor") Integer idPromotor,
+    public Response guardarUsuario(
+            @FormParam("idUsuario") Integer idUsuario, // Renombrado de idPromotor
+            @FormParam("nombre") String nombre,
+            @FormParam("email") String email,
+            @FormParam("password") String password,
+            @FormParam("rol") String rolStr // Nuevo parámetro para el rol en creación
+    ) throws ServletException, IOException {
+
+        Integer idAdmin = verificarAccesoAdmin(request);
+
+        boolean esActualizacion = (idUsuario != null && idUsuario > 0);
+        log.info("POST /admin/usuarios/guardar recibido. Modo: {}", esActualizacion ? "ACTUALIZACIÓN (ID: " + idUsuario + ")" : "CREACIÓN");
+
+        if (esActualizacion) {
+            // --- Lógica de Actualización ---
+            String mensajeFlash = null;
+            String errorFlash = null;
+            UsuarioDTO dtoParaForm = null;
+
+            try {
+                if (nombre == null || nombre.isBlank()) {
+                    throw new IllegalArgumentException("El nombre del usuario es obligatorio.");
+                }
+                log.info("Llamando a usuarioService.actualizarNombreUsuario ID {} a '{}' por Admin ID {}", idUsuario, nombre, idAdmin);
+                UsuarioDTO actualizado = usuarioService.actualizarNombreUsuario(idUsuario, nombre);
+                mensajeFlash = "Usuario '" + actualizado.getNombre() + "' (ID: " + idUsuario + ") actualizado con éxito.";
+
+                // Determinar a qué lista redirigir basado en el rol del usuario actualizado
+                URI listUri = getListUriForRole(actualizado.getRol());
+                setFlashMessage(request, "mensaje", mensajeFlash);
+                return Response.seeOther(listUri).build();
+
+            } catch (IllegalArgumentException | UsuarioNotFoundException e) {
+                errorFlash = "Error al actualizar: " + e.getMessage();
+                log.warn("Error al actualizar usuario ID {}: {}", idUsuario, errorFlash);
+                Optional<UsuarioDTO> originalOpt = usuarioService.obtenerUsuarioPorId(idUsuario);
+                if (originalOpt.isPresent()) {
+                    dtoParaForm = originalOpt.get();
+                    dtoParaForm.setNombre(nombre);
+                    forwardToUsuarioEditFormWithError(dtoParaForm, idAdmin, errorFlash); // Usa helper generalizado
+                    return Response.ok().build();
+                } else {
+                    setFlashMessage(request, "error", "Usuario no encontrado (ID: " + idUsuario + ").");
+                    // Redirigir a una lista por defecto si no se puede determinar el rol
+                    URI defaultListUri = uriInfo.getBaseUriBuilder().path(AdminResource.class).path(AdminResource.class, "listarPromotores").build();
+                    return Response.seeOther(defaultListUri).build();
+                }
+            } catch (Exception e) {
+                errorFlash = "Error interno inesperado al actualizar.";
+                log.error("Error interno al actualizar usuario ID {}: {}", idUsuario, e.getMessage(), e);
+                setFlashMessage(request, "error", errorFlash);
+                URI defaultListUri = uriInfo.getBaseUriBuilder().path(AdminResource.class).path(AdminResource.class, "listarPromotores").build();
+                return Response.seeOther(defaultListUri).build();
+            }
+
+        } else {
+            // --- Lógica de Creación ---
+            UsuarioCreacionDTO dto = new UsuarioCreacionDTO();
+            dto.setNombre(nombre);
+            dto.setEmail(email);
+            dto.setPassword(password);
+            RolUsuario rol = null;
+
+            try {
+                // Validar rol
+                if (rolStr == null || rolStr.isBlank()) {
+                    throw new IllegalArgumentException("El rol es obligatorio.");
+                }
+                try {
+                    rol = RolUsuario.valueOf(rolStr.toUpperCase());
+                } catch (IllegalArgumentException iae) {
+                    throw new IllegalArgumentException("Rol de usuario inválido: " + rolStr);
+                }
+                dto.setRol(rol);
+
+                // Validaciones básicas
+                if (nombre == null || nombre.isBlank() || email == null || email.isBlank() || password == null || password.isEmpty()) {
+                    throw new IllegalArgumentException("Nombre, email y contraseña son obligatorios.");
+                }
+                if (password.length() < 8) {
+                    throw new IllegalArgumentException("La contraseña debe tener al menos 8 caracteres.");
+                }
+
+                log.info("Llamando a usuarioService.crearUsuario (Rol: {}) por Admin ID: {}", rol, idAdmin);
+                UsuarioDTO creado = usuarioService.crearUsuario(dto);
+
+                String mensajeExito = "Usuario '" + creado.getNombre() + "' (Rol: " + rol + ") creado con éxito.";
+                setFlashMessage(request, "mensaje", mensajeExito);
+
+                // Redirigir a la lista del rol creado
+                URI listUri = getListUriForRole(rol);
+                log.debug("Redirigiendo a: {}", listUri);
+                return Response.seeOther(listUri).build();
+
+            } catch (EmailExistenteException e) {
+                log.warn("Error de negocio al crear usuario (email existente): {}", e.getMessage());
+                forwardToUsuarioCreateFormWithError(dto, idAdmin, e.getMessage());
+                return Response.ok().build();
+            } catch (IllegalArgumentException e) {
+                log.warn("Error de validación al crear usuario: {}", e.getMessage());
+                forwardToUsuarioCreateFormWithError(dto, idAdmin, e.getMessage());
+                return Response.ok().build();
+            } catch (Exception e) {
+                log.error("Error interno inesperado al crear usuario: {}", e.getMessage(), e);
+                throw new InternalServerErrorException("Error interno al crear el usuario.", e);
+            }
+        }
+    }
+
+    /**
+     * Endpoint POST para cambiar el estado (activo/inactivo) de un usuario
+     * (cualquier rol). Redirige a la lista del rol correspondiente. Requiere
+     * rol ADMIN.
+     */
+    @POST
+    @Path("/usuarios/cambiar-estado") // Ruta generalizada
+    @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
+    public Response cambiarEstadoUsuario( // Nombre generalizado
+            @FormParam("idUsuario") Integer idUsuario, // Renombrado
             @FormParam("nuevoEstado") Boolean nuevoEstado) {
 
-        log.info("POST /admin/promotores/cambiar-estado para ID: {} a {}", idPromotor, nuevoEstado);
-        Integer idAdmin = verificarAccesoAdmin(request); // Verifica sesión y rol
+        log.info("POST /admin/usuarios/cambiar-estado para ID: {} a {}", idUsuario, nuevoEstado);
+        Integer idAdmin = verificarAccesoAdmin(request);
 
-        if (idPromotor == null || nuevoEstado == null) {
-            throw new BadRequestException("Faltan parámetros requeridos (idPromotor, nuevoEstado).");
+        if (idUsuario == null || nuevoEstado == null) {
+            throw new BadRequestException("Faltan parámetros requeridos (idUsuario, nuevoEstado).");
         }
 
         String mensajeFlash = null;
         String errorFlash = null;
+        UsuarioDTO actualizado = null; // Para determinar a qué lista redirigir
+
         try {
-            // Llamar al servicio para actualizar el estado
-            log.info("Llamando a usuarioService.actualizarEstadoUsuario ID: {} a {} por Admin ID: {}", idPromotor, nuevoEstado, idAdmin);
-            UsuarioDTO actualizado = usuarioService.actualizarEstadoUsuario(idPromotor, nuevoEstado);
-            mensajeFlash = "Estado del promotor '" + actualizado.getNombre() + "' actualizado a " + (nuevoEstado ? "ACTIVO" : "INACTIVO") + ".";
+            log.info("Llamando a usuarioService.actualizarEstadoUsuario ID: {} a {} por Admin ID: {}", idUsuario, nuevoEstado, idAdmin);
+            actualizado = usuarioService.actualizarEstadoUsuario(idUsuario, nuevoEstado);
+            mensajeFlash = "Estado del usuario '" + actualizado.getNombre() + "' (Rol: " + actualizado.getRol() + ") actualizado a " + (nuevoEstado ? "ACTIVO" : "INACTIVO") + ".";
         } catch (UsuarioNotFoundException e) {
-            log.warn("Promotor ID {} no encontrado para cambiar estado.", idPromotor);
-            errorFlash = e.getMessage(); // Mensaje específico de "no encontrado"
+            log.warn("Usuario ID {} no encontrado para cambiar estado.", idUsuario);
+            errorFlash = e.getMessage();
         } catch (Exception e) {
-            log.error("Error interno al cambiar estado del promotor ID {}: {}", idPromotor, e.getMessage(), e);
-            errorFlash = "Error interno al cambiar el estado."; // Mensaje genérico
+            log.error("Error interno al cambiar estado del usuario ID {}: {}", idUsuario, e.getMessage(), e);
+            errorFlash = "Error interno al cambiar el estado.";
         }
 
-        // Guardar mensaje (éxito o error) en sesión para mostrar después de redirigir
         setFlashMessage(request, mensajeFlash != null ? "mensaje" : "error", mensajeFlash != null ? mensajeFlash : errorFlash);
 
-        // Redirigir siempre a la lista de promotores
-        URI listUri = uriInfo.getBaseUriBuilder().path(AdminResource.class).path(AdminResource.class, "listarPromotores").build();
+        // Redirigir a la lista del rol correspondiente si se pudo actualizar, o a promotores por defecto
+        URI listUri = (actualizado != null)
+                ? getListUriForRole(actualizado.getRol())
+                : uriInfo.getBaseUriBuilder().path(AdminResource.class).path(AdminResource.class, "listarPromotores").build(); // Fallback
+
         log.debug("Redirigiendo a: {}", listUri);
-        return Response.seeOther(listUri).build(); // 303 See Other
+        return Response.seeOther(listUri).build();
     }
 
     // --- Endpoints para Gestión de Festivales por Admin ---
@@ -452,7 +532,7 @@ public class AdminResource {
                 throw new IllegalArgumentException("El nombre del festival es obligatorio.");
             }
             if (fechaInicioStr == null || fechaInicioStr.isBlank() || fechaFinStr == null || fechaFinStr.isBlank()) {
-                 throw new IllegalArgumentException("Las fechas de inicio y fin son obligatorias.");
+                throw new IllegalArgumentException("Las fechas de inicio y fin son obligatorias.");
             }
             dto.setFechaInicio(LocalDate.parse(fechaInicioStr)); // Puede lanzar DateTimeParseException
             dto.setFechaFin(LocalDate.parse(fechaFinStr));     // Puede lanzar DateTimeParseException
@@ -486,7 +566,7 @@ public class AdminResource {
             return Response.ok().build(); // 200 OK (mostrar form con error)
         } catch (DateTimeParseException e) {
             log.warn("Error de formato de fecha al crear festival por admin: {}", e.getMessage());
-            forwardToFestivalFormWithError(dto, idAdmin, "Formato de fecha inválido (use yyyy-MM-dd).");
+            forwardToFestivalFormWithError(dto, idAdmin, "Formato de fecha inválido (use WebView-MM-dd).");
             return Response.ok().build(); // 200 OK
         } catch (IllegalArgumentException | UsuarioNotFoundException e) {
             log.warn("Error de validación/negocio al crear festival por admin: {}", e.getMessage());
@@ -632,7 +712,7 @@ public class AdminResource {
             // Convertir string a Enum y validar que sea CANCELADO o FINALIZADO
             nuevoEstado = EstadoFestival.valueOf(nuevoEstadoStr.toUpperCase());
             if (nuevoEstado != EstadoFestival.CANCELADO && nuevoEstado != EstadoFestival.FINALIZADO) {
-                 throw new IllegalArgumentException("Solo se permite cambiar a CANCELADO o FINALIZADO desde esta acción.");
+                throw new IllegalArgumentException("Solo se permite cambiar a CANCELADO o FINALIZADO desde esta acción.");
             }
         } catch (IllegalArgumentException e) {
             log.warn("Valor inválido para 'nuevoEstado' en POST /admin/festivales/cambiar-estado: {}", nuevoEstadoStr);
@@ -857,9 +937,9 @@ public class AdminResource {
                 return Response.ok().build(); // 200 OK (mostrando form con error)
             } else {
                 // Si no se encontró ni siquiera para mostrar el error, redirigir con error general
-                 setFlashMessage(request, "error", "Asistente no encontrado (ID: " + idAsistente + ").");
-                 URI listUri = uriInfo.getBaseUriBuilder().path(AdminResource.class).path(AdminResource.class, "listarAsistentes").build();
-                 return Response.seeOther(listUri).build();
+                setFlashMessage(request, "error", "Asistente no encontrado (ID: " + idAsistente + ").");
+                URI listUri = uriInfo.getBaseUriBuilder().path(AdminResource.class).path(AdminResource.class, "listarAsistentes").build();
+                return Response.seeOther(listUri).build();
             }
         } catch (Exception e) {
             errorFlash = "Error interno inesperado al actualizar.";
@@ -927,8 +1007,8 @@ public class AdminResource {
 
     // --- Método Auxiliar de Seguridad ---
     /**
-     * Verifica si existe una sesión HTTP activa y si el usuario autenticado
-     * en ella tiene el rol ADMIN.
+     * Verifica si existe una sesión HTTP activa y si el usuario autenticado en
+     * ella tiene el rol ADMIN.
      *
      * @param request La petición HTTP actual.
      * @return El ID del usuario administrador autenticado.
@@ -969,42 +1049,47 @@ public class AdminResource {
 
     // --- Métodos Auxiliares para Forward con Error y Mensajes Flash ---
     /**
-     * Realiza un forward a la vista de detalle/creación de promotor, pasando
-     * un mensaje de error y los datos introducidos por el usuario (excepto contraseña).
-     *
-     * @param dto DTO con los datos introducidos que causaron el error.
-     * @param idAdmin ID del administrador autenticado.
-     * @param errorMessage Mensaje de error a mostrar en el formulario.
-     * @throws ServletException Si ocurre un error durante el forward.
-     * @throws IOException Si ocurre un error de E/S durante el forward.
+     * Realiza un forward a la vista de creación de usuario, pasando un mensaje
+     * de error y los datos introducidos por el usuario (excepto contraseña).
+     * También pasa la lista de roles posibles.
      */
-    private void forwardToPromotorFormWithError(UsuarioCreacionDTO dto, Integer idAdmin, String errorMessage)
+    private void forwardToUsuarioCreateFormWithError(UsuarioCreacionDTO dto, Integer idAdmin, String errorMessage)
             throws ServletException, IOException {
         request.setAttribute("error", errorMessage);
-        dto.setPassword(""); // Limpiar contraseña antes de reenviar
-        request.setAttribute("promotor", dto);
-        request.setAttribute("esNuevo", true); // Indicar que es el formulario de creación
+        dto.setPassword(""); // Limpiar contraseña
+        request.setAttribute("usuario", dto);
+        request.setAttribute("esNuevo", true);
+        request.setAttribute("rolesPosibles", RolUsuario.values()); // Pasar roles
         request.setAttribute("idAdminAutenticado", idAdmin);
-        RequestDispatcher dispatcher = request.getRequestDispatcher("/WEB-INF/jsp/admin/admin-promotor-detalle.jsp");
+        RequestDispatcher dispatcher = request.getRequestDispatcher("/WEB-INF/jsp/admin/admin-usuario-detalle.jsp"); // JSP generalizado
         dispatcher.forward(request, response);
     }
 
-     /**
-     * Realiza un forward a la vista de detalle/creación de festival, pasando
-     * un mensaje de error y los datos introducidos por el usuario.
-     * Recarga la lista de promotores activos para el desplegable.
-     *
-     * @param dto DTO con los datos introducidos que causaron el error.
-     * @param idAdmin ID del administrador autenticado.
-     * @param errorMessage Mensaje de error a mostrar en el formulario.
-     * @throws ServletException Si ocurre un error durante el forward.
-     * @throws IOException Si ocurre un error de E/S durante el forward.
+    /**
+     * Realiza un forward a la vista de edición de usuario, pasando un mensaje
+     * de error y los datos introducidos por el usuario.
+     */
+    private void forwardToUsuarioEditFormWithError(UsuarioDTO dto, Integer idAdmin, String errorMessage)
+            throws ServletException, IOException {
+        request.setAttribute("error", errorMessage);
+        request.setAttribute("usuario", dto);
+        request.setAttribute("esNuevo", false);
+        // No necesitamos pasar roles posibles al editar
+        request.setAttribute("idAdminAutenticado", idAdmin);
+        RequestDispatcher dispatcher = request.getRequestDispatcher("/WEB-INF/jsp/admin/admin-usuario-detalle.jsp"); // JSP generalizado
+        dispatcher.forward(request, response);
+    }
+
+    /**
+     * Realiza un forward a la vista de detalle/creación de festival, pasando un
+     * mensaje de error y los datos introducidos por el usuario. Recarga la
+     * lista de promotores activos para el desplegable.
      */
     private void forwardToFestivalFormWithError(FestivalDTO dto, Integer idAdmin, String errorMessage)
             throws ServletException, IOException {
         request.setAttribute("error", errorMessage);
         request.setAttribute("festival", dto);
-        request.setAttribute("esNuevo", true); // Indicar que es el formulario de creación
+        request.setAttribute("esNuevo", true); // Asume que el error ocurrió en creación
         // Recargar lista de promotores para el select
         List<UsuarioDTO> promotoresActivos = usuarioService.obtenerUsuariosPorRol(RolUsuario.PROMOTOR)
                 .stream().filter(UsuarioDTO::getEstado).collect(Collectors.toList());
@@ -1014,15 +1099,9 @@ public class AdminResource {
         dispatcher.forward(request, response);
     }
 
-     /**
-     * Realiza un forward a la vista de detalle de asistente, pasando
-     * un mensaje de error y los datos introducidos por el usuario.
-     *
-     * @param dto DTO con los datos introducidos que causaron el error.
-     * @param idAdmin ID del administrador autenticado.
-     * @param errorMessage Mensaje de error a mostrar en el formulario.
-     * @throws ServletException Si ocurre un error durante el forward.
-     * @throws IOException Si ocurre un error de E/S durante el forward.
+    /**
+     * Realiza un forward a la vista de detalle de asistente, pasando un mensaje
+     * de error y los datos introducidos por el usuario.
      */
     private void forwardToAsistenteFormWithError(AsistenteDTO dto, Integer idAdmin, String errorMessage)
             throws ServletException, IOException {
@@ -1034,7 +1113,6 @@ public class AdminResource {
         dispatcher.forward(request, response);
     }
 
-
     /**
      * Establece un mensaje flash (de éxito o error) en la sesión HTTP.
      *
@@ -1044,21 +1122,18 @@ public class AdminResource {
      */
     private void setFlashMessage(HttpServletRequest request, String type, String message) {
         if (message != null) {
-            HttpSession session = request.getSession(); // Obtener o crear sesión
+            HttpSession session = request.getSession();
             session.setAttribute(type, message);
             log.trace("Mensaje flash '{}' guardado en sesión con clave '{}'", message, type);
         }
     }
 
     /**
-     * Comprueba si existen mensajes flash ("mensaje" o "error") en la sesión y,
-     * si es así, los mueve a atributos de la request y los elimina de la sesión.
-     * Esto permite mostrarlos una sola vez en el JSP después de una redirección.
-     *
-     * @param request La petición actual.
+     * Comprueba si existen mensajes flash y los mueve a atributos de la
+     * request.
      */
     private void mostrarMensajeFlash(HttpServletRequest request) {
-        HttpSession session = request.getSession(false); // No crear sesión si no existe
+        HttpSession session = request.getSession(false);
         if (session != null) {
             if (session.getAttribute("mensaje") != null) {
                 request.setAttribute("mensajeExito", session.getAttribute("mensaje"));
@@ -1071,5 +1146,30 @@ public class AdminResource {
                 log.trace("Mensaje flash de error movido de sesión a request.");
             }
         }
+    }
+
+    /**
+     * Helper para obtener la URI de la lista correspondiente a un rol.
+     *
+     * @param rol El RolUsuario.
+     * @return La URI de la lista.
+     */
+    private URI getListUriForRole(RolUsuario rol) {
+        String methodName;
+        switch (rol) {
+            case ADMIN:
+                methodName = "listarAdmins";
+                break;
+            case PROMOTOR:
+                methodName = "listarPromotores";
+                break;
+            case CAJERO:
+                methodName = "listarCajeros";
+                break;
+            default: // Fallback a promotores si el rol es inesperado
+                log.warn("Rol de usuario inesperado {} al determinar URI de redirección. Usando lista de promotores.", rol);
+                methodName = "listarPromotores";
+        }
+        return uriInfo.getBaseUriBuilder().path(AdminResource.class).path(AdminResource.class, methodName).build();
     }
 }

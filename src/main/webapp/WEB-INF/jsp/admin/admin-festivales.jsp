@@ -12,36 +12,7 @@
         <link rel="preconnect" href="https://fonts.googleapis.com">
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
-        <style>
-            /* Estilos generales que NO usan @apply */
-            body {
-                font-family: 'Inter', sans-serif;
-            }
-            .badge {
-                padding: 0.1em 0.6em;
-                border-radius: 9999px;
-                font-size: 0.75rem;
-                font-weight: 600;
-                display: inline-flex;
-                align-items: center;
-            }
-            .badge-borrador {
-                background-color: #FEF3C7;
-                color: #92400E;
-            }
-            .badge-publicado {
-                background-color: #D1FAE5;
-                color: #065F46;
-            }
-            .badge-cancelado {
-                background-color: #FEE2E2;
-                color: #991B1B;
-            }
-            .badge-finalizado {
-                background-color: #E5E7EB;
-                color: #374151;
-            }
-        </style>
+        <link rel="stylesheet" href="${pageContext.request.contextPath}/css/estilos.css">
     </head>
     <body class="bg-gray-100 text-gray-800">
 
@@ -52,9 +23,9 @@
                 <jsp:param name="activePage" value="festivales"/>
             </jsp:include>
 
-            <h2 class="text-2xl font-semibold text-gray-700 mb-5">Gestionar Todos los Festivales</h2>           
+            <h2 class="text-2xl font-semibold text-gray-700 mb-5">Gestionar Todos los Festivales</h2>             
 
-            <%-- Mensajes flash --%>
+            <%-- Mensajes flash (se mantienen clases de Tailwind) --%>
             <c:if test="${not empty requestScope.mensajeExito}">
                 <div class="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 mb-4 rounded-md shadow-sm" role="alert">
                     <p class="font-bold">Éxito</p> <p>${requestScope.mensajeExito}</p>
@@ -66,7 +37,7 @@
                 </div>
             </c:if>
 
-            <%-- Filtro por estado --%>
+            <%-- Filtro por estado (botones con clases CSS externas) --%>
             <div class="mb-4 bg-white p-4 rounded shadow-sm">
                 <form action="${pageContext.request.contextPath}/api/admin/festivales/listar-todos" method="get" class="flex items-end space-x-3">
                     <div>
@@ -78,10 +49,11 @@
                             </c:forEach>
                         </select>
                     </div>
-                    <button type="submit" class="font-bold py-2 px-4 rounded shadow transition duration-150 ease-in-out inline-flex items-center text-sm bg-blue-600 hover:bg-blue-700 text-white">
+                    <%-- Usamos btn-filter o btn-primary según preferencia --%>
+                    <button type="submit" class="btn btn-filter"> 
                         Filtrar
                     </button>
-                    <a href="${pageContext.request.contextPath}/api/admin/festivales/listar-todos" class="font-bold py-2 px-4 rounded shadow transition duration-150 ease-in-out inline-flex items-center text-sm bg-gray-200 hover:bg-gray-300 text-gray-800">Limpiar Filtro</a>
+                    <a href="${pageContext.request.contextPath}/api/admin/festivales/listar-todos" class="btn btn-secondary">Limpiar Filtro</a>
                 </form>
             </div>
 
@@ -116,6 +88,7 @@
                                         <td class="px-6 py-4 whitespace-nowrap"> <div class="text-sm font-medium text-gray-900">${f.nombre}</div> </td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                             <c:if test="${not empty f.nombrePromotor}">
+                                                <%-- Enlace con clases Tailwind, no requiere clase CSS específica --%>
                                                 <a href="${pageContext.request.contextPath}/api/admin/promotores/${f.idPromotor}/festivales" class="text-indigo-600 hover:underline" title="Ver promotor y sus festivales">
                                                     ${f.nombrePromotor} (ID: ${f.idPromotor})
                                                 </a>
@@ -123,6 +96,7 @@
                                             <c:if test="${empty f.nombrePromotor}">(ID: ${f.idPromotor})</c:if>
                                             </td>
                                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500"> ${f.fechaInicio} - ${f.fechaFin} </td>
+                                        <%-- Badge con clases CSS externas --%>
                                         <td class="px-6 py-4 whitespace-nowrap text-center">
                                             <span class="badge
                                                   <c:choose>
@@ -130,32 +104,33 @@
                                                       <c:when test="${f.estado == 'BORRADOR'}">badge-borrador</c:when>
                                                       <c:when test="${f.estado == 'CANCELADO'}">badge-cancelado</c:when>
                                                       <c:when test="${f.estado == 'FINALIZADO'}">badge-finalizado</c:when>
-                                                      <c:otherwise>bg-gray-100 text-gray-800</c:otherwise>
+                                                      <c:otherwise>bg-gray-100 text-gray-800</c:otherwise> <%-- Fallback --%>
                                                   </c:choose>
                                                   "> ${f.estado} </span>
                                         </td>
+                                        <%-- Acciones con clases CSS externas --%>
                                         <td class="px-6 py-4 whitespace-nowrap text-center text-sm font-medium space-x-2">
                                             <%-- Acciones de cambio de estado --%>
                                             <c:if test="${f.estado == 'BORRADOR'}">
                                                 <form action="${pageContext.request.contextPath}/api/admin/festivales/confirmar" method="post" class="inline" onsubmit="return confirm('Confirmar y publicar \'${f.nombre}\'?');">
                                                     <input type="hidden" name="idFestival" value="${f.idFestival}">
-                                                    <button type="submit" class="text-green-600 hover:text-green-900 underline font-semibold" title="Confirmar y Publicar">Confirmar</button>
+                                                    <button type="submit" class="action-button action-button-confirm" title="Confirmar y Publicar">Confirmar</button>
                                                 </form>
                                             </c:if>
                                             <c:if test="${f.estado == 'PUBLICADO'}">
                                                 <form action="${pageContext.request.contextPath}/api/admin/festivales/cambiar-estado" method="post" class="inline" onsubmit="return confirm('¿Estás seguro de CANCELAR el festival \'${f.nombre}\'?');">
                                                     <input type="hidden" name="idFestival" value="${f.idFestival}">
                                                     <input type="hidden" name="nuevoEstado" value="CANCELADO">
-                                                    <button type="submit" class="text-red-600 hover:text-red-900 underline font-semibold" title="Cancelar Festival">Cancelar</button>
+                                                    <button type="submit" class="action-button action-button-cancel" title="Cancelar Festival">Cancelar</button>
                                                 </form>
                                                 <form action="${pageContext.request.contextPath}/api/admin/festivales/cambiar-estado" method="post" class="inline" onsubmit="return confirm('¿Marcar el festival \'${f.nombre}\' como FINALIZADO?');">
                                                     <input type="hidden" name="idFestival" value="${f.idFestival}">
                                                     <input type="hidden" name="nuevoEstado" value="FINALIZADO">
-                                                    <button type="submit" class="text-gray-600 hover:text-gray-900 underline font-semibold" title="Marcar como Finalizado">Finalizar</button>
+                                                    <button type="submit" class="action-button action-button-finalize" title="Marcar como Finalizado">Finalizar</button>
                                                 </form>
                                             </c:if>
                                             <%-- Enlace a pulseras --%>
-                                            <a href="${pageContext.request.contextPath}/api/admin/festivales/${f.idFestival}/pulseras" class="text-blue-600 hover:text-blue-900 underline font-semibold" title="Ver Pulseras NFC Asociadas">Pulseras</a>
+                                            <a href="${pageContext.request.contextPath}/api/admin/festivales/${f.idFestival}/pulseras" class="action-link action-link-pulseras" title="Ver Pulseras NFC Asociadas">Pulseras</a>
                                         </td>
                                     </tr>
                                 </c:forEach>

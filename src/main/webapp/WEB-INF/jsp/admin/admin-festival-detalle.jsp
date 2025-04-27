@@ -13,14 +13,7 @@
         <link rel="preconnect" href="https://fonts.googleapis.com">
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
-        <style>
-            body {
-                font-family: 'Inter', sans-serif;
-            }
-            textarea {
-                min-height: 8rem;
-            }
-        </style>
+        <link rel="stylesheet" href="${pageContext.request.contextPath}/css/estilos.css">
     </head>
     <body class="bg-gray-100 text-gray-800">
 
@@ -28,7 +21,7 @@
 
             <%-- Incluir Menú Admin Común --%>
             <jsp:include page="/WEB-INF/jsp/admin/_admin_menu.jsp">
-                <jsp:param name="activePage" value="festivales"/> <%-- Pertenece a la sección festivales --%>
+                <jsp:param name="activePage" value="festivales"/>
             </jsp:include>
 
             <h2 class="text-2xl font-semibold text-gray-700 mb-5">
@@ -40,7 +33,7 @@
                     <a href="${pageContext.request.contextPath}/api/admin/festivales/listar-todos" class="text-indigo-600 hover:text-indigo-800 text-sm">&larr; Volver a Gestionar Festivales</a>
             </div>
 
-            <%-- Mensajes de error --%>
+            <%-- Mensajes de error (se mantienen clases de Tailwind) --%>
             <c:if test="${not empty requestScope.error}">
                 <div class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-4 rounded-md shadow-sm" role="alert">
                     <p class="font-bold">Error</p>
@@ -48,9 +41,8 @@
                 </div>
             </c:if>
 
-            <%-- Formulario --%>
+            <%-- Formulario (botones con clases CSS externas) --%>
             <form action="${pageContext.request.contextPath}/api/admin/festivales/guardar" method="post" class="bg-white p-6 md:p-8 rounded-lg shadow-md space-y-4">
-                <%-- ... (contenido del formulario sin cambios) ... --%>
                 <input type="hidden" name="idFestival" value="${festival.idFestival}">
                 <c:if test="${esNuevo}">
                     <div>
@@ -72,7 +64,8 @@
                 <c:if test="${not esNuevo}">
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Promotor Asignado</label>
-                        <p class="mt-1 text-sm text-gray-900 bg-gray-50 p-2 rounded border border-gray-200">
+                        <%-- Usamos readonly-field para consistencia, aunque no estaba definido en el style original de este JSP --%>
+                        <p class="readonly-field">
                             ${festival.nombrePromotor} (ID: ${festival.idPromotor})
                         </p>
                     </div>
@@ -125,7 +118,8 @@
                 <c:if test="${not esNuevo}">
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Estado Actual</label>
-                        <p class="mt-1 block w-full rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm font-medium text-gray-700 font-semibold ...">
+                        <%-- Usamos readonly-field para consistencia --%>
+                        <p class="readonly-field">
                             ${festival.estado}
                         </p>
                         <p class="text-xs text-gray-500 mt-1">El estado se cambia desde la lista de festivales.</p>
@@ -133,11 +127,11 @@
                 </c:if>
                 <div class="mt-6 flex justify-end space-x-3 pt-4 border-t border-gray-200">
                     <a href="${pageContext.request.contextPath}/api/admin/festivales/listar-todos"
-                       class="font-bold py-2 px-4 rounded shadow transition duration-150 ease-in-out bg-gray-200 hover:bg-gray-300 text-gray-800">
+                       class="btn btn-secondary"> <%-- Clase CSS externa --%>
                         Cancelar
                     </a>
                     <button type="submit"
-                            class="font-bold py-2 px-4 rounded shadow transition duration-150 ease-in-out bg-purple-600 hover:bg-purple-700 text-white">
+                            class="btn btn-primary"> <%-- Clase CSS externa --%>
                         ${esNuevo ? 'Crear Festival' : 'Guardar Cambios'}
                     </button>
                 </div>
@@ -149,6 +143,7 @@
                     <div class="bg-white p-6 rounded-lg shadow-md">
                         <p class="text-gray-600 mb-4">Vista de administrador para los tipos de entrada de este festival.</p>
                         <p class="text-sm text-gray-500 italic">(Funcionalidad pendiente)</p>
+                        <%-- Aquí iría la tabla o gestión de tipos de entrada si se implementa --%>
                     </div>
                 </div>
             </c:if>

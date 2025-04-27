@@ -12,76 +12,7 @@
         <link rel="preconnect" href="https://fonts.googleapis.com">
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
-        <style>
-            /* Estilos generales */
-            body {
-                font-family: 'Inter', sans-serif;
-            }
-            /* Estilos para badges de estado */
-            .badge {
-                padding: 0.1em 0.6em;
-                border-radius: 9999px;
-                font-size: 0.75rem; /* text-xs */
-                font-weight: 600; /* font-semibold */
-                display: inline-flex;
-                align-items: center;
-            }
-            .badge-borrador {
-                background-color: #FEF3C7;
-                color: #92400E;
-            }
-            .badge-publicado {
-                background-color: #D1FAE5;
-                color: #065F46;
-            }
-            .badge-cancelado {
-                background-color: #FEE2E2;
-                color: #991B1B;
-            }
-            .badge-finalizado {
-                background-color: #E5E7EB;
-                color: #374151;
-            }
-            /* Estilos para acciones en tablas */
-            .action-link {
-                text-decoration: underline;
-                font-size: 0.75rem; /* text-xs */
-            }
-            .action-button { /* Para botones dentro de formularios en la tabla */
-                background: none;
-                border: none;
-                padding: 0;
-                cursor: pointer;
-                text-decoration: underline;
-                font-size: 0.75rem; /* text-xs */
-                font-weight: 600; /* font-semibold */
-            }
-            .action-button-confirm {
-                color: #059669; /* text-green-600 */
-            }
-            .action-button-confirm:hover {
-                color: #047857; /* hover:text-green-900 */
-            }
-            .action-button-cancel {
-                color: #DC2626; /* text-red-600 */
-            }
-            .action-button-cancel:hover {
-                color: #991B1B; /* hover:text-red-900 */
-            }
-            .action-button-finalize {
-                color: #4B5563; /* text-gray-600 */
-            }
-            .action-button-finalize:hover {
-                color: #1F2937; /* hover:text-gray-900 */
-            }
-            .action-link-pulseras {
-                color: #2563EB; /* text-blue-600 */
-                font-weight: 600;
-            }
-            .action-link-pulseras:hover {
-                color: #1D4ED8; /* hover:text-blue-900 */
-            }
-        </style>
+        <link rel="stylesheet" href="${pageContext.request.contextPath}/css/estilos.css">
     </head>
     <body class="bg-gray-100 text-gray-800">
 
@@ -125,6 +56,7 @@
                                         <td class="px-6 py-4 whitespace-nowrap"> <div class="text-sm font-medium text-gray-900">${f.nombre}</div> </td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500"> ${f.fechaInicio} - ${f.fechaFin} </td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${f.ubicacion}</td>
+                                        <%-- Badge con clases CSS externas --%>
                                         <td class="px-6 py-4 whitespace-nowrap text-center">
                                             <span class="badge
                                                   <c:choose>
@@ -132,12 +64,12 @@
                                                       <c:when test="${f.estado == 'BORRADOR'}">badge-borrador</c:when>
                                                       <c:when test="${f.estado == 'CANCELADO'}">badge-cancelado</c:when>
                                                       <c:when test="${f.estado == 'FINALIZADO'}">badge-finalizado</c:when>
-                                                      <c:otherwise>bg-gray-100 text-gray-800</c:otherwise>
+                                                      <c:otherwise>bg-gray-100 text-gray-800</c:otherwise> <%-- Fallback --%>
                                                   </c:choose>
                                                   "> ${f.estado} </span>
                                         </td>
+                                        <%-- Acciones con clases CSS externas --%>
                                         <td class="px-6 py-4 whitespace-nowrap text-center text-sm font-medium space-x-2">
-                                            <%-- Acciones de cambio de estado (Estilos Homogeneizados) --%>
                                             <c:if test="${f.estado == 'BORRADOR'}">
                                                 <form action="${pageContext.request.contextPath}/api/admin/festivales/confirmar" method="post" class="inline" onsubmit="return confirm('Confirmar y publicar \'${f.nombre}\'?');">
                                                     <input type="hidden" name="idFestival" value="${f.idFestival}">
@@ -156,7 +88,6 @@
                                                     <button type="submit" class="action-button action-button-finalize" title="Marcar como Finalizado">Finalizar</button>
                                                 </form>
                                             </c:if>
-                                            <%-- Enlace a pulseras (Estilo Homogeneizado) --%>
                                             <a href="${pageContext.request.contextPath}/api/admin/festivales/${f.idFestival}/pulseras" class="action-link action-link-pulseras" title="Ver Pulseras NFC Asociadas">Pulseras</a>
                                         </td>
                                     </tr>

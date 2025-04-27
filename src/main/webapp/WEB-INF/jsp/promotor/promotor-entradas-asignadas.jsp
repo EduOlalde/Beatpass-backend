@@ -12,99 +12,13 @@
         <link rel="preconnect" href="https://fonts.googleapis.com">
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
-        <style>
-            /* Estilos generales */
-            body {
-                font-family: 'Inter', sans-serif;
-            }
-            /* Estilos para badges de estado */
-            .badge {
-                padding: 0.1em 0.6em;
-                border-radius: 9999px;
-                font-size: 0.75rem;
-                font-weight: 600;
-                display: inline-flex;
-                align-items: center;
-            }
-            .badge-activa {
-                background-color: #D1FAE5;
-                color: #065F46;
-            }
-            .badge-usada {
-                background-color: #E5E7EB;
-                color: #374151;
-            }
-            .badge-cancelada {
-                background-color: #FEE2E2;
-                color: #991B1B;
-            }
-            /* Estilo para imagen QR */
-            .qr-image {
-                border: 1px solid #e5e7eb;
-                display: block;
-            }
-            /* Estilos para acciones en tablas */
-            .action-link {
-                text-decoration: underline;
-                font-size: 0.75rem; /* text-xs */
-            }
-            .action-link-edit {
-                color: #D97706; /* text-yellow-600 */
-                font-weight: 600; /* font-semibold */
-            }
-            .action-link-edit:hover {
-                color: #92400E; /* hover:text-yellow-900 */
-            }
-            .action-button {
-                background: none;
-                border: none;
-                padding: 0;
-                cursor: pointer;
-                text-decoration: underline;
-                font-size: 0.75rem; /* text-xs */
-                font-weight: 600; /* font-semibold */
-            }
-            .action-button-nominate {
-                color: #4F46E5; /* text-indigo-600 */
-            }
-            .action-button-nominate:hover {
-                color: #3730A3; /* hover:text-indigo-900 */
-            }
-            .action-button-associate {
-                color: #059669; /* text-green-600 */
-            }
-            .action-button-associate:hover {
-                color: #047857; /* hover:text-green-900 */
-            }
-            .action-button-cancel {
-                color: #DC2626; /* text-red-600 */
-            }
-            .action-button-cancel:hover {
-                color: #991B1B; /* hover:text-red-900 */
-            }
-            /* Estilos para inputs pequeños en acciones */
-            .action-input {
-                padding: 0.25rem 0.5rem; /* p-1 */
-                border: 1px solid #D1D5DB; /* border-gray-300 */
-                border-radius: 0.375rem; /* rounded-md */
-                box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); /* shadow-sm */
-                font-size: 0.75rem; /* text-xs */
-                width: 9rem; /* w-36 */
-            }
-            .action-input:focus {
-                --tw-ring-color: #6366F1; /* focus:ring-indigo-500 */
-                border-color: #6366F1; /* focus:border-indigo-500 */
-                box-shadow: var(--tw-ring-inset) 0 0 0 calc(1px + var(--tw-ring-offset-width)) var(--tw-ring-color);
-                outline: 2px solid transparent;
-                outline-offset: 2px;
-            }
-        </style>
+        <link rel="stylesheet" href="${pageContext.request.contextPath}/css/estilos.css">
     </head>
     <body class="bg-gray-100 text-gray-800">
 
         <div class="container mx-auto p-4 md:p-8 max-w-7xl">
 
-            <%-- Cabecera --%>
+            <%-- Cabecera (se mantienen clases Tailwind) --%>
             <header class="flex flex-col sm:flex-row justify-between items-center mb-6 pb-4 border-b border-gray-300">
                 <h1 class="text-3xl font-bold text-indigo-700 mb-4 sm:mb-0">Panel de Promotor</h1>
                 <div class="flex items-center space-x-4">
@@ -124,7 +38,7 @@
                 <h2 class="text-2xl font-semibold text-gray-700">Gestionar Entradas Asignadas: ${festival.nombre}</h2>
             </div>
 
-            <%-- Mensajes flash --%>
+            <%-- Mensajes flash (se mantienen clases Tailwind) --%>
             <c:if test="${not empty requestScope.mensajeExito}">
                 <div class="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 mb-4 rounded-md shadow-sm" role="alert">
                     <p>${requestScope.mensajeExito}</p>
@@ -136,7 +50,7 @@
                 </div>
             </c:if>
 
-            <%-- Tabla de Entradas Asignadas --%>
+            <%-- Tabla de Entradas Asignadas (badges, QR, acciones con clases CSS externas) --%>
             <div class="bg-white shadow-md rounded-lg overflow-x-auto">
                 <table class="min-w-full divide-y divide-gray-200">
                     <thead class="bg-gray-50">
@@ -162,6 +76,7 @@
                                         <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-700">${ea.tipoEntradaOriginal}</td>
                                         <td class="px-4 py-4 whitespace-nowrap text-center">
                                             <c:if test="${not empty ea.qrCodeImageDataUrl}">
+                                                <%-- QR con clase CSS externa --%>
                                                 <img src="${ea.qrCodeImageDataUrl}" alt="QR Entrada ${ea.idEntradaAsignada}"
                                                      title="QR: ${ea.codigoQr}"
                                                      class="w-16 h-16 mx-auto qr-image"
@@ -172,12 +87,13 @@
                                             </c:if>
                                         </td>
                                         <td class="px-4 py-4 whitespace-nowrap text-center">
+                                            <%-- Badge con clases CSS externas --%>
                                             <span class="badge
                                                   <c:choose>
                                                       <c:when test="${ea.estado == 'ACTIVA'}">badge-activa</c:when>
                                                       <c:when test="${ea.estado == 'USADA'}">badge-usada</c:when>
                                                       <c:when test="${ea.estado == 'CANCELADA'}">badge-cancelada</c:when>
-                                                      <c:otherwise>bg-gray-100 text-gray-800</c:otherwise>
+                                                      <c:otherwise>bg-gray-100 text-gray-800</c:otherwise> <%-- Fallback --%>
                                                   </c:choose>
                                                   "> ${ea.estado} </span>
                                         </td>
@@ -200,7 +116,7 @@
                                         </td>
                                         <td class="px-4 py-4 whitespace-nowrap text-center text-sm">
                                             <div class="flex flex-col items-center space-y-1 md:space-y-2">
-                                                <%-- Formulario Nominar (Estilos Homogeneizados) --%>
+                                                <%-- Formulario Nominar con clases CSS externas --%>
                                                 <c:if test="${empty ea.idAsistente and ea.estado == 'ACTIVA'}">
                                                     <form action="${pageContext.request.contextPath}/api/promotor/entradas-asignadas/${ea.idEntradaAsignada}/nominar" method="post" class="inline-block"
                                                           onsubmit="return confirm('Nominar entrada ID ${ea.idEntradaAsignada} a ' + document.getElementById('emailAsistente_${ea.idEntradaAsignada}').value + '?');">
@@ -213,7 +129,7 @@
                                                     </form>
                                                 </c:if>
 
-                                                <%-- Formulario Asociar Pulsera (Estilos Homogeneizados) --%>
+                                                <%-- Formulario Asociar Pulsera con clases CSS externas --%>
                                                 <c:if test="${not empty ea.idAsistente and ea.estado == 'ACTIVA' and empty ea.idPulseraAsociada}">
                                                     <form action="${pageContext.request.contextPath}/api/promotor/entradas-asignadas/${ea.idEntradaAsignada}/asociar-pulsera" method="post" class="inline-block mt-1"
                                                           onsubmit="return confirm('Asociar pulsera con UID ' + this.codigoUid.value + ' a entrada ID ${ea.idEntradaAsignada}?');">
@@ -223,14 +139,13 @@
                                                         </div>
                                                     </form>
                                                 </c:if>
-                                                <%-- Mostrar UID si ya está asociada --%>
                                                 <c:if test="${not empty ea.idPulseraAsociada}">
                                                     <span class="text-xs text-green-700 font-medium block mt-1" title="Pulsera asociada">
-                                                        Pulsera: <span class="text-xs font-mono bg-gray-100 px-1 rounded">${ea.codigoUidPulsera}</span>
+                                                        Pulsera: <span class="uid-code">${ea.codigoUidPulsera}</span> <%-- uid-code clase externa --%>
                                                     </span>
                                                 </c:if>
 
-                                                <%-- Otros botones (Modificar, Cancelar - Estilos Homogeneizados) --%>
+                                                <%-- Otros botones con clases CSS externas --%>
                                                 <div class="flex justify-center space-x-2 mt-1">
                                                     <c:if test="${not empty ea.idAsistente and ea.estado == 'ACTIVA'}">
                                                         <%-- TODO: Implementar funcionalidad Modificar Nominación --%>

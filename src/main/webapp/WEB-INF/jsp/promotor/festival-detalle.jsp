@@ -12,162 +12,13 @@
         <link rel="preconnect" href="https://fonts.googleapis.com">
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
-        <style>
-            /* Estilos generales */
-            body {
-                font-family: 'Inter', sans-serif;
-            }
-            textarea {
-                min-height: 8rem;
-            }
-            /* Estilos para badges de estado */
-            .badge {
-                padding: 0.1em 0.6em;
-                border-radius: 9999px;
-                font-size: 0.75rem;
-                font-weight: 600;
-                display: inline-flex;
-                align-items: center;
-            }
-            .badge-borrador {
-                background-color: #FEF3C7;
-                color: #92400E;
-            }
-            .badge-publicado {
-                background-color: #D1FAE5;
-                color: #065F46;
-            }
-            .badge-cancelado {
-                background-color: #FEE2E2;
-                color: #991B1B;
-            }
-            .badge-finalizado {
-                background-color: #E5E7EB;
-                color: #374151;
-            }
-            /* Estilos para campos de solo lectura */
-            .readonly-value {
-                margin-top: 0.25rem;
-                display: block;
-                width: 100%;
-                border-radius: 0.375rem;
-                border: 1px solid #e5e7eb;
-                background-color: #f9fafb;
-                padding: 0.5rem 0.75rem;
-                font-size: 0.875rem;
-                color: #374151;
-                box-shadow: inset 0 1px 2px 0 rgb(0 0 0 / 0.05);
-                min-height: 38px;
-            }
-            /* Clases base para botones */
-            .btn {
-                font-weight: bold;
-                padding: 0.5rem 1rem;
-                border-radius: 0.375rem;
-                box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-                transition: all 150ms ease-in-out;
-                display: inline-flex;
-                align-items: center;
-                font-size: 0.875rem;
-                justify-content: center;
-            }
-            .btn-primary {
-                background-color: #4F46E5;
-                color: white;
-            }
-            .btn-primary:hover {
-                background-color: #4338CA;
-            }
-            .btn-secondary {
-                background-color: #6B7280;
-                color: white;
-            }
-            .btn-secondary:hover {
-                background-color: #4B5563;
-            }
-            .btn-edit {
-                background-color: #F59E0B;
-                color: white;
-            }
-            .btn-edit:hover {
-                background-color: #D97706;
-            }
-            .btn-success {
-                background-color: #10B981;
-                color: white;
-            }
-            .btn-success:hover {
-                background-color: #059669;
-            }
-            .btn-info {
-                background-color: #3B82F6;
-                color: white;
-            }
-            .btn-info:hover {
-                background-color: #2563EB;
-            }
-            .btn-teal {
-                background-color: #0D9488;
-                color: white;
-            }
-            .btn-teal:hover {
-                background-color: #0F766E;
-            }
-            .btn-orange {
-                background-color: #EA580C;
-                color: white;
-            }
-            .btn-orange:hover {
-                background-color: #C2410C;
-            }
-            .btn-warning {
-                background-color: #F59E0B;
-                color: white;
-            }
-            .btn-warning:hover {
-                background-color: #D97706;
-            }
-            .btn-purple {
-                background-color: #7e22ce;
-                color: white;
-            } /* NUEVO: Botón Morado */
-            .btn-purple:hover {
-                background-color: #6b21a8;
-            }
-            /* Estilos para acciones en tablas */
-            .action-link {
-                text-decoration: underline;
-                font-size: 0.75rem;
-            }
-            .action-link-edit {
-                color: #D97706;
-                font-weight: 600;
-            }
-            .action-link-edit:hover {
-                color: #92400E;
-            }
-            .action-button {
-                background: none;
-                border: none;
-                padding: 0;
-                cursor: pointer;
-                text-decoration: underline;
-                font-size: 0.75rem;
-                font-weight: 600;
-            }
-            .action-button-danger {
-                color: #DC2626;
-            }
-            .action-button-danger:hover {
-                color: #991B1B;
-            }
-        </style>
+        <link rel="stylesheet" href="${pageContext.request.contextPath}/css/estilos.css">
     </head>
     <body class="bg-gray-100 text-gray-800">
 
         <div class="container mx-auto p-4 md:p-8 max-w-4xl">
 
-            <%-- Cabecera --%>
+            <%-- Cabecera (se mantienen clases Tailwind) --%>
             <header class="flex flex-col sm:flex-row justify-between items-center mb-6 pb-4 border-b border-gray-300">
                 <h1 class="text-3xl font-bold text-indigo-700 mb-4 sm:mb-0">
                     Detalles del Festival
@@ -188,14 +39,14 @@
 
             <div class="mb-4 flex justify-between items-center">
                 <a href="${pageContext.request.contextPath}/api/promotor/festivales" class="text-indigo-600 hover:text-indigo-800 text-sm">&larr; Volver a Mis Festivales</a>
-                <%-- Botón Editar (Estilo Homogeneizado) --%>
+                <%-- Botón Editar con clase CSS externa --%>
                 <a href="${pageContext.request.contextPath}/api/promotor/festivales/editar/${festival.idFestival}"
                    class="btn btn-edit">
                     Editar Datos Festival
                 </a>
             </div>
 
-            <%-- Mensajes --%>
+            <%-- Mensajes (se mantienen clases Tailwind) --%>
             <c:if test="${not empty requestScope.error and empty requestScope.errorEntrada}">
                 <div class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-4 rounded-md shadow-sm" role="alert">
                     <p class="font-bold">Error:</p> <p>${requestScope.error}</p>
@@ -208,7 +59,7 @@
             </c:if>
 
 
-            <%-- Mostrar Datos Generales como solo lectura --%>
+            <%-- Mostrar Datos Generales como solo lectura (usando clase CSS externa) --%>
             <div class="bg-white p-6 md:p-8 rounded-lg shadow-md space-y-4 mb-10">
                 <h3 class="text-lg font-semibold text-gray-600 border-b pb-2 mb-4">Datos Generales del Festival</h3>
                 <div>
@@ -249,6 +100,7 @@
                 </div>
                 <div>
                     <span class="block text-sm font-medium text-gray-500 mb-1">Estado Actual</span>
+                    <%-- Badge con clase CSS externa --%>
                     <p class="readonly-value">
                         <span class="badge
                               <c:choose>
@@ -256,7 +108,7 @@
                                   <c:when test="${festival.estado == 'BORRADOR'}">badge-borrador</c:when>
                                   <c:when test="${festival.estado == 'CANCELADO'}">badge-cancelado</c:when>
                                   <c:when test="${festival.estado == 'FINALIZADO'}">badge-finalizado</c:when>
-                                  <c:otherwise>bg-gray-100 text-gray-800</c:otherwise>
+                                  <c:otherwise>bg-gray-100 text-gray-800</c:otherwise> <%-- Fallback --%>
                               </c:choose>
                               "> ${festival.estado} </span>
                         <span class="text-xs text-gray-500 ml-2"> (Solo modificable por administrador)</span>
@@ -264,10 +116,9 @@
                 </div>
             </div>
 
-            <%-- Sección Tipos de Entrada (Solo Tabla) --%>
+            <%-- Sección Tipos de Entrada (acciones con clases CSS externas) --%>
             <div class="mt-10 pt-6 border-t border-gray-300">
                 <h3 class="text-xl font-semibold mb-4 text-gray-700">Tipos de Entrada</h3>
-                <%-- Tabla de Tipos de Entrada Existentes --%>
                 <div class="bg-white p-4 md:p-6 rounded-lg shadow-md mb-6">
                     <h4 class="text-lg font-medium text-gray-800 mb-3">Entradas Definidas</h4>
                     <div class="overflow-x-auto">
@@ -294,7 +145,6 @@
                                                 <td class="px-4 py-2 whitespace-nowrap text-sm text-gray-600 text-right"><fmt:formatNumber value="${entrada.precio}" type="currency" currencySymbol="€" minFractionDigits="2" maxFractionDigits="2"/></td>
                                                 <td class="px-4 py-2 whitespace-nowrap text-sm text-gray-600 text-right">${entrada.stock}</td>
                                                 <td class="px-4 py-2 whitespace-nowrap text-center text-sm space-x-2">
-                                                    <%-- Acciones con estilo homogeneizado --%>
                                                     <a href="${pageContext.request.contextPath}/api/promotor/entradas/${entrada.idEntrada}/editar" class="action-link action-link-edit">Editar</a>
                                                     <form action="${pageContext.request.contextPath}/api/promotor/entradas/${entrada.idEntrada}/eliminar" method="post" class="inline" onsubmit="return confirm('¿Eliminar tipo entrada \'${entrada.tipo}\'?');">
                                                         <button type="submit" class="action-button action-button-danger">Eliminar</button>
@@ -310,10 +160,9 @@
                 </div>
             </div>
 
-            <%-- Gestión de Entradas, Asistentes y Compras (Botones Homogeneizados) --%>
+            <%-- Gestión de Entradas, Asistentes y Compras (botones con clases CSS externas) --%>
             <div class="mt-10 pt-6 border-t border-gray-300">
                 <h3 class="text-xl font-semibold mb-4 text-gray-700">Gestión del Festival</h3>
-                <%-- Ajustar grid a 4 columnas para el nuevo botón --%>
                 <div class="bg-white p-6 rounded-lg shadow-md grid grid-cols-1 md:grid-cols-4 gap-4">
                     <div>
                         <p class="text-gray-600 mb-2 text-sm">Ver/gestionar entradas individuales y nominarlas.</p>
@@ -336,11 +185,10 @@
                             Ver Pulseras NFC
                         </a>
                     </div>
-                    <%-- NUEVO BOTÓN --%>
                     <div>
                         <p class="text-gray-600 mb-2 text-sm">Consultar el historial de compras realizadas.</p>
                         <a href="${pageContext.request.contextPath}/api/promotor/festivales/${festival.idFestival}/compras"
-                           class="btn btn-purple w-full"> <%-- Usando nuevo estilo btn-purple --%>
+                           class="btn btn-purple w-full">
                             Ver Compras
                         </a>
                     </div>

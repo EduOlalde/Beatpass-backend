@@ -12,88 +12,21 @@
         <link rel="preconnect" href="https://fonts.googleapis.com">
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
-        <style>
-            /* Estilos generales */
-            body {
-                font-family: 'Inter', sans-serif;
-            }
-            /* Clases base para botones */
-            .btn {
-                font-weight: bold;
-                padding: 0.5rem 1rem;
-                border-radius: 0.375rem;
-                box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-                transition: all 150ms ease-in-out;
-                display: inline-flex;
-                align-items: center;
-                font-size: 0.875rem;
-            }
-            .btn-primary {
-                background-color: #4F46E5;
-                color: white;
-            } /* indigo-600 */
-            .btn-primary:hover {
-                background-color: #4338CA;
-            } /* indigo-700 */
-            /* Estilos para badges de estado */
-            .badge {
-                padding: 0.1em 0.6em;
-                border-radius: 9999px;
-                font-size: 0.75rem;
-                font-weight: 600;
-                display: inline-flex;
-                align-items: center;
-            }
-            .badge-borrador {
-                background-color: #FEF3C7;
-                color: #92400E;
-            }
-            .badge-publicado {
-                background-color: #D1FAE5;
-                color: #065F46;
-            }
-            .badge-cancelado {
-                background-color: #FEE2E2;
-                color: #991B1B;
-            }
-            .badge-finalizado {
-                background-color: #E5E7EB;
-                color: #374151;
-            }
-            /* Estilos para acciones en tablas */
-            .action-link {
-                text-decoration: underline;
-                font-size: 0.75rem; /* text-xs */
-            }
-            .action-link-view {
-                color: #4F46E5; /* text-indigo-600 */
-                font-weight: 500; /* font-medium */
-            }
-            .action-link-view:hover {
-                color: #3730A3; /* hover:text-indigo-900 */
-            }
-            .action-link-edit {
-                color: #D97706; /* text-yellow-600 */
-                font-weight: 600; /* font-semibold */
-            }
-            .action-link-edit:hover {
-                color: #92400E; /* hover:text-yellow-900 */
-            }
-        </style>
+        <link rel="stylesheet" href="${pageContext.request.contextPath}/css/estilos.css">
     </head>
     <body class="bg-gray-100 text-gray-800">
 
         <div class="container mx-auto p-4 md:p-8 max-w-7xl">
-            <%-- Cabecera Promotor (Botón Crear Homogeneizado) --%>
+            <%-- Cabecera Promotor (botón con clase CSS externa) --%>
             <header class="flex flex-col sm:flex-row justify-between items-center mb-6 pb-4 border-b border-gray-300">
                 <h1 class="text-3xl font-bold text-indigo-700 mb-4 sm:mb-0">Mis Festivales</h1>
                 <div class="flex items-center space-x-4">
                     <c:if test="${not empty sessionScope.userName}">
                         <span class="text-sm text-gray-600">Hola, ${sessionScope.userName}</span>
                     </c:if>
-                    <%-- Botón Crear con estilo homogeneizado --%>
+                    <%-- Botón Crear con clase CSS externa (ajustada a btn-primary de promotor si es diferente) --%>
                     <a href="${pageContext.request.contextPath}/api/promotor/festivales/crear"
-                       class="btn btn-primary">
+                       class="btn btn-primary"> <%-- Asumiendo btn-primary es el índigo para promotor --%>
                         + Crear Nuevo Festival
                     </a>
                     <form action="${pageContext.request.contextPath}/logout" method="post" class="inline">
@@ -102,7 +35,7 @@
                 </div>
             </header>
 
-            <%-- Mensajes flash --%>
+            <%-- Mensajes flash (se mantienen clases Tailwind) --%>
             <c:if test="${not empty sessionScope.mensaje}">
                 <div class="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 mb-4 rounded-md shadow-sm" role="alert">
                     <span class="block sm:inline">${sessionScope.mensaje}</span>
@@ -121,7 +54,7 @@
                 </div>
             </c:if>
 
-            <%-- Tabla de Festivales --%>
+            <%-- Tabla de Festivales (badges y acciones con clases CSS externas) --%>
             <div class="bg-white shadow-md rounded-lg overflow-x-auto">
                 <table class="min-w-full divide-y divide-gray-200">
                     <thead class="bg-gray-50">
@@ -157,14 +90,13 @@
                                                       <c:when test="${f.estado == 'BORRADOR'}">badge-borrador</c:when>
                                                       <c:when test="${f.estado == 'CANCELADO'}">badge-cancelado</c:when>
                                                       <c:when test="${f.estado == 'FINALIZADO'}">badge-finalizado</c:when>
-                                                      <c:otherwise>bg-gray-100 text-gray-800</c:otherwise>
+                                                      <c:otherwise>bg-gray-100 text-gray-800</c:otherwise> <%-- Fallback --%>
                                                   </c:choose>
                                                   ">
                                                 ${f.estado}
                                             </span>
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap text-center text-sm font-medium space-x-3">
-                                            <%-- Enlaces Ver y Editar (Estilos Homogeneizados) --%>
                                             <a href="${pageContext.request.contextPath}/api/promotor/festivales/ver/${f.idFestival}" class="action-link action-link-view" title="Ver detalles de ${f.nombre}">Ver</a>
                                             <a href="${pageContext.request.contextPath}/api/promotor/festivales/editar/${f.idFestival}" class="action-link action-link-edit" title="Editar datos de ${f.nombre}">Editar</a>
                                         </td>

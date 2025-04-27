@@ -12,27 +12,13 @@
         <link rel="preconnect" href="https://fonts.googleapis.com">
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
-        <style>
-            /* Estilos generales */
-            body {
-                font-family: 'Inter', sans-serif;
-            }
-            /* Estilo para código UID */
-            .uid-code {
-                font-family: monospace;
-                background-color: #f3f4f6;
-                padding: 0.1rem 0.3rem;
-                border-radius: 0.25rem;
-                font-size: 0.8rem;
-                display: inline-block;
-            }
-        </style>
+        <link rel="stylesheet" href="${pageContext.request.contextPath}/css/estilos.css">
     </head>
     <body class="bg-gray-100 text-gray-800">
 
         <div class="container mx-auto p-4 md:p-8 max-w-7xl">
 
-            <%-- Cabecera Promotor (Estilo Homogeneizado) --%>
+            <%-- Cabecera Promotor (se mantienen clases Tailwind) --%>
             <header class="flex flex-col sm:flex-row justify-between items-center mb-6 pb-4 border-b border-gray-300">
                 <h1 class="text-3xl font-bold text-indigo-700 mb-4 sm:mb-0">Panel de Promotor</h1>
                 <div class="flex items-center space-x-4">
@@ -51,7 +37,7 @@
                 <h2 class="text-2xl font-semibold text-gray-700">Asistentes Registrados para: ${festival.nombre}</h2>
             </div>
 
-            <%-- Mensajes flash --%>
+            <%-- Mensajes flash (se mantienen clases Tailwind) --%>
             <c:if test="${not empty requestScope.mensajeExito}">
                 <div class="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 mb-4 rounded-md shadow-sm" role="alert">
                     <p>${requestScope.mensajeExito}</p>
@@ -63,7 +49,7 @@
                 </div>
             </c:if>
 
-            <%-- Tabla de Asistentes del Festival --%>
+            <%-- Tabla de Asistentes del Festival (UID con clase CSS externa) --%>
             <div class="bg-white shadow-md rounded-lg overflow-x-auto">
                 <table class="min-w-full divide-y divide-gray-200">
                     <thead class="bg-gray-50">
@@ -72,7 +58,6 @@
                             <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nombre</th>
                             <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
                             <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Teléfono</th>
-                                <%-- *** NUEVA COLUMNA *** --%>
                             <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pulsera Asociada (UID)</th>
                         </tr>
                     </thead>
@@ -80,7 +65,6 @@
                         <c:choose>
                             <c:when test="${empty asistentes}">
                                 <tr>
-                                    <%-- *** Colspan ajustado *** --%>
                                     <td colspan="5" class="px-6 py-4 text-center text-sm text-gray-500 italic">
                                         No hay asistentes registrados para este festival (o con entradas asignadas).
                                     </td>
@@ -93,16 +77,14 @@
                                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${a.nombre}</td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${a.email}</td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${not empty a.telefono ? a.telefono : '-'}</td>
-                                        <%-- *** CELDA ACTUALIZADA PARA PULSERA (accede al mapa) *** --%>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                            <%-- Accede al mapa usando el nombre del festival actual como clave --%>
                                             <c:set var="pulseraUid" value="${a.festivalPulseraInfo[festival.nombre]}" />
                                             <c:choose>
                                                 <c:when test="${not empty pulseraUid}">
                                                     <span class="uid-code" title="${pulseraUid}">${pulseraUid}</span>
                                                 </c:when>
                                                 <c:otherwise>
-                                                    - <%-- Mostrar guión si no hay pulsera asociada para este festival --%>
+                                                    -
                                                 </c:otherwise>
                                             </c:choose>
                                         </td>

@@ -12,56 +12,7 @@
         <link rel="preconnect" href="https://fonts.googleapis.com">
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
-        <style>
-            /* Estilos generales */
-            body {
-                font-family: 'Inter', sans-serif;
-            }
-            /* Estilos para badges de estado */
-            .badge {
-                padding: 0.1em 0.6em;
-                border-radius: 9999px;
-                font-size: 0.75rem; /* text-xs */
-                font-weight: 600; /* font-semibold */
-                display: inline-flex;
-                align-items: center;
-            }
-            .badge-activa {
-                background-color: #D1FAE5; /* green-100 */
-                color: #065F46; /* green-800 */
-            }
-            .badge-inactiva {
-                background-color: #FEE2E2; /* red-100 */
-                color: #991B1B; /* red-800 */
-            }
-            /* Estilo para código UID */
-            .uid-code {
-                font-family: monospace;
-                background-color: #f3f4f6; /* gray-100 */
-                padding: 0.1rem 0.3rem;
-                border-radius: 0.25rem;
-                font-size: 0.8rem;
-            }
-            /* Estilos para acciones en tablas */
-            .action-link {
-                text-decoration: underline;
-                font-size: 0.75rem; /* text-xs */
-            }
-            .action-link-view {
-                color: #4F46E5; /* text-indigo-600 */
-                font-weight: 500; /* font-medium */
-            }
-            .action-link-view:hover {
-                color: #3730A3; /* hover:text-indigo-900 */
-            }
-            .action-button-danger {
-                color: #DC2626; /* text-red-600 */
-                font-weight: 600; /* font-semibold */
-            }
-            .action-button-danger:hover {
-                color: #991B1B; /* hover:text-red-900 */
-            }
-        </style>
+        <link rel="stylesheet" href="${pageContext.request.contextPath}/css/estilos.css">
     </head>
     <body class="bg-gray-100 text-gray-800">
 
@@ -77,7 +28,7 @@
                 <h2 class="text-2xl font-semibold text-gray-700">Pulseras NFC Asociadas: ${festival.nombre}</h2>
             </div>
 
-            <%-- Mensajes flash --%>
+            <%-- Mensajes flash (se mantienen clases de Tailwind) --%>
             <c:if test="${not empty requestScope.mensajeExito}">
                 <div class="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 mb-4 rounded-md shadow-sm" role="alert"> <p>${requestScope.mensajeExito}</p> </div>
             </c:if>
@@ -108,8 +59,10 @@
                                 <c:forEach var="p" items="${pulseras}">
                                     <tr>
                                         <td class="px-3 py-4 whitespace-nowrap text-sm text-gray-500">${p.idPulsera}</td>
+                                        <%-- UID con clase CSS externa --%>
                                         <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-700"> <span class="uid-code" title="${p.codigoUid}">${p.codigoUid}</span> </td>
                                         <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-900 text-right font-semibold"> <fmt:formatNumber value="${p.saldo}" type="currency" currencySymbol="€"/> </td>
+                                        <%-- Badge con clase CSS externa (unificada) --%>
                                         <td class="px-4 py-4 whitespace-nowrap text-center">
                                             <span class="badge ${p.activa ? 'badge-activa' : 'badge-inactiva'}"> ${p.activa ? 'Activa' : 'Inactiva'} </span>
                                         </td>
@@ -120,13 +73,15 @@
                                             </c:if>
                                             <c:if test="${empty p.idAsistente}"> - </c:if>
                                             </td>
-                                            <td class="px-4 py-4 whitespace-nowrap text-center text-sm space-x-2">
-                                            <%-- Acción Ver Detalles (Estilo Homogeneizado) --%>
+                                        <%-- Acciones con clases CSS externas --%>
+                                        <td class="px-4 py-4 whitespace-nowrap text-center text-sm space-x-2">
                                             <%-- TODO: Implementar vista real de detalles (recargas/consumos) --%>
                                             <a href="#" class="action-link action-link-view" title="Ver detalles de la pulsera (Pendiente)">Ver Detalles</a>
                                             <c:if test="${p.activa}">
                                                 <%-- TODO: Implementar acción de desactivación --%>
-                                                <%-- <form action="..." method="post" class="inline"> ... <button type="submit" class="action-link action-button-danger">Desactivar</button> </form> --%>
+                                                <%-- <form action="..." method="post" class="inline"> ... <button type="submit" class="action-button action-button-danger">Desactivar</button> </form> --%>
+                                                <%-- Ejemplo de cómo se vería el botón si estuviera implementado --%>
+                                                <%-- <button type="button" class="action-button action-button-danger" onclick="alert('Desactivar pulsera ${p.idPulsera} - Pendiente')">Desactivar</button> --%>
                                             </c:if>
                                         </td>
                                     </tr>

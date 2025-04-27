@@ -12,55 +12,13 @@
         <link rel="preconnect" href="https://fonts.googleapis.com">
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
-        <style>
-            /* Estilos generales */
-            body {
-                font-family: 'Inter', sans-serif;
-            }
-            /* Estilos para badges de estado */
-            .badge {
-                padding: 0.1em 0.6em;
-                border-radius: 9999px;
-                font-size: 0.75rem;
-                font-weight: 600;
-                display: inline-flex;
-                align-items: center;
-            }
-            .badge-activa {
-                background-color: #D1FAE5;
-                color: #065F46;
-            } /* green */
-            .badge-inactiva {
-                background-color: #FEE2E2;
-                color: #991B1B;
-            } /* red */
-            /* Estilo para código UID */
-            .uid-code {
-                font-family: monospace;
-                background-color: #f3f4f6;
-                padding: 0.1rem 0.3rem;
-                border-radius: 0.25rem;
-                font-size: 0.8rem;
-            }
-            /* Estilos para acciones en tablas */
-            .action-link {
-                text-decoration: underline;
-                font-size: 0.75rem; /* text-xs */
-            }
-            .action-link-view {
-                color: #4F46E5; /* text-indigo-600 */
-                font-weight: 500; /* font-medium */
-            }
-            .action-link-view:hover {
-                color: #3730A3; /* hover:text-indigo-900 */
-            }
-        </style>
+        <link rel="stylesheet" href="${pageContext.request.contextPath}/css/estilos.css">
     </head>
     <body class="bg-gray-100 text-gray-800">
 
         <div class="container mx-auto p-4 md:p-8 max-w-7xl">
 
-            <%-- Cabecera Promotor --%>
+            <%-- Cabecera Promotor (se mantienen clases Tailwind) --%>
             <header class="flex flex-col sm:flex-row justify-between items-center mb-6 pb-4 border-b border-gray-300">
                 <h1 class="text-3xl font-bold text-indigo-700 mb-4 sm:mb-0">Panel de Promotor</h1>
                 <div class="flex items-center space-x-4">
@@ -79,7 +37,7 @@
                 <h2 class="text-2xl font-semibold text-gray-700">Pulseras NFC Asociadas: ${festival.nombre}</h2>
             </div>
 
-            <%-- Mensajes flash --%>
+            <%-- Mensajes flash (se mantienen clases Tailwind) --%>
             <c:if test="${not empty requestScope.mensajeExito}">
                 <div class="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 mb-4 rounded-md shadow-sm" role="alert"> <p>${requestScope.mensajeExito}</p> </div>
             </c:if>
@@ -87,7 +45,7 @@
                 <div class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-4 rounded-md shadow-sm" role="alert"> <p class="font-bold">Error:</p> <p>${requestScope.error}</p> </div>
             </c:if>
 
-            <%-- Tabla de Pulseras NFC --%>
+            <%-- Tabla de Pulseras NFC (badges y UID con clases CSS externas) --%>
             <div class="bg-white shadow-md rounded-lg overflow-x-auto">
                 <table class="min-w-full divide-y divide-gray-200">
                     <thead class="bg-gray-50">
@@ -98,7 +56,6 @@
                             <th scope="col" class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
                             <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Entrada Asociada (ID)</th>
                             <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Asistente Asociado</th>
-                                <%-- Columna de acciones eliminada para el promotor en esta vista --%>
                         </tr>
                     </thead>
                     <tbody class="bg-white divide-y divide-gray-200">
@@ -122,8 +79,7 @@
                                             </c:if>
                                             <c:if test="${empty p.idAsistente}"> - </c:if>
                                             </td>
-                                        <%-- Acciones eliminadas de esta vista para el promotor --%>
-                                    </tr>
+                                        </tr>
                                 </c:forEach>
                             </c:otherwise>
                         </c:choose>

@@ -391,6 +391,52 @@ public class UsuarioServiceImpl implements UsuarioService {
         }
     }
 
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public UsuarioDTO actualizarNombreUsuario(Integer id, String nuevoNombre) {
+        log.info("Service: Iniciando actualización de nombre a '{}' para usuario ID: {}", nuevoNombre, id);
+        if (id == null || nuevoNombre == null || nuevoNombre.isBlank()) {
+            throw new IllegalArgumentException("ID de usuario y nuevo nombre son requeridos y el nombre no puede estar vacío.");
+        }
+
+        EntityManager em = null;
+        EntityTransaction tx = null;
+        try {
+            em = JPAUtil.createEntityManager();
+            tx = em.getTransaction();
+            tx.begin();
+
+            // Buscar usuario
+            Usuario usuario = usuarioRepository.findById(em, id)
+                    .orElseThrow(() -> new UsuarioNotFoundException("Usuario no encontrado con ID: " + id));
+
+            // Si el nombre no cambia, no hacer nada
+            if (usuario.getNombre().equals(nuevoNombre.trim())) {
+                log.info("El nombre del usuario ID {} ya es '{}'. No se requiere actualización.", id, nuevoNombre);
+                tx.commit(); // Commit aunque no haya cambio
+                return mapEntityToDto(usuario);
+            }
+
+            // Actualizar nombre y guardar
+            log.debug("Actualizando nombre de usuario ID {} a '{}'", id, nuevoNombre.trim());
+            usuario.setNombre(nuevoNombre.trim());
+            usuario = usuarioRepository.save(em, usuario); // merge
+
+            tx.commit();
+            log.info("Nombre de usuario ID: {} actualizado a '{}' correctamente.", id, nuevoNombre);
+            return mapEntityToDto(usuario);
+
+        } catch (Exception e) {
+            handleException(e, tx, "actualizar nombre usuario ID " + id);
+            throw mapException(e);
+        } finally {
+            closeEntityManager(em);
+        }
+    }
+
+
     // --- Métodos Privados de Ayuda (Helpers) ---
     /**
      * Mapea una entidad Usuario a su correspondiente UsuarioDTO. Excluye la

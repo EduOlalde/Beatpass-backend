@@ -1,4 +1,4 @@
-<%-- 
+<%--  
     Document   : promotor-festival-compras
     Created on : 26 abr 2025, 15:54:09
     Author     : Eduardo Olalde
@@ -18,19 +18,13 @@
         <link rel="preconnect" href="https://fonts.googleapis.com">
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
-        <style>
-            /* Estilos generales (puedes copiar/ajustar de otros JSPs de promotor) */
-            body {
-                font-family: 'Inter', sans-serif;
-            }
-            /* Puedes añadir estilos específicos para esta tabla si es necesario */
-        </style>
+        <link rel="stylesheet" href="${pageContext.request.contextPath}/css/estilos.css">
     </head>
     <body class="bg-gray-100 text-gray-800">
 
         <div class="container mx-auto p-4 md:p-8 max-w-7xl">
 
-            <%-- Cabecera Promotor --%>
+            <%-- Cabecera Promotor (se mantienen clases Tailwind) --%>
             <header class="flex flex-col sm:flex-row justify-between items-center mb-6 pb-4 border-b border-gray-300">
                 <h1 class="text-3xl font-bold text-indigo-700 mb-4 sm:mb-0">Panel de Promotor</h1>
                 <div class="flex items-center space-x-4">
@@ -50,7 +44,7 @@
                 <h2 class="text-2xl font-semibold text-gray-700">Historial de Compras: ${festival.nombre}</h2>
             </div>
 
-            <%-- Mensajes flash --%>
+            <%-- Mensajes flash (se mantienen clases Tailwind) --%>
             <c:if test="${not empty requestScope.mensajeExito}">
                 <div class="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 mb-4 rounded-md shadow-sm" role="alert">
                     <p>${requestScope.mensajeExito}</p>
@@ -88,26 +82,26 @@
                                 <tr>
                                     <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-500">${compra.idCompra}</td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                <fmt:parseDate value="${compra.fechaCompra}" pattern="yyyy-MM-dd'T'HH:mm:ss" var="parsedDateTime" type="both" />
-                                <fmt:formatDate value="${parsedDateTime}" pattern="dd/MM/yyyy HH:mm:ss" />
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                    ${compra.nombreAsistente}<br>
-                                    <span class="text-xs text-gray-500">${compra.emailAsistente}</span>
-                                </td>
-                                <td class="px-6 py-4 text-sm text-gray-500">
-                                    <%-- Mostrar el resumen de entradas --%>
-                                <c:forEach var="resumen" items="${compra.resumenEntradas}" varStatus="loop">
-                                    ${resumen}<c:if test="${not loop.last}"><br></c:if>
+                                        <fmt:parseDate value="${compra.fechaCompra}" pattern="yyyy-MM-dd'T'HH:mm:ss" var="parsedDateTime" type="both" />
+                                        <fmt:formatDate value="${parsedDateTime}" pattern="dd/MM/yyyy HH:mm:ss" />
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                        ${compra.nombreAsistente}<br>
+                                        <span class="text-xs text-gray-500">${compra.emailAsistente}</span>
+                                    </td>
+                                    <td class="px-6 py-4 text-sm text-gray-500">
+                                        <%-- Mostrar el resumen de entradas --%>
+                                        <c:forEach var="resumen" items="${compra.resumenEntradas}" varStatus="loop">
+                                            ${resumen}<c:if test="${not loop.last}"><br></c:if>
+                                        </c:forEach>
+                                    </td>
+                                    <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-900 text-right font-semibold">
+                                        <fmt:formatNumber value="${compra.total}" type="currency" currencySymbol="€"/>
+                                    </td>
+                                    </tr>
                                 </c:forEach>
-                                </td>
-                                <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-900 text-right font-semibold">
-                                <fmt:formatNumber value="${compra.total}" type="currency" currencySymbol="€"/>
-                                </td>
-                                </tr>
-                            </c:forEach>
-                        </c:otherwise>
-                    </c:choose>
+                            </c:otherwise>
+                        </c:choose>
                     </tbody>
                 </table>
             </div>

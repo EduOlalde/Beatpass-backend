@@ -12,46 +12,13 @@
         <link rel="preconnect" href="https://fonts.googleapis.com">
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
-        <style>
-            /* Estilos generales */
-            body {
-                font-family: 'Inter', sans-serif;
-            }
-            textarea {
-                min-height: 6rem;
-            }
-            /* Clases base para botones */
-            .btn {
-                font-weight: bold;
-                padding: 0.5rem 1rem;
-                border-radius: 0.375rem;
-                box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-                transition: all 150ms ease-in-out;
-                display: inline-flex;
-                align-items: center;
-                font-size: 0.875rem;
-            }
-            .btn-primary {
-                background-color: #4F46E5;
-                color: white;
-            } /* indigo-600 */
-            .btn-primary:hover {
-                background-color: #4338CA;
-            } /* indigo-700 */
-            .btn-secondary {
-                background-color: #E5E7EB;
-                color: #1F2937;
-            } /* gray-200 */
-            .btn-secondary:hover {
-                background-color: #D1D5DB;
-            } /* gray-300 */
-        </style>
+        <link rel="stylesheet" href="${pageContext.request.contextPath}/css/estilos.css">
     </head>
     <body class="bg-gray-100 text-gray-800">
 
         <div class="container mx-auto p-4 md:p-8 max-w-2xl">
 
-            <%-- Cabecera --%>
+            <%-- Cabecera (se mantienen clases Tailwind) --%>
             <header class="flex flex-col sm:flex-row justify-between items-center mb-6 pb-4 border-b border-gray-300">
                 <h1 class="text-3xl font-bold text-indigo-700 mb-4 sm:mb-0">Panel de Promotor</h1>
                 <div class="flex items-center space-x-4">
@@ -79,7 +46,7 @@
                 </div>
             </c:if>
 
-            <%-- Formulario de Edición --%>
+            <%-- Formulario de Edición (botones con clases CSS externas) --%>
             <form action="${pageContext.request.contextPath}/api/promotor/entradas/${entrada.idEntrada}/actualizar" method="post" class="bg-white p-6 md:p-8 rounded-lg shadow-md space-y-4">
                 <input type="hidden" name="idEntrada" value="${entrada.idEntrada}">
                 <p class="text-sm text-gray-500">Editando entrada para Festival ID: ${entrada.idFestival}</p>
@@ -115,14 +82,13 @@
                               class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-500 focus:ring-opacity-50 sm:text-sm">${entrada.descripcion}</textarea>
                 </div>
 
-                <%-- Botones (Estilos Homogeneizados) --%>
                 <div class="mt-6 flex justify-end space-x-3 pt-4 border-t border-gray-200">
                     <a href="${pageContext.request.contextPath}/api/promotor/festivales/ver/${entrada.idFestival}"
                        class="btn btn-secondary">
                         Cancelar
                     </a>
                     <button type="submit"
-                            class="btn btn-primary">
+                            class="btn btn-primary"> <%-- Asumiendo btn-primary es el índigo para promotor --%>
                         Guardar Cambios
                     </button>
                 </div>

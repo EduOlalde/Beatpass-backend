@@ -13,54 +13,13 @@
         <link rel="preconnect" href="https://fonts.googleapis.com">
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
-        <style>
-            /* Estilos generales */
-            body {
-                font-family: 'Inter', sans-serif;
-            }
-            textarea {
-                min-height: 8rem;
-            }
-            /* Clases base para botones */
-            .btn {
-                font-weight: bold;
-                padding: 0.5rem 1rem;
-                border-radius: 0.375rem;
-                box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-                transition: all 150ms ease-in-out;
-                display: inline-flex;
-                align-items: center;
-                font-size: 0.875rem;
-                justify-content: center;
-            }
-            .btn-primary {
-                background-color: #4F46E5;
-                color: white;
-            } /* indigo-600 */
-            .btn-primary:hover {
-                background-color: #4338CA;
-            } /* indigo-700 */
-            .btn-secondary {
-                background-color: #E5E7EB;
-                color: #1F2937;
-            } /* gray-200 */
-            .btn-secondary:hover {
-                background-color: #D1D5DB;
-            } /* gray-300 */
-            .btn-success {
-                background-color: #10B981;
-                color: white;
-            } /* green-500 */
-            .btn-success:hover {
-                background-color: #059669;
-            } /* green-600 */
-        </style>
+        <link rel="stylesheet" href="${pageContext.request.contextPath}/css/estilos.css">
     </head>
     <body class="bg-gray-100 text-gray-800">
 
         <div class="container mx-auto p-4 md:p-8 max-w-4xl">
 
-            <%-- Cabecera --%>
+            <%-- Cabecera (se mantienen clases Tailwind) --%>
             <header class="flex flex-col sm:flex-row justify-between items-center mb-6 pb-4 border-b border-gray-300">
                 <h1 class="text-3xl font-bold text-indigo-700 mb-4 sm:mb-0">
                     ${esNuevo ? 'Crear Nuevo Festival' : 'Editar Festival'}
@@ -91,22 +50,21 @@
                 </c:choose>
             </div>
 
-            <%-- Mensajes de error --%>
-            <c:if test="${not empty requestScope.error}">
+            <%-- Mensajes de error (se mantienen clases Tailwind) --%>
+            <c:if test="${not empty requestScope.error and empty requestScope.errorEntrada}"> <%-- Error general --%>
                 <div class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-4 rounded-md shadow-sm" role="alert">
                     <p class="font-bold">Error al guardar festival:</p>
                     <p>${requestScope.error}</p>
                 </div>
             </c:if>
-            <%-- Mensaje de error específico para añadir entrada (si se redirige aquí) --%>
-            <c:if test="${not empty requestScope.error and not empty requestScope.errorEntrada}">
+            <c:if test="${not empty requestScope.error and not empty requestScope.errorEntrada}"> <%-- Error específico de entrada --%>
                 <div class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-4 rounded-md shadow-sm" role="alert">
                     <p class="font-bold">Error al añadir tipo de entrada:</p>
                     <p>${requestScope.error}</p>
                 </div>
             </c:if>
 
-            <%-- Formulario Datos Generales Festival --%>
+            <%-- Formulario Datos Generales Festival (botones con clases CSS externas) --%>
             <form action="${pageContext.request.contextPath}/api/promotor/festivales/guardar" method="post" class="bg-white p-6 md:p-8 rounded-lg shadow-md space-y-4 mb-10">
                 <input type="hidden" name="idFestival" value="${festival.idFestival}">
                 <h3 class="text-lg font-semibold text-gray-600 border-b pb-2 mb-4">Datos Generales del Festival</h3>
@@ -155,7 +113,6 @@
                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-500 focus:ring-opacity-50 sm:text-sm">
                     </div>
                 </div>
-                <%-- Botones Guardar/Cancelar Festival --%>
                 <div class="mt-6 flex justify-end space-x-3 pt-4 border-t border-gray-200">
                     <c:choose>
                         <c:when test="${esNuevo}">
@@ -165,18 +122,17 @@
                             <a href="${pageContext.request.contextPath}/api/promotor/festivales/ver/${festival.idFestival}" class="btn btn-secondary"> Cancelar </a>
                         </c:otherwise>
                     </c:choose>
-                    <button type="submit" class="btn btn-primary">
+                    <button type="submit" class="btn btn-primary"> <%-- Asumiendo btn-primary es el índigo para promotor --%>
                         ${esNuevo ? 'Crear Solicitud de Festival' : 'Guardar Cambios Festival'}
                     </button>
                 </div>
             </form>
 
-            <%-- Sección Añadir Nuevo Tipo de Entrada --%>
-            <%-- Solo se muestra si estamos editando un festival existente (ya tiene ID) --%>
+            <%-- Sección Añadir Nuevo Tipo de Entrada (botón con clase CSS externa) --%>
             <c:if test="${not esNuevo}">
                 <div class="mt-10 pt-6 border-t border-gray-300">
                     <h3 class="text-xl font-semibold mb-4 text-gray-700">Añadir Nuevo Tipo de Entrada</h3>
-                    <%-- Mensaje de error específico para añadir entrada --%>
+                    <%-- Mensaje de error específico para añadir entrada (repetido para visibilidad cerca del form) --%>
                     <c:if test="${not empty requestScope.error and not empty requestScope.errorEntrada}">
                         <div class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-4 rounded-md shadow-sm" role="alert">
                             <p class="font-bold">Error al añadir tipo de entrada:</p>
@@ -188,7 +144,6 @@
                             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                                 <div>
                                     <label for="tipoEntrada" class="block text-sm font-medium text-gray-700 mb-1">Tipo <span class="text-red-500 ml-1">*</span></label>
-                                    <%-- Usar el valor de nuevaEntrada si existe (viene de un error previo), sino vacío --%>
                                     <input type="text" id="tipoEntrada" name="tipo" value="${nuevaEntrada.tipo}" required maxlength="50" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-500 focus:ring-opacity-50 sm:text-sm" placeholder="Ej: General">
                                 </div>
                                 <div>
@@ -205,7 +160,6 @@
                                 <textarea id="descEntrada" name="descripcion" rows="2" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-500 focus:ring-opacity-50 sm:text-sm" placeholder="Detalles sobre este tipo de entrada...">${nuevaEntrada.descripcion}</textarea>
                             </div>
                             <div class="flex justify-end pt-2">
-                                <%-- Botón Añadir con estilo homogeneizado --%>
                                 <button type="submit" class="btn btn-success text-sm"> Añadir Tipo de Entrada </button>
                             </div>
                         </form>
