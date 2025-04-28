@@ -9,4 +9,5 @@ node_modules/
 .idea/
 *.log
 
-recursos/
+/recursos/*
+!recursos/server.xml
