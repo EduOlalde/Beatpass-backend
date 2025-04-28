@@ -1,4 +1,4 @@
-<%--  
+<%--
     Document   : _admin_menu
     Created on : 21 abr 2025, 17:26:31
     Author     : Eduardo Olalde
@@ -9,7 +9,7 @@
 
 <%--
   Fragmento JSP para el menú de navegación del panel de Administración.
-  Recibe un parámetro 'activePage' para resaltar el enlace activo.
+  Recibe un atributo 'activePage' en el request scope para resaltar el enlace activo.
   Valores posibles: "admins", "promotores", "cajeros", "festivales", "asistentes".
 --%>
 
@@ -25,26 +25,27 @@
         </c:if>
 
         <%-- Enlaces de Navegación Usuarios --%>
+        <%-- CORRECCIÓN: Usar requestScope.activePage en lugar de param.activePage --%>
         <a href="${pageContext.request.contextPath}/api/admin/admins/listar"
-           class="text-sm hover:underline ${param.activePage == 'admins' ? 'font-medium text-purple-700' : 'text-indigo-600'}">
+           class="text-sm hover:underline ${requestScope.activePage == 'admins' ? 'font-medium text-purple-700' : 'text-indigo-600'}">
             Gestionar Admins
         </a>
         <a href="${pageContext.request.contextPath}/api/admin/promotores/listar"
-           class="text-sm hover:underline ${param.activePage == 'promotores' ? 'font-medium text-purple-700' : 'text-indigo-600'}">
+           class="text-sm hover:underline ${requestScope.activePage == 'promotores' ? 'font-medium text-purple-700' : 'text-indigo-600'}">
             Gestionar Promotores
         </a>
         <a href="${pageContext.request.contextPath}/api/admin/cajeros/listar"
-           class="text-sm hover:underline ${param.activePage == 'cajeros' ? 'font-medium text-purple-700' : 'text-indigo-600'}">
+           class="text-sm hover:underline ${requestScope.activePage == 'cajeros' ? 'font-medium text-purple-700' : 'text-indigo-600'}">
             Gestionar Cajeros
         </a>
 
         <%-- Enlaces de Navegación Otros --%>
         <a href="${pageContext.request.contextPath}/api/admin/festivales/listar-todos"
-           class="text-sm hover:underline ${param.activePage == 'festivales' ? 'font-medium text-purple-700' : 'text-indigo-600'}">
+           class="text-sm hover:underline ${requestScope.activePage == 'festivales' ? 'font-medium text-purple-700' : 'text-indigo-600'}">
             Gestionar Festivales
         </a>
         <a href="${pageContext.request.contextPath}/api/admin/asistentes"
-           class="text-sm hover:underline ${param.activePage == 'asistentes' ? 'font-medium text-purple-700' : 'text-indigo-600'}">
+           class="text-sm hover:underline ${requestScope.activePage == 'asistentes' ? 'font-medium text-purple-700' : 'text-indigo-600'}">
             Gestionar Asistentes
         </a>
 
