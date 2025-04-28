@@ -14,8 +14,8 @@ import java.util.Map;
  * Clase de utilidad para gestionar el {@link EntityManagerFactory} de JPA.
  * <p>
  * Sigue el patrón Singleton para asegurar que solo se cree una instancia del
- * EntityManagerFactory. Lee la configuración de la base de datos (URL, usuario, contraseña)
- * desde variables de entorno (DB_URL, DB_USER, DB_PASSWORD).
+ * EntityManagerFactory. Lee la configuración de la base de datos (URL, usuario,
+ * contraseña) desde variables de entorno (DB_URL, DB_USER, DB_PASSWORD).
  * </p>
  *
  * @author Eduardo Olalde
@@ -32,15 +32,15 @@ public class JPAUtil {
         try {
             log.info("Inicializando EntityManagerFactory para la unidad de persistencia: {}", PERSISTENCE_UNIT_NAME);
 
-            // 1. Crear un mapa para pasar propiedades programáticamente
+            // Crear un mapa para pasar propiedades programáticamente
             Map<String, String> properties = new HashMap<>();
 
-            // 2. Leer variables de entorno
+            // Leer variables de entorno
             String dbUrl = System.getenv("TFG_DB_URL");
             String dbUser = System.getenv("TFG_DB_USER");
             String dbPassword = System.getenv("TFG_DB_PASSWORD");
 
-            // 3. Verificar si las variables de entorno existen
+            // Verificar si las variables de entorno existen
             if (dbUrl == null || dbUrl.trim().isEmpty()) {
                 log.error("¡Variable de entorno DB_URL no definida o vacía!");
                 throw new RuntimeException("Variable de entorno DB_URL no definida o vacía.");
@@ -52,17 +52,25 @@ public class JPAUtil {
             if (dbPassword == null) {
                 // Permitir contraseña vacía, pero loguear si no está definida
                 log.warn("Variable de entorno DB_PASSWORD no definida. Se usará una cadena vacía si es necesario.");
-                 dbPassword = ""; // O manejar como error si siempre se requiere contraseña
+                dbPassword = ""; // O manejar como error si siempre se requiere contraseña
             }
 
             log.info("Usando DB_URL obtenida de variable de entorno."); // No loguear la URL completa por seguridad
             log.info("Usando DB_USER obtenido de variable de entorno: {}", dbUser);
             log.info("Usando DB_PASSWORD obtenida de variable de entorno."); // NUNCA loguear la contraseña
 
-            // 4. Añadir las propiedades leídas al mapa
+            // Añadir las propiedades leídas al mapa
             properties.put("jakarta.persistence.jdbc.url", dbUrl);
             properties.put("jakarta.persistence.jdbc.user", dbUser);
             properties.put("jakarta.persistence.jdbc.password", dbPassword);
+
+            try {
+                Class.forName("com.mysql.cj.jdbc.Driver");
+                log.info("Driver MySQL cargado explícitamente.");
+            } catch (ClassNotFoundException e) {
+                log.error("¡ERROR FATAL! No se encontró el driver JDBC de MySQL en el classpath.", e);
+                throw new RuntimeException("Driver MySQL no encontrado", e);
+            }
 
             // 5. Crear el EntityManagerFactory pasando el mapa de propiedades
             // Las propiedades en el mapa sobrescriben o complementan las de persistence.xml
