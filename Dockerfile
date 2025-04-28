@@ -4,7 +4,7 @@
 
  RUN rm -rf /usr/local/tomcat/webapps/*
  
-
+ COPY docker/tomcat/conf/server.xml /usr/local/tomcat/conf/server.xml
  COPY target/BeatpassTFG.war /usr/local/tomcat/webapps/ROOT.war
  
 
