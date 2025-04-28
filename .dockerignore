@@ -1,0 +1,12 @@
+# .dockerignore
+/target/*
+# Include WAR for deployment
+!target/BeatpassTFG.war
+
+node_modules/
+.git/
+.gitignore
+.idea/
+*.log
+
+recursos/

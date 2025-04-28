@@ -32,3 +32,6 @@ Thumbs.db
 .idea/
 *.swp
 .vscode/
+
+#node.js files
+node_modules/

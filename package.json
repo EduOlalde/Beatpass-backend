@@ -1,0 +1,26 @@
+{
+  "name": "beatpasstfg",
+  "version": "1.0.0",
+  "description": "**Beatpass** es un proyecto de Fin de Grado (TFG) que consiste en una plataforma web desarrollada con Jakarta EE para la gestión y venta de entradas para festivales de música. El sistema ofrece un servicio especializado para promotores de eventos, permitiéndoles crear y administrar sus festivales, definir tipos de entrada, gestionar ventas y asistentes.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/EduOlalde/DAW2-TFG-Beatpass.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/EduOlalde/DAW2-TFG-Beatpass/issues"
+  },
+  "homepage": "https://github.com/EduOlalde/DAW2-TFG-Beatpass#readme",
+  "devDependencies": {
+    "tailwindcss": "^4.1.4"
+  },
+  "dependencies": {
+    "@tailwindcss/cli": "^4.1.4"
+  }
+}

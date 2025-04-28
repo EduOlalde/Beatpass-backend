@@ -7,19 +7,11 @@
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Cambiar Contraseña - Beatpass</title>
-        <%-- Tailwind CSS desde CDN --%>
-        <script src="https://cdn.tailwindcss.com"></script>
         <%-- Fuente Inter --%>
         <link rel="preconnect" href="https://fonts.googleapis.com">
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-        <style>
-            /* Estilos base generales, @apply eliminado */
-            body {
-                font-family: 'Inter', sans-serif;
-            }
-            /* Puedes añadir otros estilos CSS estándar aquí si los necesitas */
-        </style>
+        <link rel="stylesheet" href="${pageContext.request.contextPath}/css/output.css">
     </head>
     <body class="bg-gray-100 min-h-screen flex items-center justify-center p-4">
 

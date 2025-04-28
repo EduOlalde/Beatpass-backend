@@ -8,12 +8,7 @@
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Iniciar Sesión - Beatpass</title>
-        <script src="https://cdn.tailwindcss.com"></script>
-        <style>
-            body {
-                font-family: 'Inter', sans-serif;
-            }
-        </style>
+        <link rel="stylesheet" href="${pageContext.request.contextPath}/css/output.css">
     </head>
     <body class="bg-gradient-to-r from-blue-500 to-purple-600 min-h-screen flex items-center justify-center">
 
