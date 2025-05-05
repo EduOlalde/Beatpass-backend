@@ -1,6 +1,8 @@
 package com.daw2edudiego.beatpasstfg.web;
 
-import com.daw2edudiego.beatpasstfg.dto.EntradaAsignadaDTO;
+import com.daw2edudiego.beatpasstfg.dto.CompraDTO;
+import com.daw2edudiego.beatpasstfg.dto.IniciarCompraRequestDTO;
+import com.daw2edudiego.beatpasstfg.dto.IniciarCompraResponseDTO;
 import com.daw2edudiego.beatpasstfg.exception.*;
 import com.daw2edudiego.beatpasstfg.model.Asistente;
 import com.daw2edudiego.beatpasstfg.model.EntradaAsignada;
@@ -9,7 +11,6 @@ import com.daw2edudiego.beatpasstfg.service.*;
 import com.daw2edudiego.beatpasstfg.repository.EntradaAsignadaRepository;
 import com.daw2edudiego.beatpasstfg.repository.EntradaAsignadaRepositoryImpl;
 import com.daw2edudiego.beatpasstfg.util.JPAUtil;
-import com.daw2edudiego.beatpasstfg.util.QRCodeUtil;
 
 // Imports JAX-RS
 import jakarta.ws.rs.*;
@@ -17,7 +18,7 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityTransaction;
-import jakarta.persistence.PersistenceException;
+import jakarta.validation.Valid;
 
 // Logging
 import org.slf4j.Logger;
@@ -28,37 +29,27 @@ import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
-import java.util.List;
-import java.util.stream.Collectors;
 
 /**
  * Recurso JAX-RS que expone endpoints RESTful públicos para operaciones de
- * venta y nominación de entradas, destinados a ser consumidos por las páginas
- * web de venta de entradas de los festivales.
- * <p>
- * Estos endpoints están diseñados para ser accesibles sin autenticación JWT
- * compleja (excluidos por el
- * {@link com.daw2edudiego.beatpasstfg.security.AuthenticationFilter}). Sin
- * embargo, en un entorno de producción real, deberían implementarse medidas de
- * seguridad adicionales (CSRF, rate limiting, captchas, etc.).
- * </p>
+ * venta y nominación de entradas. Ahora incluye la confirmación de pago.
  *
  * @see VentaService
  * @see AsistenteService
  * @see EntradaAsignadaService
  * @author Eduardo Olalde
  */
-@Path("/public/venta") // Nueva ruta base pública
+@Path("/public/venta")
 @Produces(MediaType.APPLICATION_JSON)
 public class PublicVentaResource {
 
     private static final Logger log = LoggerFactory.getLogger(PublicVentaResource.class);
 
-    // Inyección manual de dependencias
+    // Servicios
     private final VentaService ventaService;
     private final AsistenteService asistenteService;
-    private final EntradaAsignadaRepository entradaAsignadaRepository;
-    private final EntradaAsignadaService entradaAsignadaService;
+    private final EntradaAsignadaRepository entradaAsignadaRepository; // Mantenido para /nominar
+    private final EntradaAsignadaService entradaAsignadaService; // Mantenido para /nominar
 
     /**
      * Constructor que inicializa los servicios y repositorios necesarios.
@@ -66,81 +57,145 @@ public class PublicVentaResource {
     public PublicVentaResource() {
         this.ventaService = new VentaServiceImpl();
         this.asistenteService = new AsistenteServiceImpl();
-        this.entradaAsignadaRepository = new EntradaAsignadaRepositoryImpl();
-        this.entradaAsignadaService = new EntradaAsignadaServiceImpl();
+        this.entradaAsignadaRepository = new EntradaAsignadaRepositoryImpl(); // Para /nominar
+        this.entradaAsignadaService = new EntradaAsignadaServiceImpl(); // Para /nominar
     }
 
     /**
-     * Endpoint POST público para realizar la compra de entradas. Recibe los
-     * datos del asistente y la compra deseada. Internamente, obtiene o crea el
-     * asistente y luego registra la venta.
+     * Endpoint POST público para iniciar el proceso de pago. Recibe el ID de la
+     * entrada y la cantidad, calcula el total, crea un PaymentIntent en Stripe
+     * y devuelve el client_secret.
      *
-     * @param idFestival ID del festival (puede ser útil para validaciones
-     * futuras).
-     * @param idEntrada ID del tipo de entrada a comprar.
-     * @param cantidad Número de entradas a comprar.
-     * @param emailAsistente Email del comprador.
-     * @param nombreAsistente Nombre del comprador.
-     * @param telefonoAsistente Teléfono del comprador (opcional).
-     * @return Respuesta HTTP (ver Javadoc de VentaService).
+     * @param requestDTO DTO que contiene idEntrada y cantidad.
+     * @return Respuesta HTTP: 200 OK con el client_secret, o error 4xx/5xx.
      */
     @POST
-    @Path("/comprar") // Ruta: /api/public/venta/comprar
+    @Path("/iniciar-pago") // Nueva ruta para iniciar el pago
+    @Consumes(MediaType.APPLICATION_JSON) // Espera JSON en el cuerpo
+    public Response iniciarPago(@Valid IniciarCompraRequestDTO requestDTO) {
+
+        log.info("POST /public/venta/iniciar-pago - Entrada ID: {}, Cantidad: {}",
+                requestDTO != null ? requestDTO.getIdEntrada() : "null",
+                requestDTO != null ? requestDTO.getCantidad() : "null");
+
+        // Validación básica (complementaria a @Valid)
+        if (requestDTO == null || requestDTO.getIdEntrada() == null || requestDTO.getCantidad() == null || requestDTO.getCantidad() <= 0) {
+            return crearRespuestaError(Response.Status.BAD_REQUEST, "Datos inválidos. Se requiere idEntrada y cantidad > 0.");
+        }
+
+        try {
+            // Llamar al servicio para iniciar el proceso y obtener el DTO de respuesta
+            IniciarCompraResponseDTO responseDTO = ventaService.iniciarProcesoPago(
+                    requestDTO.getIdEntrada(),
+                    requestDTO.getCantidad()
+            );
+
+            log.info("Proceso de pago iniciado. Devolviendo client_secret para Entrada ID {}", requestDTO.getIdEntrada());
+            // Devolver 200 OK con el DTO que contiene el client_secret
+            return Response.ok(responseDTO).build();
+
+        } catch (EntradaNotFoundException | FestivalNoPublicadoException e) {
+            // Errores conocidos que indican que la compra no puede proceder
+            log.warn("No se pudo iniciar el pago para Entrada ID {}: {}", requestDTO.getIdEntrada(), e.getMessage());
+            return crearRespuestaError(Response.Status.BAD_REQUEST, e.getMessage()); // 400 Bad Request
+        } catch (IllegalArgumentException e) {
+            // Errores en los parámetros de entrada
+            log.warn("Argumento inválido al iniciar pago para Entrada ID {}: {}", requestDTO.getIdEntrada(), e.getMessage());
+            return crearRespuestaError(Response.Status.BAD_REQUEST, e.getMessage()); // 400 Bad Request
+        } catch (Exception e) {
+            // Errores inesperados (Stripe API, cálculo, etc.)
+            log.error("Error interno en POST /public/venta/iniciar-pago para Entrada ID {}: {}", requestDTO.getIdEntrada(), e.getMessage(), e);
+            return crearRespuestaError(Response.Status.INTERNAL_SERVER_ERROR, "Error interno al iniciar el proceso de pago."); // 500 Internal Server Error
+        }
+    }
+
+    /**
+     * Endpoint POST público para confirmar la compra de entradas DESPUÉS de que
+     * el pago haya sido procesado exitosamente en el frontend con Stripe.
+     * Recibe el ID del PaymentIntent confirmado.
+     *
+     * @param idFestival ID del festival (puede ser útil para contexto).
+     * @param idEntrada ID del tipo de entrada comprado.
+     * @param cantidad Número de entradas compradas.
+     * @param emailAsistente Email del comprador (para buscar/crear asistente).
+     * @param nombreAsistente Nombre del comprador (para crear asistente si no
+     * existe).
+     * @param telefonoAsistente Teléfono del comprador (opcional).
+     * @param paymentIntentId ID del PaymentIntent de Stripe ('pi_...'), debe
+     * estar 'succeeded'.
+     * @return Respuesta HTTP: 200 OK con DTO de la compra si éxito, o error
+     * 4xx/5xx.
+     */
+    @POST
+    @Path("/confirmar-compra")
     @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
-    public Response comprarEntradas(
-            @FormParam("idFestival") Integer idFestival,
+    public Response confirmarCompraConPago(
+            @FormParam("idFestival") Integer idFestival, // Aún puede ser útil para contexto
             @FormParam("idEntrada") Integer idEntrada,
             @FormParam("cantidad") Integer cantidad,
             @FormParam("emailAsistente") String emailAsistente,
             @FormParam("nombreAsistente") String nombreAsistente,
-            @FormParam("telefonoAsistente") String telefonoAsistente) {
+            @FormParam("telefonoAsistente") String telefonoAsistente,
+            @FormParam("paymentIntentId") String paymentIntentId) { // ID de Stripe
 
-        log.info("POST /public/venta/comprar - Festival: {}, Entrada: {}, Cant: {}, Email: {}",
-                idFestival, idEntrada, cantidad, emailAsistente);
+        log.info("POST /public/venta/confirmar-compra - Entrada: {}, Cant: {}, Email: {}, PI: {}",
+                idEntrada, cantidad, emailAsistente, paymentIntentId);
 
-        // Validación básica
-        if (idFestival == null || idEntrada == null || cantidad == null || cantidad <= 0
+        // Validación básica de parámetros obligatorios
+        if (idEntrada == null || cantidad == null || cantidad <= 0
                 || emailAsistente == null || emailAsistente.isBlank()
-                || nombreAsistente == null || nombreAsistente.isBlank()) {
-            return crearRespuestaError(Response.Status.BAD_REQUEST, "Faltan datos obligatorios (festival, entrada, cantidad > 0, email, nombre).");
+                || nombreAsistente == null || nombreAsistente.isBlank()
+                || paymentIntentId == null || paymentIntentId.isBlank()) {
+            return crearRespuestaError(Response.Status.BAD_REQUEST, "Faltan datos obligatorios (entrada, cantidad > 0, email, nombre, paymentIntentId).");
         }
 
         try {
-            // 1. Obtener o crear asistente
+            // 1. Obtener o crear asistente (igual que antes)
             Asistente asistente = asistenteService.obtenerOcrearAsistentePorEmail(emailAsistente, nombreAsistente, telefonoAsistente);
             log.debug("Asistente obtenido/creado ID: {}", asistente.getIdAsistente());
 
-            // 2. Registrar la venta
-            ventaService.registrarVenta(asistente.getIdAsistente(), idEntrada, cantidad);
-            log.info("Venta registrada exitosamente para asistente ID {}", asistente.getIdAsistente());
+            // 2. Llamar al NUEVO método del servicio que verifica el pago y registra la venta
+            CompraDTO compraConfirmada = ventaService.confirmarVentaConPago(
+                    asistente.getIdAsistente(),
+                    idEntrada,
+                    cantidad,
+                    paymentIntentId
+            );
 
-            // 3. Recuperar entradas generadas
-            List<EntradaAsignadaDTO> entradasGeneradasDTOs = obtenerEntradasRecienCompradas(asistente.getIdAsistente(), idEntrada, cantidad);
+            log.info("Compra confirmada exitosamente con pago verificado. Compra ID: {}, PI: {}",
+                    compraConfirmada.getIdCompra(), paymentIntentId);
 
-            return Response.ok(entradasGeneradasDTOs).build();
+            // Devolver 200 OK con el DTO de la compra confirmada
+            return Response.ok(compraConfirmada).build();
 
         } catch (AsistenteNotFoundException | EntradaNotFoundException | FestivalNotFoundException e) {
             return crearRespuestaError(Response.Status.NOT_FOUND, e.getMessage());
-        } catch (FestivalNoPublicadoException | StockInsuficienteException | IllegalArgumentException e) {
-            return crearRespuestaError(Response.Status.BAD_REQUEST, e.getMessage());
+        } catch (FestivalNoPublicadoException | StockInsuficienteException | IllegalArgumentException | VentaServiceImpl.PagoInvalidoException e) {
+            if (e instanceof VentaServiceImpl.PagoInvalidoException) {
+                log.warn("Error de pago al confirmar compra PI {}: {}", paymentIntentId, e.getMessage());
+                return crearRespuestaError(Response.Status.BAD_REQUEST, "Error con el pago: " + e.getMessage());
+            } else {
+                log.warn("Error de validación/negocio al confirmar compra PI {}: {}", paymentIntentId, e.getMessage());
+                return crearRespuestaError(Response.Status.BAD_REQUEST, e.getMessage());
+            }
         } catch (Exception e) {
-            log.error("Error interno en POST /public/venta/comprar: {}", e.getMessage(), e);
-            return crearRespuestaError(Response.Status.INTERNAL_SERVER_ERROR, "Error interno al procesar la compra.");
+            log.error("Error interno en POST /public/venta/confirmar-compra para PI {}: {}", paymentIntentId, e.getMessage(), e);
+            return crearRespuestaError(Response.Status.INTERNAL_SERVER_ERROR, "Error interno al confirmar la compra.");
         }
     }
 
     /**
-     * Endpoint POST público para nominar una entrada usando su código QR.
+     * Endpoint POST público para nominar una entrada usando su código QR. (Se
+     * mantiene igual, ya que no interactúa con el pago).
      *
      * @param codigoQr Contenido del código QR de la entrada a nominar.
      * @param emailNominado Email del asistente al que se nomina.
      * @param nombreNominado Nombre del asistente al que se nomina.
      * @param telefonoNominado Teléfono del asistente (opcional).
-     * @return Respuesta HTTP (ver Javadoc de EntradaAsignadaService o
-     * SimuladorResource).
+     * @return Respuesta HTTP.
      */
     @POST
-    @Path("/nominar") // Ruta: /api/public/venta/nominar
+    @Path("/nominar")
     @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
     public Response nominarEntrada(
             @FormParam("codigoQr") String codigoQr,
@@ -214,65 +269,7 @@ public class PublicVentaResource {
         }
     }
 
-    // --- Métodos Auxiliares (Copiados de SimuladorResource) ---
-    /**
-     * Método auxiliar para obtener las entradas recién compradas. NOTA:
-     * Solución temporal y potencialmente ineficiente.
-     */
-    private List<EntradaAsignadaDTO> obtenerEntradasRecienCompradas(Integer idAsistente, Integer idEntrada, int cantidad) {
-        EntityManager em = null;
-        try {
-            em = JPAUtil.createEntityManager();
-            String jpql = "SELECT ea FROM EntradaAsignada ea "
-                    + "JOIN ea.compraEntrada ce "
-                    + "JOIN ce.compra c "
-                    + "WHERE c.asistente.idAsistente = :asistenteId "
-                    + "AND ce.entrada.idEntrada = :entradaId "
-                    + "ORDER BY ea.idEntradaAsignada DESC";
-
-            List<EntradaAsignada> entradas = em.createQuery(jpql, EntradaAsignada.class)
-                    .setParameter("asistenteId", idAsistente)
-                    .setParameter("entradaId", idEntrada)
-                    .setMaxResults(cantidad)
-                    .getResultList();
-
-            if (entradas.size() != cantidad) {
-                log.warn("Se esperaban {} entradas generadas para asistente {} y entrada {}, pero se encontraron {}.",
-                        cantidad, idAsistente, idEntrada, entradas.size());
-            }
-
-            // Replicando lógica de mapeo temporalmente:
-            return entradas.stream()
-                    .map(ea -> {
-                        EntradaAsignadaDTO dto = new EntradaAsignadaDTO();
-                        dto.setIdEntradaAsignada(ea.getIdEntradaAsignada());
-                        dto.setCodigoQr(ea.getCodigoQr());
-                        dto.setEstado(ea.getEstado());
-                        dto.setFechaAsignacion(ea.getFechaAsignacion());
-                        if (ea.getCodigoQr() != null && !ea.getCodigoQr().isBlank()) {
-                            dto.setQrCodeImageDataUrl(QRCodeUtil.generarQrComoBase64(ea.getCodigoQr(), 100, 100));
-                        }
-                        if (ea.getCompraEntrada() != null && ea.getCompraEntrada().getEntrada() != null) {
-                            dto.setTipoEntradaOriginal(ea.getCompraEntrada().getEntrada().getTipo());
-                        }
-                        // Añadir datos del asistente si está nominado (aunque aquí no debería estarlo aún)
-                        if (ea.getAsistente() != null) {
-                            dto.setIdAsistente(ea.getAsistente().getIdAsistente());
-                            dto.setNombreAsistente(ea.getAsistente().getNombre());
-                            dto.setEmailAsistente(ea.getAsistente().getEmail());
-                        }
-                        return dto;
-                    })
-                    .collect(Collectors.toList());
-
-        } catch (Exception e) {
-            log.error("Error recuperando entradas recién compradas para asistente {} y entrada {}: {}", idAsistente, idEntrada, e.getMessage(), e);
-            return List.of(); // Devolver lista vacía en caso de error
-        } finally {
-            closeEntityManager(em);
-        }
-    }
-
+    // --- Métodos Auxiliares (Copiados y mantenidos) ---
     /**
      * Crea una respuesta de error JAX-RS estándar.
      */
@@ -316,4 +313,28 @@ public class PublicVentaResource {
             }
         }
     }
+
+    // --- Endpoint Obsoleto ---
+    /**
+     * Endpoint original para comprar entradas. Ahora obsoleto, usar
+     * /confirmar-compra.
+     *
+     * @deprecated Usar
+     * {@link #confirmarCompraConPago(Integer, Integer, Integer, String, String, String, String)}
+     */
+    @POST
+    @Path("/comprar")
+    @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
+    @Deprecated
+    public Response comprarEntradasObsoleto(
+            @FormParam("idFestival") Integer idFestival,
+            @FormParam("idEntrada") Integer idEntrada,
+            @FormParam("cantidad") Integer cantidad,
+            @FormParam("emailAsistente") String emailAsistente,
+            @FormParam("nombreAsistente") String nombreAsistente,
+            @FormParam("telefonoAsistente") String telefonoAsistente) {
+        log.warn("Llamada a endpoint obsoleto POST /public/venta/comprar");
+        return crearRespuestaError(Response.Status.GONE, "Este endpoint está obsoleto. Use /api/public/venta/confirmar-compra después de procesar el pago.");
+    }
+
 }

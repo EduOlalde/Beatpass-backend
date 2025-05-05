@@ -1,5 +1,7 @@
 package com.daw2edudiego.beatpasstfg.service;
 
+import com.daw2edudiego.beatpasstfg.dto.CompraDTO;
+import com.daw2edudiego.beatpasstfg.dto.IniciarCompraResponseDTO;
 import com.daw2edudiego.beatpasstfg.exception.*;
 
 /**
@@ -60,12 +62,53 @@ public interface VentaService {
      * a cero.
      * @throws RuntimeException Si ocurre un error inesperado durante la
      * transacción (ej: error al generar QR, error de persistencia).
+     * @deprecated Considerar usar
+     * {@link #confirmarVentaConPago(Integer, Integer, int, String)}
      */
     void registrarVenta(Integer idAsistente, Integer idEntrada, int cantidad);
 
-    // Aquí podrían añadirse otros métodos relacionados con el ciclo de vida de una venta,
-    // como consulta de historial de compras por asistente, gestión de devoluciones (si aplica), etc.
-    // Ejemplo:
-    // List<CompraResumenDTO> obtenerHistorialCompras(Integer idAsistente);
-    // void solicitarDevolucion(Integer idCompra, Integer idUsuario);
+    /**
+     * Confirma una venta después de verificar un pago exitoso con Stripe.
+     *
+     * @param idAsistente ID del asistente que realiza la compra.
+     * @param idEntrada ID del tipo de entrada que se compra.
+     * @param cantidad Número de entradas a comprar (debe ser > 0).
+     * @param paymentIntentId El ID del PaymentIntent de Stripe (ej: "pi_...")
+     * que ya debe estar en estado 'succeeded'.
+     * @return Un DTO de la Compra creada.
+     * @throws AsistenteNotFoundException Si el asistente no existe.
+     * @throws EntradaNotFoundException Si la entrada no existe.
+     * @throws FestivalNoPublicadoException Si el festival no está publicado.
+     * @throws StockInsuficienteException Si no hay stock suficiente.
+     * @throws PagoInvalidoException Si el PaymentIntent no es válido o no
+     * coincide.
+     * @throws IllegalArgumentException Si los IDs son nulos, cantidad <= 0, o
+     * paymentIntentId es inválido. @throws RuntimeException Si ocurre un error
+     * inesperado.
+     */
+    CompraDTO confirmarVentaConPago(Integer idAsistente, Integer idEntrada, int cantidad, String paymentIntentId)
+            throws AsistenteNotFoundException, EntradaNotFoundException, FestivalNoPublicadoException,
+            StockInsuficienteException, PagoInvalidoException, IllegalArgumentException;
+
+    /**
+     * Inicia el proceso de pago para una compra potencial. Calcula el total
+     * basado en el tipo de entrada y la cantidad, crea un PaymentIntent en
+     * Stripe y devuelve su client_secret. Este método NO crea registros de
+     * Compra ni descuenta stock; eso ocurre en {@link #confirmarVentaConPago}.
+     *
+     * @param idEntrada ID del tipo de entrada deseado. No debe ser
+     * {@code null}.
+     * @param cantidad Número de entradas deseadas. Debe ser > 0.
+     * @return Un {@link IniciarCompraResponseDTO} que contiene el client_secret
+     * del PaymentIntent creado.
+     * @throws EntradaNotFoundException Si el tipo de entrada no existe.
+     * @throws FestivalNoPublicadoException Si el festival asociado no está
+     * publicado.
+     * @throws IllegalArgumentException Si idEntrada es null o cantidad <= 0.
+     * @throws RuntimeException Si ocurre un error al calcular el total o al
+     * interactuar con Stripe.
+     */
+    IniciarCompraResponseDTO iniciarProcesoPago(Integer idEntrada, int cantidad)
+            throws EntradaNotFoundException, FestivalNoPublicadoException, IllegalArgumentException;
+
 }

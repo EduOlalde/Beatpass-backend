@@ -71,6 +71,28 @@ public class Compra implements Serializable {
     private Set<CompraEntrada> detallesCompra = new HashSet<>();
 
     /**
+     * Identificador del PaymentIntent de Stripe asociado a esta compra. Puede
+     * ser null si la compra no se procesó con Stripe o antes de la
+     * confirmación.
+     */
+    @Column(name = "stripe_payment_intent_id", length = 255, unique = true, nullable = true)
+    private String stripePaymentIntentId;
+
+    /**
+     * Estado del pago registrado en el sistema local. Podría ser 'PENDIENTE',
+     * 'PAGADO', 'FALLIDO', 'REEMBOLSADO'. Se recomienda usar una Enum en
+     * aplicaciones más complejas.
+     */
+    @Column(name = "estado_pago", length = 50, nullable = true)
+    private String estadoPago; // Considerar usar una Enum aquí
+
+    /**
+     * Fecha y hora en que se confirmó el pago (opcional).
+     */
+    @Column(name = "fecha_pago_confirmado", nullable = true)
+    private LocalDateTime fechaPagoConfirmado;
+
+    /**
      * Constructor por defecto requerido por JPA.
      */
     public Compra() {
@@ -167,7 +189,31 @@ public class Compra implements Serializable {
     public void setDetallesCompra(Set<CompraEntrada> detallesCompra) {
         this.detallesCompra = detallesCompra;
     }
+    
+    public String getStripePaymentIntentId() {
+        return stripePaymentIntentId;
+    }
 
+    public void setStripePaymentIntentId(String stripePaymentIntentId) {
+        this.stripePaymentIntentId = stripePaymentIntentId;
+    }
+
+    public String getEstadoPago() {
+        return estadoPago;
+    }
+
+    public void setEstadoPago(String estadoPago) {
+        this.estadoPago = estadoPago;
+    }
+
+     public LocalDateTime getFechaPagoConfirmado() {
+        return fechaPagoConfirmado;
+    }
+
+    public void setFechaPagoConfirmado(LocalDateTime fechaPagoConfirmado) {
+        this.fechaPagoConfirmado = fechaPagoConfirmado;
+    }
+    
     // --- equals, hashCode y toString ---
     /**
      * Compara esta Compra con otro objeto para determinar si son iguales. Dos
@@ -212,6 +258,8 @@ public class Compra implements Serializable {
                 + ", fechaCompra=" + fechaCompra
                 + ", total=" + total
                 + ", asistenteId=" + (asistente != null ? asistente.getIdAsistente() : "null")
+                + ", stripePaymentIntentId='" + stripePaymentIntentId + '\''
+                + ", estadoPago='" + estadoPago + '\''
                 + '}';
     }
 }

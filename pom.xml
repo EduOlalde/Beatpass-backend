@@ -19,7 +19,8 @@
         <jakartaee.api.version>9.1.0</jakartaee.api.version>
         <jstl.api.version>3.0.0</jstl.api.version>
         <jstl.impl.version>3.0.1</jstl.impl.version>
-        <hibernate.version>6.4.4.Final</hibernate.version> <hibernate.validator.version>8.0.1.Final</hibernate.validator.version>
+        <hibernate.version>6.4.4.Final</hibernate.version> 
+        <hibernate.validator.version>8.0.1.Final</hibernate.validator.version>
         <jersey.version>3.1.5</jersey.version>
         <mysql.connector.version>8.0.33</mysql.connector.version>
         <slf4j.version>2.0.7</slf4j.version>
@@ -33,6 +34,7 @@
         <maven.compiler.plugin.version>3.12.1</maven.compiler.plugin.version>
         <maven.war.plugin.version>3.3.2</maven.war.plugin.version>
         <hikaricp.version>5.1.0</hikaricp.version>
+        <stripe.version>25.11.0</stripe.version>
     </properties>
 
     <dependencies>
@@ -159,12 +161,19 @@
         <dependency>
             <groupId>com.zaxxer</groupId>
             <artifactId>HikariCP</artifactId>
-            <version>${hikaricp.version}</version> </dependency>
+            <version>${hikaricp.version}</version> 
+        </dependency>
         <dependency>
             <groupId>org.hibernate.orm</groupId>
             <artifactId>hibernate-hikaricp</artifactId>
-            <version>${hibernate.version}</version> </dependency>
-        </dependencies>
+            <version>${hibernate.version}</version> 
+        </dependency>
+        <dependency>
+            <groupId>com.stripe</groupId>
+            <artifactId>stripe-java</artifactId>
+            <version>${stripe.version}</version>
+        </dependency>
+    </dependencies>
 
     <build>
         <finalName>BeatpassTFG</finalName>
