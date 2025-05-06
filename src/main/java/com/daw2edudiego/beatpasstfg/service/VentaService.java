@@ -62,7 +62,8 @@ public interface VentaService {
      * a cero.
      * @throws RuntimeException Si ocurre un error inesperado durante la
      * transacción (ej: error al generar QR, error de persistencia).
-     * @deprecated Considerar usar
+     * @deprecated
+     * @Deprecated Considerar usar
      * {@link #confirmarVentaConPago(Integer, Integer, int, String)}
      */
     void registrarVenta(Integer idAsistente, Integer idEntrada, int cantidad);

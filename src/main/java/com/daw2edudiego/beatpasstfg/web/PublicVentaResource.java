@@ -170,8 +170,8 @@ public class PublicVentaResource {
 
         } catch (AsistenteNotFoundException | EntradaNotFoundException | FestivalNotFoundException e) {
             return crearRespuestaError(Response.Status.NOT_FOUND, e.getMessage());
-        } catch (FestivalNoPublicadoException | StockInsuficienteException | IllegalArgumentException | VentaServiceImpl.PagoInvalidoException e) {
-            if (e instanceof VentaServiceImpl.PagoInvalidoException) {
+        } catch (FestivalNoPublicadoException | StockInsuficienteException | IllegalArgumentException | PagoInvalidoException e) {
+            if (e instanceof PagoInvalidoException) {
                 log.warn("Error de pago al confirmar compra PI {}: {}", paymentIntentId, e.getMessage());
                 return crearRespuestaError(Response.Status.BAD_REQUEST, "Error con el pago: " + e.getMessage());
             } else {

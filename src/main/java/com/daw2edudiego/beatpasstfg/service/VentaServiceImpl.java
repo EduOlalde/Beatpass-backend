@@ -1,6 +1,7 @@
 package com.daw2edudiego.beatpasstfg.service;
 
 import com.daw2edudiego.beatpasstfg.dto.CompraDTO;
+import com.daw2edudiego.beatpasstfg.dto.EntradaAsignadaDTO; 
 import com.daw2edudiego.beatpasstfg.dto.IniciarCompraResponseDTO;
 import com.daw2edudiego.beatpasstfg.exception.*;
 import com.daw2edudiego.beatpasstfg.model.*;
@@ -53,7 +54,7 @@ public class VentaServiceImpl implements VentaService {
     private final CompraEntradaRepository compraEntradaRepository;
     private final EntradaAsignadaRepository entradaAsignadaRepository;
 
-    // Constante para la moneda esperada (ajustar si es necesario, ej: "usd")
+    // Constante para la moneda esperada
     private static final String EXPECTED_CURRENCY = "eur";
 
     /**
@@ -106,37 +107,27 @@ public class VentaServiceImpl implements VentaService {
 
         EntityManager em = null;
         EntityTransaction tx = null;
-        Entrada entrada; // Declarar fuera para usar en cálculo de total
+        Entrada entrada;
+        List<EntradaAsignada> entradasGeneradasPersistidas = new ArrayList<>(); // Para guardar las entidades generadas
 
         try {
             // --- Paso 1: Validaciones previas y cálculo del total esperado (sin TX aún) ---
-            em = JPAUtil.createEntityManager(); // Crear EM para lecturas iniciales
-
-            // Buscar Asistente
+            em = JPAUtil.createEntityManager();
             Asistente asistente = asistenteRepository.findById(em, idAsistente)
                     .orElseThrow(() -> new AsistenteNotFoundException("Asistente no encontrado con ID: " + idAsistente));
-
-            // Buscar Tipo de Entrada (sin bloqueo aún)
             entrada = entradaRepository.findById(em, idEntrada)
                     .orElseThrow(() -> new EntradaNotFoundException("Tipo de entrada no encontrado con ID: " + idEntrada));
-
-            // Verificar Festival y su Estado
             Festival festival = entrada.getFestival();
             if (festival == null) {
-                log.error("Inconsistencia: Entrada ID {} sin festival asociado.", idEntrada);
                 throw new IllegalStateException("Error interno: La entrada no está asociada a ningún festival.");
             }
             if (festival.getEstado() != EstadoFestival.PUBLICADO) {
-                log.warn("Intento de compra para festival ID {} no PUBLICADO (Estado: {})", festival.getIdFestival(), festival.getEstado());
                 throw new FestivalNoPublicadoException("No se pueden comprar entradas para el festival '"
                         + festival.getNombre() + "' (estado: " + festival.getEstado() + ").");
             }
-
-            // Calcular el total esperado (en la menor unidad de la moneda, ej. céntimos para EUR)
             BigDecimal totalEsperadoDecimal = entrada.getPrecio().multiply(new BigDecimal(cantidad));
             long totalEsperadoCentimos = totalEsperadoDecimal.multiply(new BigDecimal(100)).longValueExact();
-
-            closeEntityManager(em); // Cerrar EM usado para lecturas iniciales
+            closeEntityManager(em); // Cerrar EM inicial
 
             // --- Paso 2: Verificación del Pago con Stripe ---
             log.debug("Verificando PaymentIntent de Stripe: {}", paymentIntentId);
@@ -144,51 +135,36 @@ public class VentaServiceImpl implements VentaService {
             try {
                 PaymentIntentRetrieveParams params = PaymentIntentRetrieveParams.builder().build();
                 paymentIntent = PaymentIntent.retrieve(paymentIntentId, params, null);
-
                 if (!"succeeded".equals(paymentIntent.getStatus())) {
-                    log.warn("Stripe PaymentIntent {} no está en estado 'succeeded'. Estado actual: {}", paymentIntentId, paymentIntent.getStatus());
-                    throw new PagoInvalidoException("El pago no se ha completado correctamente (Estado: " + paymentIntent.getStatus() + ")");
+                    throw new PagoInvalidoException("El pago no se ha completado correctamente (Estado Stripe: " + paymentIntent.getStatus() + ")");
                 }
                 if (paymentIntent.getAmount() == null || paymentIntent.getAmount() != totalEsperadoCentimos) {
-                    log.warn("Discrepancia en el monto del pago. Esperado: {} céntimos, Recibido: {} céntimos", totalEsperadoCentimos, paymentIntent.getAmount());
                     throw new PagoInvalidoException("El monto del pago (" + paymentIntent.getAmount() + ") no coincide con el total esperado (" + totalEsperadoCentimos + ").");
                 }
                 if (!EXPECTED_CURRENCY.equalsIgnoreCase(paymentIntent.getCurrency())) {
-                    log.warn("Discrepancia en la moneda del pago. Esperada: {}, Recibida: {}", EXPECTED_CURRENCY, paymentIntent.getCurrency());
                     throw new PagoInvalidoException("La moneda del pago (" + paymentIntent.getCurrency() + ") no coincide con la esperada (" + EXPECTED_CURRENCY + ").");
                 }
-                log.info("Verificación de Stripe PaymentIntent {} exitosa (succeeded, monto y moneda OK).", paymentIntentId);
-
+                log.info("Verificación de Stripe PaymentIntent {} exitosa.", paymentIntentId);
             } catch (StripeException e) {
-                log.error("Error al verificar PaymentIntent {} con Stripe: {}", paymentIntentId, e.getMessage());
                 throw new PagoInvalidoException("Error al verificar el estado del pago con la pasarela: " + e.getMessage(), e);
             }
 
-            // --- Paso 3: Proceder con la lógica de negocio (Ahora dentro de una transacción) ---
+            // --- Paso 3: Proceder con la lógica de negocio (Transacción JPA) ---
             em = JPAUtil.createEntityManager();
             tx = em.getTransaction();
-            tx.begin(); // Iniciar transacción
+            tx.begin();
 
-            // Volver a buscar Asistente (dentro de la TX)
             asistente = asistenteRepository.findById(em, idAsistente)
                     .orElseThrow(() -> new AsistenteNotFoundException("Asistente no encontrado con ID: " + idAsistente));
-
-            // Volver a buscar Entrada y BLOQUEARLA ahora
             entrada = em.find(Entrada.class, idEntrada, LockModeType.PESSIMISTIC_WRITE);
             if (entrada == null) {
                 throw new EntradaNotFoundException("Tipo de entrada no encontrado con ID: " + idEntrada);
             }
-            log.debug("Entrada ID {} encontrada y bloqueada dentro de TX. Stock actual: {}", idEntrada, entrada.getStock());
-
-            // Re-verificar stock (importante por el bloqueo)
             if (entrada.getStock() == null || entrada.getStock() < cantidad) {
-                log.warn("Stock insuficiente (verificado dentro de TX con bloqueo) para entrada ID {}. Solicitado: {}, Disponible: {}",
-                        idEntrada, cantidad, entrada.getStock());
                 throw new StockInsuficienteException("Lo sentimos, el stock (" + entrada.getStock() + ") para el tipo de entrada '"
                         + entrada.getTipo() + "' se agotó mientras procesabas el pago.");
             }
 
-            // Crear la Compra con datos de Stripe
             Compra compra = new Compra();
             compra.setAsistente(asistente);
             compra.setTotal(totalEsperadoDecimal);
@@ -199,19 +175,15 @@ public class VentaServiceImpl implements VentaService {
                 compra.setFechaPagoConfirmado(LocalDateTime.ofInstant(instant, ZoneId.systemDefault()));
             }
             compra = compraRepository.save(em, compra);
-            log.debug("Compra ID: {} creada con datos de Stripe para Asistente ID: {}", compra.getIdCompra(), idAsistente);
 
-            // Crear CompraEntrada
             CompraEntrada compraEntrada = new CompraEntrada();
             compraEntrada.setCompra(compra);
             compraEntrada.setEntrada(entrada);
             compraEntrada.setCantidad(cantidad);
             compraEntrada.setPrecioUnitario(entrada.getPrecio());
             compraEntrada = compraEntradaRepository.save(em, compraEntrada);
-            log.debug("CompraEntrada ID: {} creada para Compra ID: {}", compraEntrada.getIdCompraEntrada(), compra.getIdCompra());
 
-            // Generar Entradas Asignadas
-            List<EntradaAsignada> entradasGeneradas = new ArrayList<>();
+            // Generar Entradas Asignadas y guardarlas en la lista
             for (int i = 0; i < cantidad; i++) {
                 EntradaAsignada entradaAsignada = new EntradaAsignada();
                 entradaAsignada.setCompraEntrada(compraEntrada);
@@ -219,31 +191,29 @@ public class VentaServiceImpl implements VentaService {
                 String qrContent = QRCodeUtil.generarContenidoQrUnico();
                 entradaAsignada.setCodigoQr(qrContent);
                 entradaAsignada = entradaAsignadaRepository.save(em, entradaAsignada);
-                entradasGeneradas.add(entradaAsignada);
+                entradasGeneradasPersistidas.add(entradaAsignada); // <-- Guardar la entidad generada
                 log.trace("Generada y guardada EntradaAsignada ID: {} con QR final: ...{}",
                         entradaAsignada.getIdEntradaAsignada(),
                         qrContent.substring(Math.max(0, qrContent.length() - 6)));
             }
             log.debug("Generadas {} entradas asignadas para CompraEntrada ID: {}", cantidad, compraEntrada.getIdCompraEntrada());
 
-            // Actualizar Stock
             int nuevoStock = entrada.getStock() - cantidad;
             entrada.setStock(nuevoStock);
             entradaRepository.save(em, entrada);
             log.info("Stock actualizado para Entrada ID {}. Nuevo stock: {}", idEntrada, nuevoStock);
 
-            // Confirmar transacción
             tx.commit();
             log.info("Venta confirmada con pago exitoso y transacción completada. Compra ID: {}, PI: {}",
                     compra.getIdCompra(), paymentIntentId);
 
-            // Mapear Compra a CompraDTO para devolver
-            CompraDTO compraDTO = mapCompraToDTO(compra);
+            // Mapear Compra a CompraDTO, incluyendo las entradas generadas
+            CompraDTO compraDTO = mapCompraToDTO(compra, entradasGeneradasPersistidas); // <-- Pasar lista de entidades
             return compraDTO;
 
         } catch (Exception e) {
             handleException(e, tx, "confirmar venta con pago para PI " + paymentIntentId);
-            throw mapException(e); // Relanzar excepción mapeada
+            throw mapException(e);
         } finally {
             closeEntityManager(em);
         }
@@ -251,22 +221,6 @@ public class VentaServiceImpl implements VentaService {
 
     /**
      * {@inheritDoc}
-     *
-     * Este método calcula el total, crea un PaymentIntent en Stripe y devuelve
-     * el client_secret necesario para que el frontend procese el pago. No
-     * realiza operaciones de base de datos persistentes (solo lectura).
-     *
-     * @param idEntrada ID del tipo de entrada deseado. No debe ser
-     * {@code null}.
-     * @param cantidad Número de entradas deseadas. Debe ser > 0.
-     * @return Un {@link IniciarCompraResponseDTO} que contiene el
-     * client_secret.
-     * @throws EntradaNotFoundException Si el tipo de entrada no existe.
-     * @throws FestivalNoPublicadoException Si el festival asociado no está
-     * publicado.
-     * @throws IllegalArgumentException Si idEntrada es null o cantidad <= 0.
-     * @throws RuntimeException Si ocurre un error al calcular el total o al
-     * interactuar con Stripe.
      */
     @Override
     public IniciarCompraResponseDTO iniciarProcesoPago(Integer idEntrada, int cantidad)
@@ -274,7 +228,6 @@ public class VentaServiceImpl implements VentaService {
 
         log.info("Service: Iniciando proceso de pago - Entrada ID: {}, Cantidad: {}", idEntrada, cantidad);
 
-        // Validación inicial
         if (idEntrada == null) {
             throw new IllegalArgumentException("ID de entrada es requerido.");
         }
@@ -284,68 +237,41 @@ public class VentaServiceImpl implements VentaService {
 
         EntityManager em = null;
         try {
-            // --- Obtener datos necesarios (solo lectura) ---
             em = JPAUtil.createEntityManager();
-
-            // Buscar Tipo de Entrada
             Entrada entrada = entradaRepository.findById(em, idEntrada)
                     .orElseThrow(() -> new EntradaNotFoundException("Tipo de entrada no encontrado con ID: " + idEntrada));
-
-            // Verificar Festival y Estado
             Festival festival = entrada.getFestival();
             if (festival == null) {
-                log.error("Inconsistencia: Entrada ID {} sin festival asociado.", idEntrada);
                 throw new IllegalStateException("Error interno: La entrada no está asociada a ningún festival.");
             }
             if (festival.getEstado() != EstadoFestival.PUBLICADO) {
-                log.warn("Intento de iniciar pago para festival ID {} no PUBLICADO (Estado: {})", festival.getIdFestival(), festival.getEstado());
                 throw new FestivalNoPublicadoException("No se pueden comprar entradas para el festival '"
                         + festival.getNombre() + "' (estado: " + festival.getEstado() + ").");
             }
 
-            // Calcular total en céntimos
             BigDecimal totalDecimal = entrada.getPrecio().multiply(new BigDecimal(cantidad));
             long totalCentimos = totalDecimal.multiply(new BigDecimal(100)).longValueExact();
             log.debug("Total calculado para {} entradas de tipo '{}': {} {} ({} céntimos)",
                     cantidad, entrada.getTipo(), totalDecimal, EXPECTED_CURRENCY.toUpperCase(), totalCentimos);
 
-            // --- Crear PaymentIntent en Stripe ---
             log.debug("Creando PaymentIntent en Stripe...");
             PaymentIntent paymentIntent;
             try {
-                // Parámetros para crear el PaymentIntent
                 PaymentIntentCreateParams params = PaymentIntentCreateParams.builder()
-                        .setAmount(totalCentimos) // Monto en la menor unidad (céntimos)
-                        .setCurrency(EXPECTED_CURRENCY) // Moneda (ej: "eur")
-                        // Habilitar métodos de pago automáticos (recomendado por Stripe)
+                        .setAmount(totalCentimos)
+                        .setCurrency(EXPECTED_CURRENCY)
                         .setAutomaticPaymentMethods(
-                                PaymentIntentCreateParams.AutomaticPaymentMethods.builder()
-                                        .setEnabled(true)
-                                        .build()
+                                PaymentIntentCreateParams.AutomaticPaymentMethods.builder().setEnabled(true).build()
                         )
-                        // Puedes añadir metadata si es útil (ej: idEntrada, cantidad)
-                        // .putMetadata("idEntrada", idEntrada.toString())
-                        // .putMetadata("cantidad", String.valueOf(cantidad))
-                        // .putMetadata("nombreFestival", festival.getNombre()) // Cuidado con PII
                         .build();
-
-                // Crear el PaymentIntent
                 paymentIntent = PaymentIntent.create(params);
                 log.info("PaymentIntent de Stripe creado con ID: {}", paymentIntent.getId());
-
             } catch (StripeException e) {
-                log.error("Error al crear PaymentIntent en Stripe para entrada ID {}: {}", idEntrada, e.getMessage(), e);
-                // Mapear a una excepción genérica o una más específica si se prefiere
                 throw new RuntimeException("Error al iniciar el proceso de pago con la pasarela: " + e.getMessage(), e);
             }
-
-            // Devolver el client_secret
             return new IniciarCompraResponseDTO(paymentIntent.getClientSecret());
-
         } catch (Exception e) {
-            // Capturar excepciones de BD o de cálculo de total
             log.error("Error en iniciarProcesoPago para entrada ID {}: {}", idEntrada, e.getMessage(), e);
-            // Relanzar excepción mapeada (podría ser EntradaNotFound, FestivalNoPublicado, etc.)
             throw mapException(e);
         } finally {
             closeEntityManager(em);
@@ -354,14 +280,14 @@ public class VentaServiceImpl implements VentaService {
 
     // --- Métodos Privados de Ayuda (Helpers) ---
     /**
-     * Manejador genérico de excepciones para métodos de servicio.
+     * Manejador genérico de excepciones.
      */
     private void handleException(Exception e, EntityTransaction tx, String action) {
         log.error("Error durante la acción '{}': {}", action, e.getMessage(), e);
         if (tx != null && tx.isActive()) {
             try {
                 tx.rollback();
-                log.warn("Rollback de transacción de '{}' realizado debido a error.", action);
+                log.warn("Rollback de transacción de '{}' realizado.", action);
             } catch (Exception rbEx) {
                 log.error("¡Error CRÍTICO durante el rollback de '{}'!: {}", action, rbEx.getMessage(), rbEx);
             }
@@ -385,16 +311,11 @@ public class VentaServiceImpl implements VentaService {
      * Mapea excepciones técnicas a excepciones de negocio o RuntimeException.
      */
     private RuntimeException mapException(Exception e) {
-        if (e instanceof AsistenteNotFoundException
-                || e instanceof EntradaNotFoundException
-                || e instanceof FestivalNotFoundException
-                || e instanceof FestivalNoPublicadoException
-                || e instanceof StockInsuficienteException
-                || e instanceof PagoInvalidoException
-                || e instanceof IllegalArgumentException
-                || e instanceof SecurityException
-                || e instanceof IllegalStateException
-                || e instanceof PersistenceException
+        if (e instanceof AsistenteNotFoundException || e instanceof EntradaNotFoundException
+                || e instanceof FestivalNotFoundException || e instanceof FestivalNoPublicadoException
+                || e instanceof StockInsuficienteException || e instanceof PagoInvalidoException
+                || e instanceof IllegalArgumentException || e instanceof SecurityException
+                || e instanceof IllegalStateException || e instanceof PersistenceException
                 || e instanceof RuntimeException) {
             return (RuntimeException) e;
         }
@@ -403,13 +324,16 @@ public class VentaServiceImpl implements VentaService {
     }
 
     /**
-     * Mapea una entidad {@link Compra} a su correspondiente {@link CompraDTO}.
+     * Mapea una entidad {@link Compra} y la lista de sus
+     * {@link EntradaAsignada} generadas a su correspondiente {@link CompraDTO}.
      *
      * @param compra La entidad {@link Compra} a mapear. No debe ser
      * {@code null}.
+     * @param entradasGeneradas La lista de entidades {@link EntradaAsignada}
+     * que se acaban de generar para esta compra.
      * @return El objeto {@link CompraDTO} poblado.
      */
-    private CompraDTO mapCompraToDTO(Compra compra) {
+    private CompraDTO mapCompraToDTO(Compra compra, List<EntradaAsignada> entradasGeneradas) {
         if (compra == null) {
             log.warn("Intento de mapear una entidad Compra nula a DTO.");
             return null;
@@ -418,13 +342,10 @@ public class VentaServiceImpl implements VentaService {
         dto.setIdCompra(compra.getIdCompra());
         dto.setFechaCompra(compra.getFechaCompra());
         dto.setTotal(compra.getTotal());
-
-        // Mapear información del pago (si existe)
         dto.setStripePaymentIntentId(compra.getStripePaymentIntentId());
         dto.setEstadoPago(compra.getEstadoPago());
         dto.setFechaPagoConfirmado(compra.getFechaPagoConfirmado());
 
-        // Mapear información del asistente asociado
         if (compra.getAsistente() != null) {
             dto.setIdAsistente(compra.getAsistente().getIdAsistente());
             dto.setEmailAsistente(compra.getAsistente().getEmail());
@@ -433,35 +354,86 @@ public class VentaServiceImpl implements VentaService {
             log.warn("La Compra ID {} no tiene un Asistente asociado.", compra.getIdCompra());
         }
 
-        // Mapear los detalles de la compra a un resumen simple
-        try {
-            if (compra.getDetallesCompra() != null && !compra.getDetallesCompra().isEmpty()) {
-                List<String> resumen = compra.getDetallesCompra().stream()
-                        .map(detalle -> {
-                            String tipoEntrada = (detalle.getEntrada() != null) ? detalle.getEntrada().getTipo() : "Desconocido";
-                            return detalle.getCantidad() + " x " + tipoEntrada;
-                        })
-                        .collect(Collectors.toList());
-                dto.setResumenEntradas(resumen);
+        // Mapear las entradas generadas (pasadas como argumento) a DTOs
+        if (entradasGeneradas != null && !entradasGeneradas.isEmpty()) {
+            List<EntradaAsignadaDTO> entradasDTO = entradasGeneradas.stream()
+                    .map(this::mapEntradaAsignadaToDTO) // Usar método helper para mapear cada entrada
+                    .collect(Collectors.toList());
+            dto.setEntradasGeneradas(entradasDTO); // Establecer la lista en el DTO de Compra
+
+            // Opcional: generar también el resumen si aún se usa en algún sitio
+            try {
+                if (compra.getDetallesCompra() != null && !compra.getDetallesCompra().isEmpty()) {
+                    List<String> resumen = compra.getDetallesCompra().stream()
+                            .map(detalle -> {
+                                String tipoEntrada = (detalle.getEntrada() != null) ? detalle.getEntrada().getTipo() : "Desconocido";
+                                return detalle.getCantidad() + " x " + tipoEntrada;
+                            })
+                            .collect(Collectors.toList());
+                    dto.setResumenEntradas(resumen);
+                }
+            } catch (org.hibernate.LazyInitializationException e) {
+                log.warn("LazyInitializationException al acceder a detallesCompra para Compra ID {}. No se incluirá resumen.", compra.getIdCompra());
+                dto.setResumenEntradas(new ArrayList<>());
             }
-        } catch (org.hibernate.LazyInitializationException e) {
-            log.warn("LazyInitializationException al acceder a detallesCompra para Compra ID {}. No se incluirá resumen.", compra.getIdCompra());
+        } else {
+            log.warn("No se proporcionaron entradas generadas para mapear en Compra ID {}", compra.getIdCompra());
+            dto.setEntradasGeneradas(new ArrayList<>()); // Asegurar lista vacía
         }
         return dto;
     }
 
     /**
-     * Excepción personalizada para indicar problemas durante la verificación o
-     * procesamiento del pago con la pasarela externa (Stripe).
+     * Mapea una entidad {@link EntradaAsignada} a su DTO
+     * {@link EntradaAsignadaDTO}, asegurando la compatibilidad con el DTO
+     * proporcionado.
+     *
+     * @param entidad La entidad EntradaAsignada.
+     * @return El DTO mapeado.
      */
-    public static class PagoInvalidoException extends RuntimeException {
+    private EntradaAsignadaDTO mapEntradaAsignadaToDTO(EntradaAsignada entidad) {
+        if (entidad == null) {
+            return null;
+        }
+        EntradaAsignadaDTO dto = new EntradaAsignadaDTO();
+        dto.setIdEntradaAsignada(entidad.getIdEntradaAsignada());
+        dto.setCodigoQr(entidad.getCodigoQr());
+        dto.setEstado(entidad.getEstado());
+        dto.setFechaAsignacion(entidad.getFechaAsignacion());
+        dto.setFechaUso(entidad.getFechaUso());
 
-        public PagoInvalidoException(String message) {
-            super(message);
+        if (entidad.getAsistente() != null) {
+            dto.setIdAsistente(entidad.getAsistente().getIdAsistente());
+            dto.setNombreAsistente(entidad.getAsistente().getNombre());
+            dto.setEmailAsistente(entidad.getAsistente().getEmail());
         }
 
-        public PagoInvalidoException(String message, Throwable cause) {
-            super(message, cause);
+        // Obtener info de la entrada original, festival y compra a través de compraEntrada
+        if (entidad.getCompraEntrada() != null) {
+            // Establecer ID de CompraEntrada en el DTO
+            dto.setIdCompraEntrada(entidad.getCompraEntrada().getIdCompraEntrada()); // <-- Añadido según DTO
+
+            if (entidad.getCompraEntrada().getEntrada() != null) {
+                Entrada entradaOriginal = entidad.getCompraEntrada().getEntrada();
+                dto.setIdEntradaOriginal(entradaOriginal.getIdEntrada());
+                dto.setTipoEntradaOriginal(entradaOriginal.getTipo());
+                // Añadir ID y nombre del festival desde la Entrada original
+                if (entradaOriginal.getFestival() != null) {
+                    dto.setIdFestival(entradaOriginal.getFestival().getIdFestival());
+                    dto.setNombreFestival(entradaOriginal.getFestival().getNombre());
+                }
+            }
+            // El ID de la Compra NO está directamente en EntradaAsignadaDTO,
+            // se obtiene del CompraDTO padre si es necesario.
+            // Si se necesitara aquí, habría que añadirlo al DTO y mapearlo desde entidad.getCompraEntrada().getCompra().getIdCompra()
         }
+
+        // Mapear información de la pulsera si la relación existiera en la entidad EntradaAsignada
+        // if (entidad.getPulseraNFC() != null) { // Asumiendo que existe getPulseraNFC()
+        //     dto.setIdPulseraAsociada(entidad.getPulseraNFC().getIdPulsera());
+        //     dto.setCodigoUidPulsera(entidad.getPulseraNFC().getCodigoUid());
+        // }
+        // El campo qrCodeImageDataUrl se genera en el frontend
+        return dto;
     }
 }

@@ -28,6 +28,13 @@ public class CompraDTO {
     // Información resumida de las entradas compradas en esta transacción
     private List<String> resumenEntradas; // Ej: ["2 x General", "1 x VIP"]
 
+    /**
+     * Lista de DTOs representando las entradas individuales generadas como
+     * resultado de esta compra específica. Se poblará solo en la respuesta de
+     * confirmación de compra.
+     */
+    private List<EntradaAsignadaDTO> entradasGeneradas;
+
     // --- Campos de Pago (Stripe) ---
     /**
      * Identificador del PaymentIntent de Stripe asociado a esta compra. Será
@@ -111,7 +118,14 @@ public class CompraDTO {
         this.resumenEntradas = resumenEntradas;
     }
 
-    // --- Getters y Setters para campos de Stripe ---
+    public List<EntradaAsignadaDTO> getEntradasGeneradas() {
+        return entradasGeneradas;
+    }
+
+    public void setEntradasGeneradas(List<EntradaAsignadaDTO> entradasGeneradas) {
+        this.entradasGeneradas = entradasGeneradas;
+    }
+
     /**
      * Obtiene el ID del PaymentIntent de Stripe asociado.
      *
@@ -214,7 +228,9 @@ public class CompraDTO {
                 + ", nombreAsistente='" + nombreAsistente + '\''
                 + ", emailAsistente='" + emailAsistente + '\''
                 + ", resumenEntradas=" + resumenEntradas
-                + ", stripePaymentIntentId='" + stripePaymentIntentId + '\''
+                + ", entradasGeneradasCount=" + (entradasGeneradas != null ? entradasGeneradas.size() : 0)
+                + // Log count
+                ", stripePaymentIntentId='" + stripePaymentIntentId + '\''
                 + ", estadoPago='" + estadoPago + '\''
                 + ", fechaPagoConfirmado=" + fechaPagoConfirmado
                 + '}';
