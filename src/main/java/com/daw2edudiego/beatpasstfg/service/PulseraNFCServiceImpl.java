@@ -14,6 +14,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -45,8 +46,9 @@ public class PulseraNFCServiceImpl implements PulseraNFCService {
     @Override
     public PulseraNFCDTO asociarPulseraEntrada(String codigoUid, Integer idEntradaAsignada, Integer idActor) {
         log.info("Service: Asociando pulsera UID {} a entrada ID {} por actor ID {}", codigoUid, idEntradaAsignada, idActor);
+
         if (codigoUid == null || codigoUid.isBlank() || idEntradaAsignada == null || idActor == null) {
-            throw new IllegalArgumentException("UID pulsera, ID entrada y ID actor son requeridos.");
+            throw new IllegalArgumentException("UID de pulsera, ID de entrada asignada y ID de actor son requeridos.");
         }
 
         EntityManager em = null;
@@ -72,6 +74,7 @@ public class PulseraNFCServiceImpl implements PulseraNFCService {
             PulseraNFC pulsera;
 
             if (pulseraOpt.isPresent()) {
+                // --- Pulsera Existente ---
                 pulsera = pulseraOpt.get();
                 log.debug("Pulsera encontrada con UID {}. Verificando estado y festival.", codigoUid);
                 em.lock(pulsera, LockModeType.PESSIMISTIC_WRITE);
@@ -87,12 +90,14 @@ public class PulseraNFCServiceImpl implements PulseraNFCService {
                     throw new SecurityException("Esta pulsera pertenece a otro festival y no puede ser asociada a esta entrada.");
                 }
             } else {
-                log.debug("Pulsera con UID {} no encontrada. Creando nueva.", codigoUid);
+                // --- Pulsera Nueva ---
+                log.debug("Pulsera con UID {} no encontrada. Creando nueva instancia.", codigoUid);
                 pulsera = new PulseraNFC();
                 pulsera.setCodigoUid(codigoUid);
                 pulsera.setSaldo(BigDecimal.ZERO);
                 pulsera.setActiva(true);
-                pulsera.setFestival(festival); // Asociar al festival de la entrada
+                pulsera.setFestival(festival);
+
             }
 
             if (actor.getRol() == RolUsuario.PROMOTOR) {
@@ -103,11 +108,13 @@ public class PulseraNFCServiceImpl implements PulseraNFCService {
                 log.warn("Desasociando pulsera UID {} de entrada anterior ID {}", codigoUid, pulsera.getEntradaAsignada().getIdEntradaAsignada());
             }
             pulsera.setEntradaAsignada(entradaAsignada);
+            pulsera.setFechaAsociacion(LocalDateTime.now());
+
             pulsera = pulseraNFCRepository.save(em, pulsera);
 
             tx.commit();
-            log.info("Pulsera UID {} (ID: {}) asociada correctamente a Entrada ID {} del Festival ID {}",
-                    pulsera.getCodigoUid(), pulsera.getIdPulsera(), idEntradaAsignada, festival.getIdFestival());
+            log.info("Pulsera UID {} (ID: {}) asociada correctamente a Entrada ID {} del Festival ID {} en {}",
+                    pulsera.getCodigoUid(), pulsera.getIdPulsera(), idEntradaAsignada, festival.getIdFestival(), pulsera.getFechaAsociacion());
 
             return mapEntityToDto(pulsera);
 

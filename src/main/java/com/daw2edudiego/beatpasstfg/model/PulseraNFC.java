@@ -51,6 +51,13 @@ public class PulseraNFC implements Serializable {
     private LocalDateTime ultimaModificacion;
 
     /**
+     * Fecha y hora en que la pulsera fue asociada a una entrada. Permite nulos
+     * si la pulsera no está asociada.
+     */
+    @Column(name = "fecha_asociacion", nullable = true)
+    private LocalDateTime fechaAsociacion;
+
+    /**
      * Entrada a la que está asociada esta pulsera. Relación 1:1 (lado
      * propietario). FK 'id_entrada_asignada' única. Cascade limitado, Fetch
      * LAZY.
@@ -126,6 +133,14 @@ public class PulseraNFC implements Serializable {
         return ultimaModificacion;
     }
 
+    public LocalDateTime getFechaAsociacion() {
+        return fechaAsociacion;
+    }
+
+    public void setFechaAsociacion(LocalDateTime fechaAsociacion) {
+        this.fechaAsociacion = fechaAsociacion;
+    }
+
     public EntradaAsignada getEntradaAsignada() {
         return entradaAsignada;
     }
@@ -193,6 +208,8 @@ public class PulseraNFC implements Serializable {
                 + ", activa=" + activa
                 + ", idEntradaAsignada=" + (entradaAsignada != null ? entradaAsignada.getIdEntradaAsignada() : "null")
                 + ", idFestival=" + (festival != null ? festival.getIdFestival() : "null")
-                + '}';
+                + ", fechaAsociacion=" + fechaAsociacion
+                + // <-- Añadido al toString
+                '}';
     }
 }
