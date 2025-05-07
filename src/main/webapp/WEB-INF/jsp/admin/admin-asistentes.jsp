@@ -17,14 +17,13 @@
 
         <div class="container mx-auto p-4 md:p-8 max-w-7xl">
 
-            <%-- Incluir Menú Admin Común --%>
             <jsp:include page="/WEB-INF/jsp/admin/_admin_menu.jsp">
                 <jsp:param name="activePage" value="asistentes"/>
             </jsp:include>
 
             <h2 class="text-2xl font-semibold text-gray-700 mb-5">Gestionar Asistentes</h2>
 
-            <%-- Mensajes flash (se mantienen clases de Tailwind) --%>
+            <%-- Mensajes flash --%>
             <c:if test="${not empty requestScope.mensajeExito}">
                 <div class="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 mb-4 rounded-md shadow-sm" role="alert">
                     <p>${requestScope.mensajeExito}</p>
@@ -36,7 +35,7 @@
                 </div>
             </c:if>
 
-            <%-- Formulario de Búsqueda (botones con clases CSS externas) --%>
+            <%-- Formulario de Búsqueda --%>
             <div class="mb-4 bg-white p-4 rounded shadow-sm">
                 <form action="${pageContext.request.contextPath}/api/admin/asistentes" method="get" class="flex items-end space-x-3">
                     <div>
@@ -92,7 +91,6 @@
                                                 ${a.fechaCreacion}
                                             </c:if>
                                         </td>
-                                        <%-- Celda con UID de pulsera usando clase CSS externa --%>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                             <c:choose>
                                                 <c:when test="${not empty a.festivalPulseraInfo}">
@@ -115,7 +113,6 @@
                                                 </c:otherwise>
                                             </c:choose>
                                         </td>
-                                        <%-- Acciones con clases CSS externas --%>
                                         <td class="px-4 py-4 whitespace-nowrap text-center text-sm space-x-2">
                                             <a href="${pageContext.request.contextPath}/api/admin/asistentes/${a.idAsistente}" class="action-link action-link-view" title="Ver detalles de ${a.nombre}">Ver</a>
                                             <a href="${pageContext.request.contextPath}/api/admin/asistentes/${a.idAsistente}/editar" class="action-link action-link-edit" title="Editar datos de ${a.nombre}">Editar</a>

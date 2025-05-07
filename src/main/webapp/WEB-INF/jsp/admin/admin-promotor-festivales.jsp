@@ -17,7 +17,6 @@
 
         <div class="container mx-auto p-4 md:p-8 max-w-7xl">
 
-            <%-- Incluir Menú Admin Común --%>
             <jsp:include page="/WEB-INF/jsp/admin/_admin_menu.jsp">
                 <jsp:param name="activePage" value="promotores"/>
             </jsp:include>
@@ -55,7 +54,6 @@
                                         <td class="px-6 py-4 whitespace-nowrap"> <div class="text-sm font-medium text-gray-900">${f.nombre}</div> </td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500"> ${f.fechaInicio} - ${f.fechaFin} </td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${f.ubicacion}</td>
-                                        <%-- Badge con clases CSS externas --%>
                                         <td class="px-6 py-4 whitespace-nowrap text-center">
                                             <span class="badge
                                                   <c:choose>
@@ -63,11 +61,11 @@
                                                       <c:when test="${f.estado == 'BORRADOR'}">badge-borrador</c:when>
                                                       <c:when test="${f.estado == 'CANCELADO'}">badge-cancelado</c:when>
                                                       <c:when test="${f.estado == 'FINALIZADO'}">badge-finalizado</c:when>
-                                                      <c:otherwise>bg-gray-100 text-gray-800</c:otherwise> <%-- Fallback --%>
+                                                      <c:otherwise>bg-gray-100 text-gray-800</c:otherwise> 
                                                   </c:choose>
                                                   "> ${f.estado} </span>
                                         </td>
-                                        <%-- Acciones con clases CSS externas --%>
+                                        <%-- Acciones --%>
                                         <td class="px-6 py-4 whitespace-nowrap text-center text-sm font-medium space-x-2">
                                             <c:if test="${f.estado == 'BORRADOR'}">
                                                 <form action="${pageContext.request.contextPath}/api/admin/festivales/confirmar" method="post" class="inline" onsubmit="return confirm('Confirmar y publicar \'${f.nombre}\'?');">

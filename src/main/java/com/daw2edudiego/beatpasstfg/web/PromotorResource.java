@@ -1,10 +1,12 @@
 package com.daw2edudiego.beatpasstfg.web;
 
-import com.daw2edudiego.beatpasstfg.dto.*;
-import com.daw2edudiego.beatpasstfg.exception.*;
+// DTOs, Excepciones, Modelo, Servicios
+import com.daw2edudiego.beatpasstfg.dto.*; // Import all DTOs
+import com.daw2edudiego.beatpasstfg.exception.*; // Import all exceptions
 import com.daw2edudiego.beatpasstfg.model.RolUsuario;
-import com.daw2edudiego.beatpasstfg.service.*;
+import com.daw2edudiego.beatpasstfg.service.*; // Import all services
 
+// Jakarta EE Servlets y JAX-RS
 import jakarta.servlet.RequestDispatcher;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -14,39 +16,73 @@ import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
-import jakarta.ws.rs.core.UriBuilder;
 import jakarta.ws.rs.core.UriInfo;
 
+// Logging
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+// Clases estándar Java
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.Optional;
 
 /**
- * Recurso JAX-RS para el panel web del Promotor (/api/promotor). Gestiona
- * Festivales, Entradas, Asistentes y Pulseras propias. Requiere rol PROMOTOR en
- * sesión HTTP. Devuelve principalmente HTML (JSPs).
+ * Recurso JAX-RS que define los endpoints para el panel web del Promotor,
+ * accesible bajo la ruta base {@code /api/promotor}.
+ * <p>
+ * Proporciona funcionalidades para que los usuarios con rol
+ * {@link RolUsuario#PROMOTOR} gestionen sus propios recursos:
+ * <ul>
+ * <li>Festivales: Listar los propios, ver detalles, mostrar formulario de
+ * edición, crear solicitud, guardar cambios.</li>
+ * <li>Tipos de Entrada: Añadir, editar, eliminar (asociados a sus
+ * festivales).</li>
+ * <li>Entradas Asignadas: Listar por festival, nominar a asistentes, cancelar,
+ * asociar pulseras.</li>
+ * <li>Asistentes: Listar los asociados a sus festivales.</li>
+ * <li>Pulseras NFC: Listar las asociadas a sus festivales.</li>
+ * <li>Cambio de Contraseña: Gestionar el cambio de contraseña obligatorio
+ * inicial.</li>
+ * </ul>
+ * La autenticación y autorización se basa en la validación de una sesión HTTP
+ * existente y la verificación de que el usuario autenticado en sesión tenga el
+ * rol PROMOTOR. Las respuestas son principalmente HTML, realizando forwards a
+ * archivos JSP ubicados en {@code /WEB-INF/jsp/promotor/}. Utiliza el patrón
+ * Post-Redirect-Get (PRG) con mensajes flash en sesión para operaciones POST.
+ * </p>
+ *
+ * @see FestivalService
+ * @see EntradaService
+ * @see EntradaAsignadaService
+ * @see VentaService
+ * @see AsistenteService
+ * @see PulseraNFCService
+ * @see UsuarioService
+ * @see CompraService
+ * @author Eduardo Olalde
  */
 @Path("/promotor")
 public class PromotorResource {
 
     private static final Logger log = LoggerFactory.getLogger(PromotorResource.class);
 
+    // Services (Manual Dependency Injection)
     private final FestivalService festivalService;
     private final UsuarioService usuarioService;
     private final EntradaService entradaService;
     private final EntradaAsignadaService entradaAsignadaService;
-    // private final VentaService ventaService; // VentaService no se usa directamente aquí
+    private final VentaService ventaService;
     private final AsistenteService asistenteService;
     private final PulseraNFCService pulseraNFCService;
     private final CompraService compraService;
 
+    // JAX-RS Context Injection
     @Context
     private UriInfo uriInfo;
     @Context
@@ -54,108 +90,213 @@ public class PromotorResource {
     @Context
     private HttpServletResponse response;
 
+    /**
+     * Constructor que inicializa las instancias de los servicios necesarios.
+     */
     public PromotorResource() {
         this.festivalService = new FestivalServiceImpl();
         this.usuarioService = new UsuarioServiceImpl();
         this.entradaService = new EntradaServiceImpl();
         this.entradaAsignadaService = new EntradaAsignadaServiceImpl();
-        // this.ventaService = new VentaServiceImpl();
+        this.ventaService = new VentaServiceImpl();
         this.asistenteService = new AsistenteServiceImpl();
         this.pulseraNFCService = new PulseraNFCServiceImpl();
         this.compraService = new CompraServiceImpl();
     }
 
-    // --- Gestión de Festivales ---
+    // --- Endpoints para Gestión de Festivales del Promotor ---
+    /**
+     * Endpoint GET para listar los festivales propios del promotor autenticado.
+     * Realiza forward al JSP {@code /WEB-INF/jsp/promotor/mis-festivales.jsp}.
+     * Requiere rol PROMOTOR en sesión.
+     *
+     * @return Una respuesta JAX-RS (implícitamente OK si el forward tiene
+     * éxito).
+     * @throws ServletException Si ocurre un error durante el forward del JSP.
+     * @throws IOException Si ocurre un error de E/S durante el forward.
+     * @throws NotAuthorizedException Si no hay sesión activa.
+     * @throws ForbiddenException Si el usuario en sesión no es PROMOTOR.
+     */
     @GET
     @Path("/festivales")
     @Produces(MediaType.TEXT_HTML)
     public Response listarFestivales() throws ServletException, IOException {
-        log.debug("GET /promotor/festivales");
-        Integer idPromotor = verificarAccesoPromotor(request);
+        log.debug("GET /promotor/festivales (listar) recibido");
+        Integer idPromotor = verificarAccesoPromotor(request); // Verifica sesión y rol
+
+        log.debug("Listando festivales para Promotor ID: {}", idPromotor);
         List<FestivalDTO> listaFestivales = festivalService.obtenerFestivalesPorPromotor(idPromotor);
 
         request.setAttribute("festivales", listaFestivales);
         request.setAttribute("idPromotorAutenticado", idPromotor);
-        mostrarMensajeFlash(request);
-        forwardToJsp("/WEB-INF/jsp/promotor/mis-festivales.jsp");
+        mostrarMensajeFlash(request); // Muestra mensajes de éxito/error de acciones previas
+
+        RequestDispatcher dispatcher = request.getRequestDispatcher("/WEB-INF/jsp/promotor/mis-festivales.jsp");
+        dispatcher.forward(request, response);
         return Response.ok().build();
     }
 
+    /**
+     * Endpoint GET para mostrar el formulario de creación de un nuevo festival
+     * (solicitud) por el promotor autenticado. Realiza forward al JSP
+     * {@code /WEB-INF/jsp/promotor/promotor-festival-editar.jsp}. Requiere rol
+     * PROMOTOR en sesión.
+     *
+     * @return Una respuesta JAX-RS (implícitamente OK si el forward tiene
+     * éxito).
+     * @throws ServletException Si ocurre un error durante el forward del JSP.
+     * @throws IOException Si ocurre un error de E/S durante el forward.
+     * @throws NotAuthorizedException Si no hay sesión activa.
+     * @throws ForbiddenException Si el usuario en sesión no es PROMOTOR.
+     */
     @GET
     @Path("/festivales/crear")
     @Produces(MediaType.TEXT_HTML)
     public Response mostrarFormularioCrear() throws ServletException, IOException {
-        log.debug("GET /promotor/festivales/crear");
+        log.debug("GET /promotor/festivales/crear recibido");
         Integer idPromotor = verificarAccesoPromotor(request);
-        request.setAttribute("festival", new FestivalDTO());
+        log.debug("Mostrando formulario de creación para Promotor ID: {}", idPromotor);
+
+        request.setAttribute("festival", new FestivalDTO()); // DTO vacío
         request.setAttribute("idPromotorAutenticado", idPromotor);
-        request.setAttribute("esNuevo", true);
-        forwardToJsp("/WEB-INF/jsp/promotor/promotor-festival-editar.jsp");
+        request.setAttribute("esNuevo", true); // Indicador para el JSP
+
+        RequestDispatcher dispatcher = request.getRequestDispatcher("/WEB-INF/jsp/promotor/promotor-festival-editar.jsp");
+        dispatcher.forward(request, response);
         return Response.ok().build();
     }
 
+    /**
+     * Endpoint GET para mostrar los detalles (vista de solo lectura) de un
+     * festival específico perteneciente al promotor autenticado. Carga los
+     * datos del festival, los tipos de entrada asociados y realiza forward al
+     * JSP {@code /WEB-INF/jsp/promotor/festival-detalle.jsp}. Requiere rol
+     * PROMOTOR en sesión y ser dueño del festival.
+     *
+     * @param idFestivalParam ID del festival a visualizar, obtenido del path.
+     * @return Una respuesta JAX-RS OK si el forward tiene éxito.
+     * @throws BadRequestException Si el ID no es válido.
+     * @throws NotFoundException Si el festival no se encuentra.
+     * @throws ForbiddenException Si el promotor no es dueño del festival.
+     * @throws InternalServerErrorException Si ocurre un error interno al cargar
+     * datos.
+     * @throws ServletException Si ocurre un error durante el forward del JSP.
+     * @throws IOException Si ocurre un error de E/S durante el forward.
+     */
     @GET
     @Path("/festivales/ver/{id}")
     @Produces(MediaType.TEXT_HTML)
-    public Response mostrarDetallesFestival(@PathParam("id") Integer idFestival) throws ServletException, IOException {
-        log.debug("GET /promotor/festivales/ver/{}", idFestival);
+    public Response mostrarDetallesFestival(@PathParam("id") Integer idFestivalParam) throws ServletException, IOException {
+        log.debug("GET /promotor/festivales/ver/{} (Detalles) recibido", idFestivalParam);
         Integer idPromotor = verificarAccesoPromotor(request);
-        if (idFestival == null) {
-            throw new BadRequestException("ID festival no válido.");
+        final Integer idFestival = idFestivalParam; // Usar variable final para claridad
+
+        if (idFestival == null || idFestival <= 0) { // Añadir validación > 0
+            throw new BadRequestException("ID de festival no válido.");
         }
 
         try {
+            log.debug("Buscando festival con ID: {}", idFestival);
             FestivalDTO festival = festivalService.obtenerFestivalPorId(idFestival)
-                    .filter(f -> f.getIdPromotor().equals(idPromotor))
+                    .filter(f -> idPromotor.equals(f.getIdPromotor())) // Asegurar comparación correcta de Integer
                     .orElseThrow(() -> new ForbiddenException("Festival no encontrado o no pertenece a este promotor."));
 
+            log.debug("Obteniendo tipos de entrada para festival ID: {}", idFestival);
             List<EntradaDTO> listaEntradas = entradaService.obtenerEntradasPorFestival(idFestival, idPromotor);
 
             request.setAttribute("festival", festival);
             request.setAttribute("tiposEntrada", listaEntradas);
             request.setAttribute("idPromotorAutenticado", idPromotor);
             mostrarMensajeFlash(request);
-            forwardToJsp("/WEB-INF/jsp/promotor/festival-detalle.jsp");
+
+            RequestDispatcher dispatcher = request.getRequestDispatcher("/WEB-INF/jsp/promotor/festival-detalle.jsp");
+            dispatcher.forward(request, response);
             return Response.ok().build();
 
-        } catch (NotFoundException | ForbiddenException e) {
-            throw e;
+        } catch (ForbiddenException | NotFoundException e) { // NotFound podría venir de los servicios
+            throw e; // Dejar que JAX-RS maneje 403 o 404
         } catch (Exception e) {
-            log.error("Error al mostrar detalles festival ID {}: {}", idFestival, e.getMessage(), e);
-            throw new InternalServerErrorException("Error al cargar datos del festival", e);
+            log.error("Error al mostrar detalles para festival ID {}: {}", idFestival, e.getMessage(), e);
+            throw new InternalServerErrorException("Error al cargar datos del festival.", e);
         }
     }
 
+    /**
+     * Endpoint GET para mostrar el formulario de edición de los datos básicos
+     * de un festival existente perteneciente al promotor autenticado. Carga
+     * solo los datos necesarios para el formulario y realiza forward al JSP
+     * {@code /WEB-INF/jsp/promotor/promotor-festival-editar.jsp}. Requiere rol
+     * PROMOTOR en sesión y ser dueño del festival.
+     *
+     * @param idFestivalParam ID del festival a editar, obtenido del path.
+     * @return Una respuesta JAX-RS OK si el forward tiene éxito.
+     * @throws BadRequestException Si el ID no es válido.
+     * @throws NotFoundException Si el festival no se encuentra.
+     * @throws ForbiddenException Si el promotor no es dueño del festival.
+     * @throws InternalServerErrorException Si ocurre un error interno al cargar
+     * datos.
+     * @throws ServletException Si ocurre un error durante el forward del JSP.
+     * @throws IOException Si ocurre un error de E/S durante el forward.
+     */
     @GET
-    @Path("/festivales/editar/{id}")
+    @Path("/festivales/editar/{id}") // Nueva ruta para edición
     @Produces(MediaType.TEXT_HTML)
-    public Response mostrarFormularioEditarFestival(@PathParam("id") Integer idFestival) throws ServletException, IOException {
-        log.debug("GET /promotor/festivales/editar/{}", idFestival);
+    public Response mostrarFormularioEditarFestival(@PathParam("id") Integer idFestivalParam) throws ServletException, IOException {
+        log.debug("GET /promotor/festivales/editar/{} recibido", idFestivalParam);
         Integer idPromotor = verificarAccesoPromotor(request);
-        if (idFestival == null) {
-            throw new BadRequestException("ID festival no válido.");
+        final Integer idFestival = idFestivalParam;
+
+        if (idFestival == null || idFestival <= 0) {
+            throw new BadRequestException("ID de festival no válido.");
         }
 
         try {
+            log.debug("Buscando festival con ID: {} para editar", idFestival);
             FestivalDTO festival = festivalService.obtenerFestivalPorId(idFestival)
-                    .filter(f -> f.getIdPromotor().equals(idPromotor))
+                    .filter(f -> idPromotor.equals(f.getIdPromotor()))
                     .orElseThrow(() -> new ForbiddenException("Festival no encontrado o no pertenece a este promotor."));
 
             request.setAttribute("festival", festival);
             request.setAttribute("idPromotorAutenticado", idPromotor);
-            request.setAttribute("esNuevo", false);
-            mostrarMensajeFlash(request);
-            forwardToJsp("/WEB-INF/jsp/promotor/promotor-festival-editar.jsp");
+            request.setAttribute("esNuevo", false); // Indicar modo edición
+            mostrarMensajeFlash(request); // Mostrar errores de intento previo si los hubo
+
+            RequestDispatcher dispatcher = request.getRequestDispatcher("/WEB-INF/jsp/promotor/promotor-festival-editar.jsp");
+            dispatcher.forward(request, response);
             return Response.ok().build();
 
-        } catch (NotFoundException | ForbiddenException e) {
+        } catch (ForbiddenException | NotFoundException e) {
             throw e;
         } catch (Exception e) {
-            log.error("Error al mostrar form editar festival ID {}: {}", idFestival, e.getMessage(), e);
-            throw new InternalServerErrorException("Error al cargar datos del festival para editar", e);
+            log.error("Error al mostrar formulario de edición para festival ID {}: {}", idFestival, e.getMessage(), e);
+            throw new InternalServerErrorException("Error al cargar datos del festival para editar.", e);
         }
     }
 
+    /**
+     * Endpoint POST para guardar un festival (crear uno nuevo o actualizar uno
+     * existente). Recibe datos del formulario. Si es nuevo, lo crea en estado
+     * BORRADOR. Si es existente, actualiza sus datos (excepto el estado y el
+     * promotor). Redirige a la página de VISTA del festival si tiene éxito, o
+     * vuelve a mostrar el formulario de EDICIÓN con errores si falla. Requiere
+     * rol PROMOTOR en sesión.
+     *
+     * @param idStr ID del festival (String, vacío o "0" si es nuevo).
+     * @param nombre Nombre del festival (obligatorio).
+     * @param descripcion Descripción (opcional).
+     * @param fechaInicioStr Fecha inicio (YYYY-MM-DD, obligatorio).
+     * @param fechaFinStr Fecha fin (YYYY-MM-DD, obligatorio, no anterior a
+     * inicio).
+     * @param ubicacion Ubicación (opcional).
+     * @param aforoStr Aforo (opcional, debe ser número positivo si se indica).
+     * @param imagenUrl URL de imagen (opcional).
+     * @return Una respuesta de redirección (303) a la vista si éxito, o una
+     * respuesta OK (200) mostrando el formulario de edición con error si falla.
+     * @throws ServletException Si ocurre un error durante el forward en caso de
+     * error.
+     * @throws IOException Si ocurre un error de E/S durante el forward en caso
+     * de error.
+     */
     @POST
     @Path("/festivales/guardar")
     @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
@@ -166,366 +307,523 @@ public class PromotorResource {
             @FormParam("aforo") String aforoStr, @FormParam("imagenUrl") String imagenUrl
     ) throws ServletException, IOException {
 
-        log.info("POST /promotor/festivales/guardar");
+        log.info("POST /promotor/festivales/guardar recibido");
         Integer idPromotor = verificarAccesoPromotor(request);
-        boolean esNuevo = (idStr == null || idStr.isEmpty() || "0".equals(idStr));
+
+        boolean esNuevo = (idStr == null || idStr.isBlank() || "0".equals(idStr));
         Integer idFestival = null;
-        FestivalDTO dto = new FestivalDTO();
+        FestivalDTO dto = new FestivalDTO(); // Para mapear datos y posible reenvío al form en error
         String errorMessage = null;
-        FestivalDTO festivalGuardado = null;
+        FestivalDTO festivalGuardado = null; // Para obtener ID si es nuevo
 
         try {
+            // Intentar parsear ID si es actualización
             if (!esNuevo) {
-                idFestival = Integer.parseInt(idStr);
-            }
-            dto.setIdFestival(idFestival);
-
-            // Validar y poblar DTO (Simplificado, asume parseo funciona o lanza excepción)
-            if (nombre == null || nombre.isBlank()) {
-                throw new IllegalArgumentException("Nombre obligatorio.");
-            }
-            dto.setNombre(nombre);
-            dto.setDescripcion(descripcion);
-            dto.setUbicacion(ubicacion);
-            dto.setImagenUrl(imagenUrl);
-            if (fechaInicioStr == null || fechaFinStr == null || fechaInicioStr.isBlank() || fechaFinStr.isBlank()) {
-                throw new IllegalArgumentException("Fechas obligatorias.");
-            }
-            dto.setFechaInicio(LocalDate.parse(fechaInicioStr));
-            dto.setFechaFin(LocalDate.parse(fechaFinStr));
-            if (dto.getFechaFin().isBefore(dto.getFechaInicio())) {
-                throw new IllegalArgumentException("Fecha fin no puede ser anterior a inicio.");
-            }
-            if (aforoStr != null && !aforoStr.isBlank()) {
-                dto.setAforo(Integer.parseInt(aforoStr));
-                if (dto.getAforo() <= 0) {
-                    throw new IllegalArgumentException("Aforo debe ser positivo.");
+                try {
+                    idFestival = Integer.parseInt(idStr);
+                    if (idFestival <= 0) {
+                        throw new NumberFormatException(); // ID debe ser positivo
+                    }
+                    dto.setIdFestival(idFestival); // Establecer ID en el DTO si es actualización
+                } catch (NumberFormatException e) {
+                    throw new IllegalArgumentException("ID de festival inválido para actualización: " + idStr);
                 }
             }
 
+            // Validar y poblar DTO con datos del formulario
+            if (nombre == null || nombre.isBlank()) {
+                throw new IllegalArgumentException("El nombre del festival es obligatorio.");
+            }
+            dto.setNombre(nombre); // Se setean en el DTO para repoblar el form en caso de error
+            dto.setDescripcion(descripcion);
+            dto.setUbicacion(ubicacion);
+            dto.setImagenUrl(imagenUrl);
+            if (fechaInicioStr == null || fechaInicioStr.isBlank() || fechaFinStr == null || fechaFinStr.isBlank()) {
+                throw new IllegalArgumentException("Las fechas de inicio y fin son obligatorias.");
+            }
+            dto.setFechaInicio(LocalDate.parse(fechaInicioStr)); // Puede lanzar DateTimeParseException
+            dto.setFechaFin(LocalDate.parse(fechaFinStr));     // Puede lanzar DateTimeParseException
+            if (dto.getFechaFin().isBefore(dto.getFechaInicio())) {
+                throw new IllegalArgumentException("La fecha de fin no puede ser anterior a la fecha de inicio.");
+            }
+            if (aforoStr != null && !aforoStr.isBlank()) {
+                try {
+                    dto.setAforo(Integer.parseInt(aforoStr));
+                    if (dto.getAforo() <= 0) {
+                        throw new IllegalArgumentException("El aforo debe ser un número positivo.");
+                    }
+                } catch (NumberFormatException e) {
+                    throw new IllegalArgumentException("Formato numérico inválido para Aforo.");
+                }
+            }
+            // El ID del promotor se pasa directamente al servicio, no se necesita en el DTO para la lógica del servicio
+            dto.setIdPromotor(idPromotor); // Añadir promotor al DTO para repoblar form
+
+            // Llamar al servicio correspondiente
             String mensajeExito;
             if (esNuevo) {
+                log.debug("Llamando a festivalService.crearFestival para promotor {}", idPromotor);
                 festivalGuardado = festivalService.crearFestival(dto, idPromotor);
-                idFestival = festivalGuardado.getIdFestival();
-                mensajeExito = "Solicitud de festival '" + festivalGuardado.getNombre() + "' creada (BORRADOR).";
+                idFestival = festivalGuardado.getIdFestival(); // Obtener el ID del nuevo festival
+                mensajeExito = "Solicitud de festival '" + festivalGuardado.getNombre() + "' creada correctamente (estado BORRADOR).";
             } else {
+                log.debug("Llamando a festivalService.actualizarFestival ID {} para promotor {}", idFestival, idPromotor);
+                // El servicio actualizarFestival verifica la propiedad y NO cambia el estado
                 festivalService.actualizarFestival(idFestival, dto, idPromotor);
-                festivalGuardado = dto; // Usar DTO para mensaje
-                mensajeExito = "Festival '" + dto.getNombre() + "' actualizado.";
+                // idFestival ya tiene el valor correcto
+                mensajeExito = "Festival '" + dto.getNombre() + "' actualizado correctamente.";
             }
 
+            // Éxito: Mensaje flash y redirección a la página de VISTA del festival
             setFlashMessage(request, "mensaje", mensajeExito);
-            URI viewUri = buildUri("mostrarDetallesFestival", idFestival);
-            return Response.seeOther(viewUri).build();
+            if (idFestival == null) {
+                log.error("No se pudo obtener idFestival para redirigir después de guardar. Redirigiendo a lista general.");
+                URI fallbackUri = uriInfo.getBaseUriBuilder().path(PromotorResource.class).path("festivales").build();
+                return Response.seeOther(fallbackUri).build();
+            }
+            // CORRECCIÓN: Usar UriBuilder para construir la URI y resolver el template 'id' con el valor de idFestival
+            URI viewUri = uriInfo.getBaseUriBuilder()
+                    .path(PromotorResource.class) // Añade /api/promotor
+                    .path(PromotorResource.class, "mostrarDetallesFestival") // Añade /festivales/ver/{id}
+                    .resolveTemplate("id", idFestival) // Reemplaza {id} con el valor de idFestival
+                    .build();
+            log.debug("Redirección post-guardado a: {}", viewUri);
+            return Response.seeOther(viewUri).build(); // 303 See Other
 
-        } catch (NumberFormatException e) {
-            errorMessage = "Formato numérico inválido (ID o Aforo).";
-            log.warn("Error guardando festival (promotor {}): {}", idPromotor, errorMessage);
         } catch (DateTimeParseException e) {
             errorMessage = "Formato de fecha inválido (use yyyy-MM-dd).";
             log.warn("Error guardando festival (promotor {}): {}", idPromotor, errorMessage);
         } catch (IllegalArgumentException | FestivalNotFoundException | SecurityException | IllegalStateException e) {
+            // Errores de validación, negocio o permisos
             errorMessage = e.getMessage();
             log.warn("Error guardando festival (promotor {}): {}", idPromotor, errorMessage);
         } catch (Exception e) {
+            // Errores inesperados
             errorMessage = "Error interno inesperado al guardar el festival.";
             log.error("Error interno guardando festival (promotor {}): {}", idPromotor, e.getMessage(), e);
         }
 
-        // Si hubo error, volver al form
-        dto.setNombre(nombre);
-        dto.setDescripcion(descripcion);
-        dto.setUbicacion(ubicacion);
-        dto.setImagenUrl(imagenUrl);
-        dto.setIdPromotor(idPromotor);
-        try {
-            dto.setFechaInicio(LocalDate.parse(fechaInicioStr));
-        } catch (Exception ignored) {
-        }
-        try {
-            dto.setFechaFin(LocalDate.parse(fechaFinStr));
-        } catch (Exception ignored) {
-        }
-        try {
-            if (aforoStr != null && !aforoStr.isBlank()) {
-                dto.setAforo(Integer.parseInt(aforoStr));
-            }
-        } catch (Exception ignored) {
-        }
-
+        // Si hubo error, volver a mostrar el formulario de EDICIÓN con el error
         forwardToPromotorFestivalEditFormWithError(dto, idPromotor, !esNuevo, errorMessage);
-        return Response.ok().build();
+        return Response.ok().build(); // 200 OK (mostrando form de edición con error)
     }
 
-    // --- Gestión de Tipos de Entrada ---
+    // --- Endpoints para Gestión de Tipos de Entrada por el Promotor ---
+    /**
+     * Endpoint POST para añadir un nuevo tipo de entrada a un festival
+     * existente del promotor autenticado. Recibe datos del formulario. Redirige
+     * a la vista de detalle del festival. Requiere rol PROMOTOR en sesión y ser
+     * dueño del festival.
+     *
+     * @param idFestival ID del festival al que se añade la entrada, obtenido
+     * del path.
+     * @param tipo Nombre del tipo de entrada (ej: "General", obligatorio).
+     * @param descripcion Descripción (opcional).
+     * @param precioStr Precio (String, obligatorio, se parseará a BigDecimal).
+     * @param stockStr Stock inicial (String, obligatorio, se parseará a
+     * Integer).
+     * @return Una respuesta de redirección (303) a la vista de detalle del
+     * festival.
+     * @throws BadRequestException Si el ID del festival no es válido.
+     */
     @POST
     @Path("/festivales/{idFestival}/entradas")
     @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
     public Response guardarEntrada(
             @PathParam("idFestival") Integer idFestival,
-            @FormParam("tipo") String tipo, @FormParam("descripcion") String descripcion,
-            @FormParam("precio") String precioStr, @FormParam("stock") String stockStr) {
+            @FormParam("tipo") String tipo,
+            @FormParam("descripcion") String descripcion,
+            @FormParam("precio") String precioStr,
+            @FormParam("stock") String stockStr) {
 
-        log.info("POST /promotor/festivales/{}/entradas", idFestival);
+        log.info("POST /promotor/festivales/{}/entradas recibido", idFestival);
         Integer idPromotor = verificarAccesoPromotor(request);
-        if (idFestival == null) {
+        if (idFestival == null || idFestival <= 0) {
             throw new BadRequestException("ID festival inválido.");
         }
 
         String mensajeFlash = null;
         String errorFlash = null;
-        EntradaDTO dto = new EntradaDTO(); // Para posible reenvío
+        EntradaDTO dto = new EntradaDTO(); // Para posible reenvío si hay error
+        dto.setIdFestival(idFestival); // Establecer el ID del festival en el DTO
 
         try {
+            // Validar y poblar DTO
             if (tipo == null || tipo.isBlank()) {
-                throw new IllegalArgumentException("Tipo de entrada obligatorio.");
+                throw new IllegalArgumentException("El nombre del tipo de entrada es obligatorio.");
             }
+            dto.setTipo(tipo); // Poblar DTO para posible reenvío en error
+            dto.setDescripcion(descripcion);
             if (precioStr == null || precioStr.isBlank()) {
-                throw new IllegalArgumentException("Precio obligatorio.");
+                throw new IllegalArgumentException("El precio es obligatorio.");
             }
             if (stockStr == null || stockStr.isBlank()) {
-                throw new IllegalArgumentException("Stock obligatorio.");
+                throw new IllegalArgumentException("El stock es obligatorio.");
             }
 
-            dto.setIdFestival(idFestival);
-            dto.setTipo(tipo);
-            dto.setDescripcion(descripcion);
-            dto.setPrecio(new BigDecimal(precioStr.replace(',', '.')));
-            dto.setStock(Integer.parseInt(stockStr));
-            if (dto.getPrecio().compareTo(BigDecimal.ZERO) < 0) {
-                throw new IllegalArgumentException("Precio no negativo.");
-            }
-            if (dto.getStock() < 0) {
-                throw new IllegalArgumentException("Stock no negativo.");
-            }
-
-            EntradaDTO entradaCreada = entradaService.crearEntrada(dto, idFestival, idPromotor);
-            mensajeFlash = "Tipo de entrada '" + entradaCreada.getTipo() + "' añadido.";
-
-        } catch (NumberFormatException e) {
-            errorFlash = "Formato numérico inválido para precio o stock.";
-            log.warn("Error de formato numérico al crear entrada para festival {}: {}", idFestival, e.getMessage());
-            // Poblar DTO con datos erróneos para repintar form
-            dto.setTipo(tipo);
-            dto.setDescripcion(descripcion);
-        } catch (IllegalArgumentException | SecurityException | FestivalNotFoundException e) {
-            errorFlash = "Error al añadir entrada: " + e.getMessage();
-            log.warn("Error de validación/negocio al crear entrada para festival {}: {}", idFestival, errorFlash);
-            // Poblar DTO con datos erróneos para repintar form
-            dto.setTipo(tipo);
-            dto.setDescripcion(descripcion);
+            // Parsear precio y stock
             try {
-                dto.setPrecio(new BigDecimal(precioStr.replace(',', '.')));
-            } catch (Exception ignored) {
+                dto.setPrecio(new BigDecimal(precioStr.replace(',', '.'))); // Permitir coma decimal
+                if (dto.getPrecio().compareTo(BigDecimal.ZERO) < 0) {
+                    throw new IllegalArgumentException("El precio no puede ser negativo.");
+                }
+            } catch (NumberFormatException e) {
+                throw new IllegalArgumentException("Formato numérico inválido para Precio.");
             }
             try {
                 dto.setStock(Integer.parseInt(stockStr));
-            } catch (Exception ignored) {
+                if (dto.getStock() < 0) {
+                    throw new IllegalArgumentException("El stock no puede ser negativo.");
+                }
+            } catch (NumberFormatException e) {
+                throw new IllegalArgumentException("Formato numérico inválido para Stock.");
             }
+
+            // Llamar al servicio para crear la entrada (el servicio verifica propiedad del festival)
+            EntradaDTO entradaCreada = entradaService.crearEntrada(dto, idFestival, idPromotor);
+            mensajeFlash = "Tipo de entrada '" + entradaCreada.getTipo() + "' añadido correctamente.";
+
+        } catch (IllegalArgumentException | SecurityException | FestivalNotFoundException e) {
+            errorFlash = "Error al añadir entrada: " + e.getMessage();
+            log.warn("Error de validación/negocio al crear entrada para festival {}: {}", idFestival, errorFlash);
+            // DTO ya está poblado para repintar el formulario
         } catch (Exception e) {
             errorFlash = "Error interno inesperado al añadir el tipo de entrada.";
             log.error("Error interno al crear entrada para festival {}: {}", idFestival, e.getMessage(), e);
+            // DTO ya está poblado para repintar el formulario
         }
 
-        HttpSession session = request.getSession(false);
-        if (session != null) {
-            if (mensajeFlash != null) {
-                session.setAttribute("mensaje", mensajeFlash);
-            }
-            if (errorFlash != null) {
-                session.setAttribute("error", errorFlash);
-                session.setAttribute("nuevaEntradaConError", dto);
-                session.setAttribute("errorEntrada", true);
-            }
+        // Guardar mensaje/error en sesión
+        HttpSession session = request.getSession(); // Obtener o crear sesión
+        if (mensajeFlash != null) {
+            session.setAttribute("mensaje", mensajeFlash);
+        }
+        if (errorFlash != null) {
+            session.setAttribute("error", errorFlash);
+            // Guardar el DTO con errores para repintar el formulario de añadir entrada
+            session.setAttribute("nuevaEntradaConError", dto);
+            // Marcar que hubo error en la entrada para diferenciarlo del error de festival
+            session.setAttribute("errorEntrada", true);
         }
 
-        URI detailUri = buildUri("mostrarDetallesFestival", idFestival);
-        return Response.seeOther(detailUri).build();
+        // Redirigir siempre a la página de VISTA del festival
+        URI detailUri = uriInfo.getBaseUriBuilder()
+                .path(PromotorResource.class)
+                .path(PromotorResource.class, "mostrarDetallesFestival")
+                .resolveTemplate("id", idFestival)
+                .build();
+        return Response.seeOther(detailUri).build(); // 303 See Other
     }
 
+    /**
+     * Endpoint GET para mostrar el formulario de edición de un tipo de entrada
+     * específico. Realiza forward al JSP
+     * {@code /WEB-INF/jsp/promotor/promotor-entrada-detalle.jsp}. Requiere rol
+     * PROMOTOR en sesión y ser dueño del festival asociado.
+     *
+     * @param idEntrada ID del tipo de entrada a editar, obtenido del path.
+     * @return Una respuesta JAX-RS OK si el forward tiene éxito.
+     * @throws BadRequestException Si el ID no es válido.
+     * @throws NotFoundException Si la entrada no se encuentra.
+     * @throws ForbiddenException Si el promotor no es dueño del festival
+     * asociado.
+     * @throws InternalServerErrorException Si ocurre un error interno al cargar
+     * datos.
+     * @throws ServletException Si ocurre un error durante el forward del JSP.
+     * @throws IOException Si ocurre un error de E/S durante el forward.
+     */
     @GET
     @Path("/entradas/{idEntrada}/editar")
     @Produces(MediaType.TEXT_HTML)
     public Response mostrarFormularioEditarEntrada(@PathParam("idEntrada") Integer idEntrada) throws ServletException, IOException {
-        log.debug("GET /promotor/entradas/{}/editar", idEntrada);
+        log.debug("GET /promotor/entradas/{}/editar recibido", idEntrada);
         Integer idPromotor = verificarAccesoPromotor(request);
-        if (idEntrada == null) {
-            throw new BadRequestException("ID entrada no válido.");
+        if (idEntrada == null || idEntrada <= 0) {
+            throw new BadRequestException("ID de entrada no válido.");
         }
 
         try {
+            // Obtener el DTO de la entrada, el servicio verifica propiedad
             EntradaDTO entradaDTO = entradaService.obtenerEntradaPorId(idEntrada, idPromotor)
-                    .orElseThrow(() -> new NotFoundException("Tipo de entrada no encontrado o sin permiso."));
+                    .orElseThrow(() -> new NotFoundException("Tipo de entrada no encontrado o no tiene permiso."));
 
             request.setAttribute("entrada", entradaDTO);
-            request.setAttribute("idPromotorAutenticado", idPromotor);
-            mostrarMensajeFlash(request);
-            forwardToJsp("/WEB-INF/jsp/promotor/promotor-entrada-detalle.jsp");
+            request.setAttribute("idPromotorAutenticado", idPromotor); // Para consistencia
+            mostrarMensajeFlash(request); // Por si hay errores de un intento previo
+
+            RequestDispatcher dispatcher = request.getRequestDispatcher("/WEB-INF/jsp/promotor/promotor-entrada-detalle.jsp");
+            dispatcher.forward(request, response);
             return Response.ok().build();
 
         } catch (NotFoundException | ForbiddenException e) {
             throw e;
         } catch (Exception e) {
-            log.error("Error al mostrar form editar entrada ID {}: {}", idEntrada, e.getMessage(), e);
+            log.error("Error al mostrar formulario de edición para entrada ID {}: {}", idEntrada, e.getMessage(), e);
             throw new InternalServerErrorException("Error al cargar datos del tipo de entrada.", e);
         }
     }
 
+    /**
+     * Endpoint POST para procesar la actualización de un tipo de entrada
+     * existente. Recibe datos del formulario. Redirige a la vista de detalle
+     * del festival si tiene éxito, o vuelve al formulario de edición de la
+     * entrada si falla. Requiere rol PROMOTOR en sesión y ser dueño del
+     * festival asociado.
+     *
+     * @param idEntrada ID del tipo de entrada a actualizar, obtenido del path.
+     * @param tipo Nuevo nombre del tipo (obligatorio).
+     * @param descripcion Nueva descripción (opcional).
+     * @param precioStr Nuevo precio (String, obligatorio).
+     * @param stockStr Nuevo stock (String, obligatorio).
+     * @return Una respuesta de redirección (303) a la vista de detalle del
+     * festival o al formulario de edición de entrada si hay error.
+     * @throws BadRequestException Si el ID no es válido.
+     * @throws ServletException Si ocurre un error durante el forward en caso de
+     * error.
+     * @throws IOException Si ocurre un error de E/S durante el forward en caso
+     * de error.
+     */
     @POST
     @Path("/entradas/{idEntrada}/actualizar")
     @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
     public Response actualizarEntrada(
             @PathParam("idEntrada") Integer idEntrada,
-            @FormParam("tipo") String tipo, @FormParam("descripcion") String descripcion,
-            @FormParam("precio") String precioStr, @FormParam("stock") String stockStr) throws ServletException, IOException {
+            @FormParam("tipo") String tipo,
+            @FormParam("descripcion") String descripcion,
+            @FormParam("precio") String precioStr,
+            @FormParam("stock") String stockStr) throws ServletException, IOException {
 
-        log.info("POST /promotor/entradas/{}/actualizar", idEntrada);
+        log.info("POST /promotor/entradas/{}/actualizar recibido", idEntrada);
         Integer idPromotor = verificarAccesoPromotor(request);
-        if (idEntrada == null) {
-            throw new BadRequestException("ID entrada no válido.");
+        if (idEntrada == null || idEntrada <= 0) {
+            throw new BadRequestException("ID de entrada no válido.");
         }
 
         String mensajeFlash = null;
         String errorFlash = null;
-        Integer idFestival = null;
-        EntradaDTO dto = new EntradaDTO();
+        Integer idFestival = null; // Para redirigir
+        EntradaDTO dto = new EntradaDTO(); // Para posible reenvío al form en error
+        dto.setIdEntrada(idEntrada); // Guardar el ID en el DTO para repoblar form
 
         try {
+            // Validar y poblar DTO
             if (tipo == null || tipo.isBlank()) {
-                throw new IllegalArgumentException("Tipo obligatorio.");
+                throw new IllegalArgumentException("El nombre del tipo de entrada es obligatorio.");
             }
+            dto.setTipo(tipo); // Poblar DTO para repoblar form
+            dto.setDescripcion(descripcion);
             if (precioStr == null || precioStr.isBlank()) {
-                throw new IllegalArgumentException("Precio obligatorio.");
+                throw new IllegalArgumentException("El precio es obligatorio.");
             }
             if (stockStr == null || stockStr.isBlank()) {
-                throw new IllegalArgumentException("Stock obligatorio.");
+                throw new IllegalArgumentException("El stock es obligatorio.");
             }
 
-            dto.setIdEntrada(idEntrada);
-            dto.setTipo(tipo);
-            dto.setDescripcion(descripcion);
-            dto.setPrecio(new BigDecimal(precioStr.replace(',', '.')));
-            dto.setStock(Integer.parseInt(stockStr));
-            if (dto.getPrecio().compareTo(BigDecimal.ZERO) < 0) {
-                throw new IllegalArgumentException("Precio no negativo.");
+            // Parsear y validar precio
+            try {
+                dto.setPrecio(new BigDecimal(precioStr.replace(',', '.')));
+                if (dto.getPrecio().compareTo(BigDecimal.ZERO) < 0) {
+                    throw new IllegalArgumentException("El precio no puede ser negativo.");
+                }
+            } catch (NumberFormatException e) {
+                throw new IllegalArgumentException("Formato numérico inválido para Precio.");
             }
-            if (dto.getStock() < 0) {
-                throw new IllegalArgumentException("Stock no negativo.");
+            // Parsear y validar stock
+            try {
+                dto.setStock(Integer.parseInt(stockStr));
+                if (dto.getStock() < 0) {
+                    throw new IllegalArgumentException("El stock no puede ser negativo.");
+                }
+            } catch (NumberFormatException e) {
+                throw new IllegalArgumentException("Formato numérico inválido para Stock.");
             }
 
+            // Llamar al servicio para actualizar (el servicio verifica propiedad)
             EntradaDTO actualizada = entradaService.actualizarEntrada(idEntrada, dto, idPromotor);
-            mensajeFlash = "Tipo de entrada '" + actualizada.getTipo() + "' actualizado.";
-            idFestival = actualizada.getIdFestival();
+            mensajeFlash = "Tipo de entrada '" + actualizada.getTipo() + "' actualizado con éxito.";
+            idFestival = actualizada.getIdFestival(); // Obtener ID del festival para redirigir
 
-        } catch (NumberFormatException e) {
-            errorFlash = "Formato numérico inválido para precio o stock.";
-            log.warn("Error de formato numérico al actualizar entrada ID {}: {}", idEntrada, e.getMessage());
-            // Poblar DTO para reenvío
-            dto.setTipo(tipo);
-            dto.setDescripcion(descripcion);
         } catch (IllegalArgumentException | SecurityException | EntradaNotFoundException e) {
             errorFlash = "Error al actualizar: " + e.getMessage();
             log.warn("Error de validación/negocio al actualizar entrada ID {}: {}", idEntrada, errorFlash);
-            // Poblar DTO para reenvío
-            dto.setTipo(tipo);
-            dto.setDescripcion(descripcion);
-            try {
-                dto.setPrecio(new BigDecimal(precioStr.replace(',', '.')));
-            } catch (Exception ignored) {
-            }
-            try {
-                dto.setStock(Integer.parseInt(stockStr));
-            } catch (Exception ignored) {
-            }
+            // DTO ya está poblado para repintar form
         } catch (Exception e) {
             errorFlash = "Error interno inesperado al actualizar el tipo de entrada.";
             log.error("Error interno al actualizar entrada ID {}: {}", idEntrada, e.getMessage(), e);
+            // DTO ya está poblado para repintar form
         }
 
-        setFlashMessage(request, errorFlash != null ? "error" : "mensaje", errorFlash != null ? errorFlash : mensajeFlash);
-
-        URI redirectUri;
+        // Decidir a dónde redirigir
         if (errorFlash != null) {
-            redirectUri = buildUri("mostrarFormularioEditarEntrada", idEntrada); // Volver a edición
+            // Si hubo error, redirigir de vuelta al formulario de edición de la ENTRADA
+            setFlashMessage(request, "error", errorFlash);
+            // Reconstruir la URI para el método GET de edición de esta entrada
+            URI editUri = uriInfo.getBaseUriBuilder()
+                    .path(PromotorResource.class)
+                    .path(PromotorResource.class, "mostrarFormularioEditarEntrada") // Método GET para editar ENTRADA
+                    .resolveTemplate("idEntrada", idEntrada) // Pasar el ID de la ENTRADA que falló
+                    .build();
+            log.debug("Redirección post-actualización (fallida) a: {}", editUri);
+            return Response.seeOther(editUri).build(); // 303 See Other
         } else {
-            redirectUri = buildUri("mostrarDetallesFestival", idFestival); // Ir a vista festival
+            // Si tuvo éxito, redirigir a la página de VISTA del FESTIVAL
+            setFlashMessage(request, "mensaje", mensajeFlash);
+            if (idFestival == null) {
+                log.error("No se pudo obtener idFestival para redirigir después de actualizar entrada ID {}. Redirigiendo a lista general.", idEntrada);
+                URI fallbackUri = uriInfo.getBaseUriBuilder().path(PromotorResource.class).path("festivales").build();
+                return Response.seeOther(fallbackUri).build();
+            }
+            // CORRECCIÓN: Construir URI para ver detalles del FESTIVAL
+            URI detailUri = uriInfo.getBaseUriBuilder()
+                    .path(PromotorResource.class)
+                    .path(PromotorResource.class, "mostrarDetallesFestival") // VISTA del FESTIVAL
+                    .resolveTemplate("id", idFestival) // Usar "id" como nombre de template y pasar idFestival
+                    .build();
+            log.debug("Redirección post-actualización (exitosa) a: {}", detailUri);
+            return Response.seeOther(detailUri).build(); // 303 See Other
         }
-        return Response.seeOther(redirectUri).build();
-    }
+    } // Fin de actualizarEntrada
 
+    /**
+     * Endpoint POST para eliminar un tipo de entrada específico. Redirige a la
+     * vista de detalle del festival. Requiere rol PROMOTOR en sesión y ser
+     * dueño del festival asociado.
+     *
+     * @param idEntrada ID del tipo de entrada a eliminar, obtenido del path.
+     * @return Una respuesta de redirección (303) a la vista de detalle del
+     * festival.
+     * @throws BadRequestException Si el ID no es válido.
+     */
     @POST
     @Path("/entradas/{idEntrada}/eliminar")
     public Response eliminarEntrada(@PathParam("idEntrada") Integer idEntrada) {
-        log.info("POST /promotor/entradas/{}/eliminar", idEntrada);
+        log.info("POST /promotor/entradas/{}/eliminar recibido", idEntrada);
         Integer idPromotor = verificarAccesoPromotor(request);
-        if (idEntrada == null) {
-            throw new BadRequestException("ID entrada no válido.");
+        if (idEntrada == null || idEntrada <= 0) {
+            throw new BadRequestException("ID de entrada no válido.");
         }
 
         String mensajeFlash = null;
         String errorFlash = null;
-        Integer idFestival = null;
+        Integer idFestival = null; // Para redirigir
 
         try {
+            // Obtener el ID del festival ANTES de intentar eliminar la entrada
             Optional<EntradaDTO> optDto = entradaService.obtenerEntradaPorId(idEntrada, idPromotor);
             if (optDto.isPresent()) {
                 idFestival = optDto.get().getIdFestival();
+                // Llamar al servicio para eliminar (el servicio verifica propiedad)
                 entradaService.eliminarEntrada(idEntrada, idPromotor);
-                mensajeFlash = "Tipo de entrada ID " + idEntrada + " eliminado.";
+                mensajeFlash = "Tipo de entrada ID " + idEntrada + " eliminado correctamente.";
             } else {
-                errorFlash = "Entrada no encontrada o sin permiso.";
+                errorFlash = "Tipo de entrada no encontrado o no tiene permiso para eliminarlo.";
+                log.warn("Intento de eliminar entrada ID {} fallido (no encontrada o sin permiso) por promotor {}", idEntrada, idPromotor);
             }
-        } catch (EntradaNotFoundException | UsuarioNotFoundException e) {
+        } catch (EntradaNotFoundException | UsuarioNotFoundException e) { // UsuarioNotFound no debería ocurrir aquí
             errorFlash = e.getMessage();
             log.warn("Error al eliminar entrada ID {}: {}", idEntrada, errorFlash);
         } catch (SecurityException e) {
-            errorFlash = e.getMessage();
+            errorFlash = e.getMessage(); // "No tiene permiso..."
             log.warn("Error de seguridad al eliminar entrada ID {}: {}", idEntrada, errorFlash);
-        } catch (RuntimeException e) {
-            errorFlash = "No se pudo eliminar el tipo de entrada (posiblemente tiene ventas asociadas): " + e.getMessage();
+        } catch (RuntimeException e) { // Captura errores como violación de FK (IllegalStateException/PersistenceException del servicio)
+            errorFlash = "No se pudo eliminar el tipo de entrada (posiblemente tiene ventas asociadas).";
             log.error("Error runtime al eliminar entrada ID {}: {}", idEntrada, e.getMessage(), e);
-        } catch (Exception e) {
+        } catch (Exception e) { // Captura genérica para otros errores
             errorFlash = "Error interno inesperado al eliminar.";
             log.error("Error interno al eliminar entrada ID {}: {}", idEntrada, e.getMessage(), e);
         }
 
+        // Guardar mensaje/error y redirigir
         setFlashMessage(request, mensajeFlash != null ? "mensaje" : "error", mensajeFlash != null ? mensajeFlash : errorFlash);
-        URI redirectUri = (idFestival != null) ? buildUri("mostrarDetallesFestival", idFestival) : buildUri("listarFestivales", null);
-        return Response.seeOther(redirectUri).build();
+
+        // Redirigir a la página de VISTA del festival si obtuvimos su ID, sino a la lista general
+        URI redirectUri;
+        if (idFestival != null) {
+            redirectUri = uriInfo.getBaseUriBuilder()
+                    .path(PromotorResource.class)
+                    .path(PromotorResource.class, "mostrarDetallesFestival") // VISTA del FESTIVAL
+                    .resolveTemplate("id", idFestival) // Usar template "id"
+                    .build();
+        } else {
+            // Fallback si no se pudo obtener el idFestival (ej, si la entrada no existía)
+            redirectUri = uriInfo.getBaseUriBuilder().path(PromotorResource.class).path("festivales").build();
+        }
+        log.debug("Redirección post-eliminación entrada a: {}", redirectUri);
+        return Response.seeOther(redirectUri).build(); // 303 See Other
     }
 
-    // --- Gestión de Entradas Asignadas ---
+    // --- Endpoints para Gestión de Entradas Asignadas ---
+    /**
+     * Endpoint GET para listar las entradas asignadas (vendidas/generadas) de
+     * un festival específico perteneciente al promotor autenticado. Realiza
+     * forward al JSP
+     * {@code /WEB-INF/jsp/promotor/promotor-entradas-asignadas.jsp}. Requiere
+     * rol PROMOTOR en sesión y ser dueño del festival.
+     *
+     * @param idFestival ID del festival cuyas entradas asignadas se listarán,
+     * obtenido del path.
+     * @return Una respuesta JAX-RS OK si el forward tiene éxito.
+     * @throws BadRequestException Si el ID no es válido.
+     * @throws NotFoundException Si el festival no se encuentra.
+     * @throws ForbiddenException Si el promotor no es dueño del festival.
+     * @throws InternalServerErrorException Si ocurre un error interno al cargar
+     * datos.
+     * @throws ServletException Si ocurre un error durante el forward del JSP.
+     * @throws IOException Si ocurre un error de E/S durante el forward.
+     */
     @GET
     @Path("/festivales/{idFestival}/entradas-asignadas")
     @Produces(MediaType.TEXT_HTML)
     public Response listarEntradasAsignadas(@PathParam("idFestival") Integer idFestival) throws ServletException, IOException {
-        log.debug("GET /promotor/festivales/{}/entradas-asignadas", idFestival);
+        log.debug("GET /promotor/festivales/{}/entradas-asignadas recibido", idFestival);
         Integer idPromotor = verificarAccesoPromotor(request);
-        if (idFestival == null) {
+        if (idFestival == null || idFestival <= 0) {
             throw new BadRequestException("ID festival inválido.");
         }
         try {
+            // Obtener festival y verificar propiedad
             FestivalDTO festival = festivalService.obtenerFestivalPorId(idFestival)
-                    .filter(f -> f.getIdPromotor().equals(idPromotor))
+                    .filter(f -> idPromotor.equals(f.getIdPromotor()))
                     .orElseThrow(() -> new ForbiddenException("Festival no encontrado o no pertenece a este promotor."));
 
+            // Obtener lista de entradas asignadas
             List<EntradaAsignadaDTO> listaEntradas = entradaAsignadaService.obtenerEntradasAsignadasPorFestival(idFestival, idPromotor);
 
             request.setAttribute("festival", festival);
             request.setAttribute("entradasAsignadas", listaEntradas);
             request.setAttribute("idPromotorAutenticado", idPromotor);
             mostrarMensajeFlash(request);
-            forwardToJsp("/WEB-INF/jsp/promotor/promotor-entradas-asignadas.jsp");
+
+            RequestDispatcher dispatcher = request.getRequestDispatcher("/WEB-INF/jsp/promotor/promotor-entradas-asignadas.jsp");
+            dispatcher.forward(request, response);
             return Response.ok().build();
 
         } catch (ForbiddenException | NotFoundException e) {
             throw e;
         } catch (Exception e) {
-            log.error("Error al listar entradas asignadas festival ID {}: {}", idFestival, e.getMessage(), e);
-            throw new InternalServerErrorException("Error al cargar entradas asignadas.", e);
+            log.error("Error al listar entradas asignadas para festival ID {}: {}", idFestival, e.getMessage(), e);
+            throw new InternalServerErrorException("Error al cargar las entradas asignadas.", e);
         }
     }
 
+    /**
+     * Endpoint POST para nominar una entrada asignada a un asistente. Recibe el
+     * email, nombre y teléfono (opcional) del asistente desde el formulario. El
+     * servicio buscará o creará el asistente por email. Redirige a la lista de
+     * entradas asignadas del festival. Requiere rol PROMOTOR en sesión y ser
+     * dueño del festival asociado a la entrada.
+     *
+     * @param idEntradaAsignada ID de la entrada asignada a nominar, obtenido
+     * del path.
+     * @param emailAsistente Email del asistente (obligatorio).
+     * @param nombreAsistente Nombre del asistente (obligatorio si el asistente
+     * es nuevo).
+     * @param telefonoAsistente Teléfono del asistente (opcional).
+     * @return Una respuesta de redirección (303) a la lista de entradas
+     * asignadas del festival.
+     * @throws BadRequestException Si faltan parámetros obligatorios (ID
+     * entrada, email).
+     */
     @POST
     @Path("/entradas-asignadas/{idEntradaAsignada}/nominar")
     @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
@@ -535,70 +833,139 @@ public class PromotorResource {
             @FormParam("nombreAsistente") String nombreAsistente,
             @FormParam("telefonoAsistente") String telefonoAsistente) {
 
-        log.info("POST /promotor/entradas-asignadas/{}/nominar a email {}", idEntradaAsignada, emailAsistente);
+        log.info("POST /promotor/entradas-asignadas/{}/nominar recibido para asistente email {}", idEntradaAsignada, emailAsistente);
         Integer idPromotor = verificarAccesoPromotor(request);
-        if (idEntradaAsignada == null || emailAsistente == null || emailAsistente.isBlank()) {
-            throw new BadRequestException("Faltan parámetros (idEntradaAsignada, emailAsistente).");
+
+        if (idEntradaAsignada == null || idEntradaAsignada <= 0 || emailAsistente == null || emailAsistente.isBlank()) {
+            throw new BadRequestException("Faltan parámetros requeridos o son inválidos (idEntradaAsignada, emailAsistente).");
         }
+        // El servicio validará si el nombre es necesario
 
         String mensajeFlash = null;
         String errorFlash = null;
-        Integer idFestival = null;
+        Integer idFestival = null; // Para redirigir
 
         try {
+            // Llamar al servicio para nominar (el servicio verifica propiedad y estado)
             entradaAsignadaService.nominarEntrada(idEntradaAsignada, emailAsistente, nombreAsistente, telefonoAsistente, idPromotor);
-            mensajeFlash = "Entrada ID " + idEntradaAsignada + " nominada a " + emailAsistente + ".";
-            idFestival = entradaAsignadaService.obtenerEntradaAsignadaPorId(idEntradaAsignada, idPromotor)
-                    .map(EntradaAsignadaDTO::getIdFestival).orElse(null);
-        } catch (Exception e) { // Captura todas las de negocio/runtime
-            errorFlash = "No se pudo nominar: " + e.getMessage();
-            log.warn("Error al nominar entrada ID {}: {}", idEntradaAsignada, errorFlash);
-            // Intentar obtener ID de festival para redirigir igual
-            try {
-                idFestival = entradaAsignadaService.obtenerEntradaAsignadaPorId(idEntradaAsignada, idPromotor)
-                        .map(EntradaAsignadaDTO::getIdFestival).orElse(null);
-            } catch (Exception ignored) {
+            mensajeFlash = "Entrada ID " + idEntradaAsignada + " nominada correctamente al asistente con email " + emailAsistente + ".";
+
+            // Obtener el ID del festival para la redirección
+            Optional<EntradaAsignadaDTO> optDto = entradaAsignadaService.obtenerEntradaAsignadaPorId(idEntradaAsignada, idPromotor);
+            if (optDto.isPresent()) {
+                idFestival = optDto.get().getIdFestival();
+            } else {
+                log.warn("No se pudo obtener entrada ID {} después de nominarla para determinar el festival.", idEntradaAsignada);
+                // errorFlash podría establecerse aquí si la redirección es crítica
             }
+
+        } catch (EntradaAsignadaNotFoundException | UsuarioNotFoundException | IllegalArgumentException e) {
+            errorFlash = e.getMessage(); // Errores de datos o no encontrado
+            log.warn("Error al nominar entrada ID {}: {}", idEntradaAsignada, errorFlash);
+        } catch (SecurityException | IllegalStateException e) {
+            errorFlash = "No se pudo nominar la entrada: " + e.getMessage(); // Errores de permiso o estado
+            log.warn("Error de negocio/seguridad al nominar entrada ID {}: {}", idEntradaAsignada, errorFlash);
+        } catch (Exception e) {
+            errorFlash = "Error interno inesperado al nominar la entrada.";
+            log.error("Error interno al nominar entrada ID {}: {}", idEntradaAsignada, e.getMessage(), e);
         }
 
+        // Guardar mensaje/error y redirigir
         setFlashMessage(request, mensajeFlash != null ? "mensaje" : "error", mensajeFlash != null ? mensajeFlash : errorFlash);
-        URI redirectUri = (idFestival != null) ? buildUri("listarEntradasAsignadas", idFestival) : buildUri("listarFestivales", null);
-        return Response.seeOther(redirectUri).build();
+
+        // Redirigir a la lista de entradas asignadas del festival si tenemos el ID, sino a la lista general de festivales
+        URI redirectUri;
+        if (idFestival != null) {
+            redirectUri = uriInfo.getBaseUriBuilder()
+                    .path(PromotorResource.class)
+                    .path(PromotorResource.class, "listarEntradasAsignadas")
+                    .resolveTemplate("idFestival", idFestival)
+                    .build();
+        } else {
+            redirectUri = uriInfo.getBaseUriBuilder().path(PromotorResource.class).path("festivales").build(); // Fallback
+        }
+        log.debug("Redirección post-nominación a: {}", redirectUri);
+        return Response.seeOther(redirectUri).build(); // 303 See Other
     }
 
+    /**
+     * Endpoint POST para cancelar una entrada asignada. El servicio se encarga
+     * de verificar permisos, estado de la entrada y de restaurar el stock del
+     * tipo de entrada original. Redirige a la lista de entradas asignadas del
+     * festival. Requiere rol PROMOTOR en sesión y ser dueño del festival
+     * asociado.
+     *
+     * @param idEntradaAsignada ID de la entrada asignada a cancelar, obtenido
+     * del path.
+     * @return Una respuesta de redirección (303) a la lista de entradas
+     * asignadas.
+     * @throws BadRequestException Si falta el ID o no es válido.
+     */
     @POST
     @Path("/entradas-asignadas/{idEntradaAsignada}/cancelar")
     public Response cancelarEntrada(@PathParam("idEntradaAsignada") Integer idEntradaAsignada) {
-        log.info("POST /promotor/entradas-asignadas/{}/cancelar", idEntradaAsignada);
+        log.info("POST /promotor/entradas-asignadas/{}/cancelar recibido", idEntradaAsignada);
         Integer idPromotor = verificarAccesoPromotor(request);
-        if (idEntradaAsignada == null) {
-            throw new BadRequestException("Falta idEntradaAsignada.");
+        if (idEntradaAsignada == null || idEntradaAsignada <= 0) {
+            throw new BadRequestException("ID entrada asignada inválido.");
         }
 
         String mensajeFlash = null;
         String errorFlash = null;
-        Integer idFestival = null;
+        Integer idFestival = null; // Para redirigir
 
         try {
-            idFestival = entradaAsignadaService.obtenerEntradaAsignadaPorId(idEntradaAsignada, idPromotor)
-                    .map(EntradaAsignadaDTO::getIdFestival).orElse(null);
-            if (idFestival != null) { // Solo intentar cancelar si se encontró y tenemos permiso
+            // Obtener ID del festival ANTES de cancelar, para poder redirigir incluso si falla
+            Optional<EntradaAsignadaDTO> optDto = entradaAsignadaService.obtenerEntradaAsignadaPorId(idEntradaAsignada, idPromotor);
+            if (optDto.isPresent()) {
+                idFestival = optDto.get().getIdFestival();
+                // Llamar al servicio para cancelar (verifica propiedad y estado)
                 entradaAsignadaService.cancelarEntrada(idEntradaAsignada, idPromotor);
-                mensajeFlash = "Entrada ID " + idEntradaAsignada + " cancelada (stock restaurado).";
+                mensajeFlash = "Entrada ID " + idEntradaAsignada + " cancelada correctamente (stock restaurado).";
             } else {
-                errorFlash = "Entrada no encontrada o sin permiso.";
+                errorFlash = "Entrada no encontrada o no tiene permiso para cancelarla.";
+                log.warn("Intento de cancelar entrada ID {} fallido (no encontrada o sin permiso) por promotor {}", idEntradaAsignada, idPromotor);
             }
-        } catch (Exception e) {
-            errorFlash = "No se pudo cancelar: " + e.getMessage();
+        } catch (EntradaAsignadaNotFoundException | UsuarioNotFoundException e) {
+            errorFlash = e.getMessage();
             log.warn("Error al cancelar entrada ID {}: {}", idEntradaAsignada, e.getMessage());
-            // Si ya teníamos el ID de festival, lo mantenemos para redirigir
+        } catch (SecurityException | IllegalStateException e) {
+            errorFlash = "No se pudo cancelar la entrada: " + e.getMessage();
+            log.warn("Error negocio/seguridad al cancelar entrada ID {}: {}", idEntradaAsignada, e.getMessage());
+        } catch (Exception e) {
+            errorFlash = "Error interno inesperado al cancelar la entrada.";
+            log.error("Error interno al cancelar entrada ID {}: {}", idEntradaAsignada, e.getMessage(), e);
         }
 
         setFlashMessage(request, mensajeFlash != null ? "mensaje" : "error", mensajeFlash != null ? mensajeFlash : errorFlash);
-        URI redirectUri = (idFestival != null) ? buildUri("listarEntradasAsignadas", idFestival) : buildUri("listarFestivales", null);
-        return Response.seeOther(redirectUri).build();
+
+        URI redirectUri;
+        if (idFestival != null) {
+            redirectUri = uriInfo.getBaseUriBuilder()
+                    .path(PromotorResource.class)
+                    .path(PromotorResource.class, "listarEntradasAsignadas")
+                    .resolveTemplate("idFestival", idFestival)
+                    .build();
+        } else {
+            redirectUri = uriInfo.getBaseUriBuilder().path(PromotorResource.class).path("festivales").build(); // Fallback
+        }
+        log.debug("Redirección post-cancelación a: {}", redirectUri);
+        return Response.seeOther(redirectUri).build(); // 303 See Other
     }
 
+    /**
+     * Endpoint POST para asociar una pulsera NFC a una entrada asignada. Recibe
+     * el UID de la pulsera desde el formulario. Redirige a la lista de entradas
+     * asignadas del festival. Requiere rol PROMOTOR en sesión y ser dueño del
+     * festival asociado.
+     *
+     * @param idEntradaAsignada ID de la entrada asignada a la que asociar la
+     * pulsera, obtenido del path.
+     * @param codigoUid UID de la pulsera a asociar, obtenido del formulario.
+     * @return Una respuesta de redirección (303) a la lista de entradas
+     * asignadas.
+     * @throws BadRequestException Si faltan parámetros o son inválidos.
+     */
     @POST
     @Path("/entradas-asignadas/{idEntradaAsignada}/asociar-pulsera")
     @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
@@ -608,147 +975,218 @@ public class PromotorResource {
 
         log.info("POST /promotor/entradas-asignadas/{}/asociar-pulsera con UID: {}", idEntradaAsignada, codigoUid);
         Integer idPromotor = verificarAccesoPromotor(request);
-        if (idEntradaAsignada == null || codigoUid == null || codigoUid.isBlank()) {
-            throw new BadRequestException("Faltan parámetros (idEntradaAsignada, codigoUid).");
+
+        if (idEntradaAsignada == null || idEntradaAsignada <= 0 || codigoUid == null || codigoUid.isBlank()) {
+            throw new BadRequestException("Faltan parámetros requeridos o son inválidos (idEntradaAsignada, codigoUid).");
         }
 
         String mensajeFlash = null;
         String errorFlash = null;
-        Integer idFestival = null;
+        Integer idFestival = null; // Para redirigir
 
         try {
-            idFestival = entradaAsignadaService.obtenerEntradaAsignadaPorId(idEntradaAsignada, idPromotor)
-                    .map(EntradaAsignadaDTO::getIdFestival).orElse(null);
-            if (idFestival != null) {
+            // Obtener ID del festival ANTES de asociar, para la redirección
+            Optional<EntradaAsignadaDTO> optDto = entradaAsignadaService.obtenerEntradaAsignadaPorId(idEntradaAsignada, idPromotor);
+            if (optDto.isPresent()) {
+                idFestival = optDto.get().getIdFestival();
+                // Llamar al servicio para asociar la pulsera (verifica propiedad y estado)
                 pulseraNFCService.asociarPulseraEntrada(codigoUid, idEntradaAsignada, idPromotor);
-                mensajeFlash = "Pulsera UID '" + codigoUid + "' asociada a entrada ID " + idEntradaAsignada + ".";
+                mensajeFlash = "Pulsera con UID '" + codigoUid + "' asociada correctamente a la entrada ID " + idEntradaAsignada + ".";
             } else {
-                errorFlash = "Entrada no encontrada o sin permiso.";
+                errorFlash = "Entrada no encontrada o no tiene permiso.";
+                log.warn("Intento de asociar pulsera a entrada ID {} fallido (no encontrada o sin permiso) por promotor {}", idEntradaAsignada, idPromotor);
             }
-        } catch (Exception e) {
-            errorFlash = "No se pudo asociar: " + e.getMessage();
+        } catch (EntradaAsignadaNotFoundException | UsuarioNotFoundException | IllegalArgumentException e) {
+            errorFlash = e.getMessage();
             log.warn("Error al asociar pulsera a entrada ID {}: {}", idEntradaAsignada, errorFlash);
+        } catch (SecurityException | IllegalStateException | PulseraYaAsociadaException | EntradaAsignadaNoNominadaException e) {
+            errorFlash = "No se pudo asociar la pulsera: " + e.getMessage();
+            log.warn("Error negocio/seguridad al asociar pulsera a entrada ID {}: {}", idEntradaAsignada, errorFlash);
+        } catch (Exception e) {
+            errorFlash = "Error interno inesperado al asociar la pulsera.";
+            log.error("Error interno al asociar pulsera a entrada ID {}: {}", idEntradaAsignada, e.getMessage(), e);
         }
 
         setFlashMessage(request, mensajeFlash != null ? "mensaje" : "error", mensajeFlash != null ? mensajeFlash : errorFlash);
-        URI redirectUri = (idFestival != null) ? buildUri("listarEntradasAsignadas", idFestival) : buildUri("listarFestivales", null);
-        return Response.seeOther(redirectUri).build();
+
+        URI redirectUri;
+        if (idFestival != null) {
+            redirectUri = uriInfo.getBaseUriBuilder()
+                    .path(PromotorResource.class)
+                    .path(PromotorResource.class, "listarEntradasAsignadas")
+                    .resolveTemplate("idFestival", idFestival)
+                    .build();
+        } else {
+            redirectUri = uriInfo.getBaseUriBuilder().path(PromotorResource.class).path("festivales").build(); // Fallback
+        }
+        log.debug("Redirección post-asociar pulsera a: {}", redirectUri);
+        return Response.seeOther(redirectUri).build(); // 303 See Other
     }
 
-    // --- Listados Relacionados ---
+    // --- Endpoints para Consulta de Asistentes y Pulseras por Festival ---
+    /**
+     * Endpoint GET para mostrar la lista de asistentes únicos con entradas para
+     * un festival específico del promotor autenticado. Realiza forward al JSP
+     * {@code /WEB-INF/jsp/promotor/promotor-festival-asistentes.jsp}. Requiere
+     * rol PROMOTOR en sesión y ser dueño del festival.
+     *
+     * @param idFestival ID del festival cuyos asistentes se listarán, obtenido
+     * del path.
+     * @return Una respuesta JAX-RS OK si el forward tiene éxito.
+     * @throws BadRequestException Si el ID no es válido.
+     * @throws NotFoundException Si el festival no se encuentra.
+     * @throws ForbiddenException Si el promotor no es dueño del festival.
+     * @throws InternalServerErrorException Si ocurre un error interno al cargar
+     * datos.
+     * @throws ServletException Si ocurre un error durante el forward del JSP.
+     * @throws IOException Si ocurre un error de E/S durante el forward.
+     */
     @GET
     @Path("/festivales/{idFestival}/asistentes")
     @Produces(MediaType.TEXT_HTML)
     public Response listarAsistentesPorFestival(@PathParam("idFestival") Integer idFestival) throws ServletException, IOException {
-        log.debug("GET /promotor/festivales/{}/asistentes", idFestival);
+        log.debug("GET /promotor/festivales/{}/asistentes recibido", idFestival);
         Integer idPromotor = verificarAccesoPromotor(request);
-        if (idFestival == null) {
-            throw new BadRequestException("ID festival no válido.");
+        if (idFestival == null || idFestival <= 0) {
+            throw new BadRequestException("ID de festival no válido.");
         }
 
         try {
+            // Obtener datos del festival y verificar propiedad
             FestivalDTO festival = festivalService.obtenerFestivalPorId(idFestival)
-                    .filter(f -> f.getIdPromotor().equals(idPromotor))
+                    .filter(f -> idPromotor.equals(f.getIdPromotor()))
                     .orElseThrow(() -> new ForbiddenException("Festival no encontrado o no pertenece a este promotor."));
+
+            // Obtener lista de asistentes DTOs para este festival (el servicio verifica permisos)
             List<AsistenteDTO> listaAsistentes = asistenteService.obtenerAsistentesPorFestival(idFestival, idPromotor);
 
             request.setAttribute("festival", festival);
             request.setAttribute("asistentes", listaAsistentes);
             request.setAttribute("idPromotorAutenticado", idPromotor);
             mostrarMensajeFlash(request);
-            forwardToJsp("/WEB-INF/jsp/promotor/promotor-festival-asistentes.jsp");
+
+            RequestDispatcher dispatcher = request.getRequestDispatcher("/WEB-INF/jsp/promotor/promotor-festival-asistentes.jsp");
+            dispatcher.forward(request, response);
             return Response.ok().build();
 
         } catch (ForbiddenException | NotFoundException e) {
             throw e;
         } catch (Exception e) {
-            log.error("Error al listar asistentes festival ID {}: {}", idFestival, e.getMessage(), e);
-            throw new InternalServerErrorException("Error al cargar asistentes.", e);
+            log.error("Error al listar asistentes para festival ID {}: {}", idFestival, e.getMessage(), e);
+            throw new InternalServerErrorException("Error al cargar los asistentes del festival.", e);
         }
     }
 
+    /**
+     * Endpoint GET para mostrar la lista de compras realizadas para un festival
+     * específico del promotor autenticado. Realiza forward al JSP
+     * {@code /WEB-INF/jsp/promotor/promotor-festival-compras.jsp}. Requiere rol
+     * PROMOTOR en sesión y ser dueño del festival.
+     *
+     * @param idFestival ID del festival cuyas compras se listarán, obtenido del
+     * path.
+     * @return Una respuesta JAX-RS OK si el forward tiene éxito, o redirección
+     * si falla la carga.
+     * @throws BadRequestException Si el ID no es válido.
+     * @throws ForbiddenException Si el promotor no es dueño del festival.
+     * @throws ServletException Si ocurre un error durante el forward del JSP.
+     * @throws IOException Si ocurre un error de E/S durante el forward.
+     */
     @GET
     @Path("/festivales/{idFestival}/compras")
     @Produces(MediaType.TEXT_HTML)
     public Response listarComprasPorFestival(@PathParam("idFestival") Integer idFestival) throws ServletException, IOException {
-        log.debug("GET /promotor/festivales/{}/compras", idFestival);
+        log.debug("GET /promotor/festivales/{}/compras recibido", idFestival);
         Integer idPromotor = verificarAccesoPromotor(request);
-        if (idFestival == null) {
-            throw new BadRequestException("ID festival no válido.");
+        if (idFestival == null || idFestival <= 0) {
+            throw new BadRequestException("ID de festival no válido.");
         }
 
         try {
+            // Obtener datos del festival y verificar propiedad
             FestivalDTO festival = festivalService.obtenerFestivalPorId(idFestival)
-                    .filter(f -> f.getIdPromotor().equals(idPromotor))
+                    .filter(f -> idPromotor.equals(f.getIdPromotor()))
                     .orElseThrow(() -> new ForbiddenException("Festival no encontrado o no pertenece a este promotor."));
+
+            // Obtener lista de compras DTOs para este festival (servicio verifica permiso)
             List<CompraDTO> listaCompras = compraService.obtenerComprasPorFestival(idFestival, idPromotor);
 
             request.setAttribute("festival", festival);
             request.setAttribute("compras", listaCompras);
             request.setAttribute("idPromotorAutenticado", idPromotor);
             mostrarMensajeFlash(request);
-            forwardToJsp("/WEB-INF/jsp/promotor/promotor-festival-compras.jsp");
+
+            RequestDispatcher dispatcher = request.getRequestDispatcher("/WEB-INF/jsp/promotor/promotor-festival-compras.jsp");
+            dispatcher.forward(request, response);
             return Response.ok().build();
 
         } catch (ForbiddenException | NotFoundException e) {
             throw e;
         } catch (Exception e) {
-            log.error("Error al listar compras festival ID {}: {}", idFestival, e.getMessage(), e);
+            log.error("Error al listar compras para festival ID {}: {}", idFestival, e.getMessage(), e);
             setFlashMessage(request, "error", "Error al cargar las compras del festival.");
-            return Response.seeOther(buildUri("mostrarDetallesFestival", idFestival)).build();
+            URI detailUri = uriInfo.getBaseUriBuilder()
+                    .path(PromotorResource.class)
+                    .path(PromotorResource.class, "mostrarDetallesFestival")
+                    .resolveTemplate("id", idFestival)
+                    .build();
+            return Response.seeOther(detailUri).build(); // Redirigir con error
         }
     }
 
-    @GET
-    @Path("/festivales/{idFestival}/pulseras")
-    @Produces(MediaType.TEXT_HTML)
-    public Response listarPulserasPorFestivalPromotor(@PathParam("idFestival") Integer idFestival) throws ServletException, IOException {
-        log.debug("GET /promotor/festivales/{}/pulseras", idFestival);
-        Integer idPromotor = verificarAccesoPromotor(request);
-        if (idFestival == null) {
-            throw new BadRequestException("ID festival no válido.");
-        }
-
-        try {
-            FestivalDTO festival = festivalService.obtenerFestivalPorId(idFestival)
-                    .filter(f -> f.getIdPromotor().equals(idPromotor))
-                    .orElseThrow(() -> new ForbiddenException("Festival no encontrado o no pertenece a este promotor."));
-            List<PulseraNFCDTO> listaPulseras = pulseraNFCService.obtenerPulserasPorFestival(idFestival, idPromotor);
-
-            request.setAttribute("festival", festival);
-            request.setAttribute("pulseras", listaPulseras);
-            request.setAttribute("idPromotorAutenticado", idPromotor);
-            mostrarMensajeFlash(request);
-            forwardToJsp("/WEB-INF/jsp/promotor/promotor-festival-pulseras.jsp");
-            return Response.ok().build();
-
-        } catch (ForbiddenException | NotFoundException e) {
-            throw e;
-        } catch (Exception e) {
-            log.error("Error al listar pulseras festival ID {}: {}", idFestival, e.getMessage(), e);
-            setFlashMessage(request, "error", "Error al cargar las pulseras del festival.");
-            return Response.seeOther(buildUri("mostrarDetallesFestival", idFestival)).build();
-        }
-    }
-
-    // --- Cambio de Contraseña Obligatorio ---
+    // --- Endpoints para Cambio de Contraseña Obligatorio ---
+    /**
+     * Endpoint GET para mostrar el formulario de cambio de contraseña
+     * obligatorio. Se accede típicamente después de un login exitoso si el flag
+     * 'cambioPasswordRequerido' del usuario es true. Realiza forward al JSP
+     * {@code /WEB-INF/jsp/cambiar-password-obligatorio.jsp}. Requiere sesión
+     * activa.
+     *
+     * @return Una respuesta JAX-RS OK si el forward tiene éxito, o redirección
+     * si falla.
+     * @throws ServletException Si ocurre un error durante el forward del JSP.
+     * @throws IOException Si ocurre un error de E/S durante el forward.
+     * @throws NotAuthorizedException Si no hay sesión activa o es inválida.
+     */
     @GET
     @Path("/mostrar-cambio-password")
     @Produces(MediaType.TEXT_HTML)
     public Response mostrarFormularioCambioPassword() throws ServletException, IOException {
-        log.debug("GET /promotor/mostrar-cambio-password");
+        log.debug("GET /promotor/mostrar-cambio-password recibido");
         HttpSession session = request.getSession(false);
         if (session == null || session.getAttribute("userId") == null) {
-            log.warn("Acceso a mostrar-cambio-password sin sesión válida.");
-            return Response.seeOther(URI.create(request.getContextPath() + "/login.jsp?error=session_required")).build();
+            log.warn("Intento de acceso a mostrar-cambio-password sin sesión válida.");
+            try {
+                URI loginUri = new URI(request.getContextPath() + "/login?error=session_required");
+                return Response.seeOther(loginUri).build();
+            } catch (URISyntaxException e) {
+                log.error("Error creando URI para login", e);
+                return Response.serverError().entity("Error interno").build();
+            }
         }
         Integer userId = (Integer) session.getAttribute("userId");
-        log.debug("Mostrando form cambio pass obligatorio para userId: {}", userId);
-        mostrarMensajeFlash(request); // Muestra errores de intento previo
-        forwardToJsp("/WEB-INF/jsp/cambiar-password-obligatorio.jsp");
+        log.debug("Mostrando formulario de cambio de contraseña obligatorio para userId: {}", userId);
+
+        mostrarMensajeFlash(request); // Mostrar errores de intento previo
+
+        RequestDispatcher dispatcher = request.getRequestDispatcher("/WEB-INF/jsp/cambiar-password-obligatorio.jsp");
+        dispatcher.forward(request, response);
         return Response.ok().build();
     }
 
+    /**
+     * Endpoint POST para procesar el cambio de contraseña obligatorio. Recibe
+     * la nueva contraseña y su confirmación desde el formulario. Llama al
+     * servicio para actualizar la contraseña y quitar el flag 'requerido'.
+     * Redirige al dashboard correspondiente al rol del usuario si tiene éxito,
+     * o de vuelta al formulario de cambio si falla. Requiere sesión activa.
+     *
+     * @param newPassword Nueva contraseña introducida (mínimo 8 caracteres).
+     * @param confirmPassword Confirmación de la nueva contraseña (debe
+     * coincidir).
+     * @return Una respuesta de redirección (303) al dashboard o al formulario
+     * de cambio.
+     */
     @POST
     @Path("/cambiar-password-obligatorio")
     @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
@@ -758,134 +1196,131 @@ public class PromotorResource {
 
         HttpSession session = request.getSession(false);
         String errorMessage = null;
-        URI redirectUri = null;
+        URI redirectUri = null; // URI para redirección
 
+        // Verificar sesión y obtener userId y rol
         if (session == null || session.getAttribute("userId") == null || session.getAttribute("userRole") == null) {
-            log.error("Intento de cambiar contraseña obligatorio sin sesión válida.");
-            return Response.seeOther(URI.create(request.getContextPath() + "/login.jsp?error=session_expired")).build();
+            log.error("Intento de cambiar contraseña obligatorio sin sesión o datos de usuario válidos.");
+            try {
+                redirectUri = new URI(request.getContextPath() + "/login?error=session_expired");
+                return Response.seeOther(redirectUri).build();
+            } catch (URISyntaxException e) {
+                return Response.serverError().entity("Error interno").build();
+            }
         }
         Integer userId = (Integer) session.getAttribute("userId");
         String userRole = (String) session.getAttribute("userRole");
         log.info("POST /promotor/cambiar-password-obligatorio para userId: {}", userId);
 
+        // Validar contraseñas
         if (newPassword == null || newPassword.isEmpty() || !newPassword.equals(confirmPassword)) {
             errorMessage = "Las contraseñas no coinciden o están vacías.";
-        } else if (newPassword.length() < 8) {
-            errorMessage = "La nueva contraseña debe tener al menos 8 caracteres.";
-        }
-
-        if (errorMessage != null) {
             log.warn("Error validación contraseña obligatoria (userId: {}): {}", userId, errorMessage);
+            session.setAttribute("passwordChangeError", errorMessage); // Usar clave específica
+            return redirectBackToChangePasswordForm();
+        }
+        if (newPassword.length() < 8) { // Requisito mínimo
+            errorMessage = "La nueva contraseña debe tener al menos 8 caracteres.";
+            log.warn("Error complejidad contraseña obligatoria (userId: {}): {}", userId, errorMessage);
             session.setAttribute("passwordChangeError", errorMessage);
             return redirectBackToChangePasswordForm();
         }
 
         try {
+            // Llamar al servicio para cambiar contraseña y quitar flag
+            log.debug("Llamando a usuarioService.cambiarPasswordYMarcarActualizada para userId: {}", userId);
             usuarioService.cambiarPasswordYMarcarActualizada(userId, newPassword);
-            log.info("Contraseña obligatoria cambiada para userId: {}", userId);
-            session.removeAttribute("passwordChangeError");
-            session.setAttribute("mensaje", "Contraseña actualizada. ¡Bienvenido!");
-            redirectUri = URI.create(request.getContextPath() + determineDashboardUrlFromRole(userRole));
-            return Response.seeOther(redirectUri).build();
+            log.info("Contraseña obligatoria cambiada y flag actualizado para userId: {}", userId);
 
-        } catch (Exception e) {
-            log.error("Error al actualizar contraseña obligatoria userId {}: {}", userId, e.getMessage(), e);
-            session.setAttribute("passwordChangeError", "Error al guardar: " + e.getMessage());
+            session.removeAttribute("passwordChangeError");
+            session.setAttribute("mensaje", "Contraseña actualizada correctamente. ¡Bienvenido!");
+
+            // Redirigir al dashboard apropiado según el rol guardado en sesión
+            String dashboardUrl = determineDashboardUrlFromRole(userRole);
+            log.debug("Redirigiendo a dashboard: {}", dashboardUrl);
+            redirectUri = new URI(request.getContextPath() + dashboardUrl);
+            return Response.seeOther(redirectUri).build(); // 303 See Other
+
+        } catch (Exception e) { // Captura UsuarioNotFound, IllegalArgument o RuntimeException del servicio
+            log.error("Error al actualizar contraseña obligatoria para userId {}: {}", userId, e.getMessage(), e);
+            session.setAttribute("passwordChangeError", "Error al guardar la nueva contraseña: " + e.getMessage());
             return redirectBackToChangePasswordForm();
+        }
+    }
+
+    /**
+     * Endpoint GET para mostrar la lista de pulseras NFC asociadas a un
+     * festival específico del promotor autenticado. Realiza forward al JSP
+     * {@code /WEB-INF/jsp/promotor/promotor-festival-pulseras.jsp}. Requiere
+     * rol PROMOTOR en sesión y ser dueño del festival.
+     *
+     * @param idFestival ID del festival cuyas pulseras se listarán, obtenido
+     * del path.
+     * @return Una respuesta JAX-RS OK si el forward tiene éxito, o redirección
+     * si falla la carga.
+     * @throws BadRequestException Si el ID no es válido.
+     * @throws NotFoundException Si el festival no se encuentra.
+     * @throws ForbiddenException Si el promotor no es dueño del festival.
+     * @throws InternalServerErrorException Si ocurre un error interno al cargar
+     * datos.
+     * @throws ServletException Si ocurre un error durante el forward del JSP.
+     * @throws IOException Si ocurre un error de E/S durante el forward.
+     */
+    @GET
+    @Path("/festivales/{idFestival}/pulseras")
+    @Produces(MediaType.TEXT_HTML)
+    public Response listarPulserasPorFestivalPromotor(@PathParam("idFestival") Integer idFestival) throws ServletException, IOException {
+        log.debug("GET /promotor/festivales/{}/pulseras recibido", idFestival);
+        Integer idPromotor = verificarAccesoPromotor(request);
+        if (idFestival == null || idFestival <= 0) {
+            throw new BadRequestException("ID de festival no válido.");
+        }
+
+        try {
+            // Obtener datos del festival y verificar propiedad
+            FestivalDTO festival = festivalService.obtenerFestivalPorId(idFestival)
+                    .filter(f -> idPromotor.equals(f.getIdPromotor()))
+                    .orElseThrow(() -> new ForbiddenException("Festival no encontrado o no pertenece a este promotor."));
+
+            // Obtener lista de pulseras DTOs para este festival (servicio verifica permiso)
+            List<PulseraNFCDTO> listaPulseras = pulseraNFCService.obtenerPulserasPorFestival(idFestival, idPromotor);
+
+            request.setAttribute("festival", festival);
+            request.setAttribute("pulseras", listaPulseras);
+            request.setAttribute("idPromotorAutenticado", idPromotor);
+            mostrarMensajeFlash(request);
+
+            RequestDispatcher dispatcher = request.getRequestDispatcher("/WEB-INF/jsp/promotor/promotor-festival-pulseras.jsp");
+            dispatcher.forward(request, response);
+            return Response.ok().build();
+
+        } catch (ForbiddenException | NotFoundException e) {
+            throw e;
+        } catch (Exception e) {
+            log.error("Error al listar pulseras para festival ID {}: {}", idFestival, e.getMessage(), e);
+            setFlashMessage(request, "error", "Error al cargar las pulseras del festival.");
+            URI detailUri = uriInfo.getBaseUriBuilder()
+                    .path(PromotorResource.class)
+                    .path(PromotorResource.class, "mostrarDetallesFestival")
+                    .resolveTemplate("id", idFestival)
+                    .build();
+            return Response.seeOther(detailUri).build();
         }
     }
 
     // --- Métodos Auxiliares ---
     /**
-     * Verifica acceso PROMOTOR y devuelve su ID. Lanza excepciones JAX-RS.
-     */
-    private Integer verificarAccesoPromotor(HttpServletRequest request) {
-        HttpSession session = request.getSession(false);
-        if (session == null) {
-            log.warn("Acceso a recurso Promotor sin sesión.");
-            throw new NotAuthorizedException("No hay sesión activa.", Response.status(Response.Status.UNAUTHORIZED).build());
-        }
-        Integer userId = (Integer) session.getAttribute("userId");
-        String userRole = (String) session.getAttribute("userRole");
-        if (userId == null || userRole == null) {
-            log.warn("Acceso a recurso Promotor con sesión inválida. ID: {}", session.getId());
-            session.invalidate();
-            throw new NotAuthorizedException("Sesión inválida.", Response.status(Response.Status.UNAUTHORIZED).build());
-        }
-        if (!RolUsuario.PROMOTOR.name().equals(userRole)) {
-            log.warn("Usuario ID {} (Rol {}) intentó acceder a recurso Promotor.", userId, userRole);
-            throw new ForbiddenException("Acceso denegado. Rol PROMOTOR requerido.");
-        }
-        log.debug("Acceso permitido para promotor ID: {}", userId);
-        return userId;
-    }
-
-    /**
-     * Realiza forward a un JSP.
-     */
-    private void forwardToJsp(String jspPath) throws ServletException, IOException {
-        RequestDispatcher dispatcher = request.getRequestDispatcher(jspPath);
-        dispatcher.forward(request, response);
-    }
-
-    /**
-     * Guarda mensaje flash en sesión.
-     */
-    private void setFlashMessage(HttpServletRequest request, String type, String message) {
-        if (message != null) {
-            HttpSession session = request.getSession();
-            session.setAttribute(type, message);
-            log.trace("Mensaje flash guardado: {}={}", type, message);
-        }
-    }
-
-    /**
-     * Mueve mensajes flash de sesión a request.
-     */
-    private void mostrarMensajeFlash(HttpServletRequest request) {
-        HttpSession session = request.getSession(false);
-        if (session != null) {
-            String[] keys = {"mensaje", "error", "passwordChangeError", "nuevaEntradaConError", "errorEntrada"};
-            String[] requestKeys = {"mensajeExito", "error", "error", "nuevaEntrada", "errorEntrada"}; // Mapeo a claves de request
-
-            for (int i = 0; i < keys.length; i++) {
-                Object value = session.getAttribute(keys[i]);
-                if (value != null) {
-                    request.setAttribute(requestKeys[i], value);
-                    session.removeAttribute(keys[i]);
-                    log.trace("Mensaje/Atributo flash '{}' movido de sesión a request.", keys[i]);
-                }
-            }
-        }
-    }
-
-    /**
-     * Construye URI relativa a la base de la API para un método y parámetro ID.
-     */
-    private URI buildUri(String methodName, Object idParam) {
-        UriBuilder builder = uriInfo.getBaseUriBuilder()
-                .path(PromotorResource.class)
-                .path(PromotorResource.class, methodName);
-        if (idParam != null) {
-            // Asume que el parámetro se llama 'id' o 'idFestival' o 'idEntrada', etc.
-            // Se necesita introspección o un mapa para hacerlo genérico,
-            // pero para estos casos específicos podemos hacerlo manualmente:
-            String paramName = "id"; // Default
-            if ("mostrarDetallesFestival".equals(methodName) || "listarEntradasAsignadas".equals(methodName) || "listarAsistentesPorFestival".equals(methodName) || "listarComprasPorFestival".equals(methodName) || "listarPulserasPorFestivalPromotor".equals(methodName)) {
-                paramName = "idFestival";
-            } else if ("mostrarFormularioEditarEntrada".equals(methodName) || "actualizarEntrada".equals(methodName) || "eliminarEntrada".equals(methodName)) {
-                paramName = "idEntrada";
-            } else if ("nominarEntrada".equals(methodName) || "cancelarEntrada".equals(methodName) || "asociarPulseraPromotor".equals(methodName)) {
-                paramName = "idEntradaAsignada";
-            }
-            return builder.resolveTemplate(paramName, idParam).build();
-        } else {
-            return builder.build();
-        }
-    }
-
-    /**
-     * Forward a form de edición de festival con error.
+     * Realiza un forward al JSP del formulario de edición de festival del
+     * promotor, pasando un mensaje de error y los datos del DTO que causaron el
+     * error. Usado cuando falla la operación de guardado.
+     *
+     * @param dto DTO con los datos introducidos que causaron el error.
+     * @param idPromotor ID del promotor autenticado.
+     * @param esEdicion {@code true} si era una edición, {@code false} si era
+     * creación.
+     * @param errorMessage Mensaje de error a mostrar en el formulario.
+     * @throws ServletException Si ocurre un error durante el forward.
+     * @throws IOException Si ocurre un error de E/S durante el forward.
      */
     private void forwardToPromotorFestivalEditFormWithError(FestivalDTO dto, Integer idPromotor, boolean esEdicion, String errorMessage)
             throws ServletException, IOException {
@@ -893,11 +1328,47 @@ public class PromotorResource {
         request.setAttribute("festival", dto);
         request.setAttribute("esNuevo", !esEdicion);
         request.setAttribute("idPromotorAutenticado", idPromotor);
-        forwardToJsp("/WEB-INF/jsp/promotor/promotor-festival-editar.jsp");
+        RequestDispatcher dispatcher = request.getRequestDispatcher("/WEB-INF/jsp/promotor/promotor-festival-editar.jsp");
+        dispatcher.forward(request, response);
     }
 
     /**
-     * Redirige al form de cambio de contraseña obligatorio.
+     * Verifica si existe una sesión HTTP activa y si el usuario autenticado en
+     * ella tiene el rol PROMOTOR.
+     *
+     * @param request La petición HTTP actual.
+     * @return El ID del usuario promotor autenticado.
+     * @throws NotAuthorizedException Si no hay sesión activa o es inválida.
+     * @throws ForbiddenException Si el usuario en sesión no tiene rol PROMOTOR.
+     */
+    private Integer verificarAccesoPromotor(HttpServletRequest request) {
+        HttpSession session = request.getSession(false);
+        log.trace("Verificando acceso Promotor. ¿Sesión existe?: {}", (session != null));
+        if (session == null) {
+            log.warn("Intento de acceso a recurso Promotor sin sesión activa.");
+            throw new NotAuthorizedException("No hay sesión activa. Por favor, inicie sesión.", Response.status(Response.Status.UNAUTHORIZED).build());
+        }
+        Integer userId = (Integer) session.getAttribute("userId");
+        String userRole = (String) session.getAttribute("userRole");
+        log.trace("Atributos de sesión encontrados: userId={}, userRole={}", userId, userRole);
+        if (userId == null || userRole == null) {
+            log.warn("Intento de acceso a recurso Promotor con sesión inválida (faltan atributos). Sesión ID: {}", session.getId());
+            session.invalidate();
+            throw new NotAuthorizedException("Sesión inválida. Por favor, inicie sesión de nuevo.", Response.status(Response.Status.UNAUTHORIZED).build());
+        }
+        if (!RolUsuario.PROMOTOR.name().equals(userRole)) {
+            log.warn("Usuario ID {} con rol {} intentó acceder a recurso de Promotor.", userId, userRole);
+            throw new ForbiddenException("Acceso denegado. Se requiere rol PROMOTOR.");
+        }
+        log.debug("Acceso permitido para promotor ID: {}", userId);
+        return userId;
+    }
+
+    /**
+     * Redirige de vuelta al formulario de cambio de contraseña obligatorio.
+     * Usado cuando falla la validación o el guardado.
+     *
+     * @return Una respuesta de redirección (303).
      */
     private Response redirectBackToChangePasswordForm() {
         try {
@@ -905,24 +1376,90 @@ public class PromotorResource {
                     .path(PromotorResource.class)
                     .path(PromotorResource.class, "mostrarFormularioCambioPassword")
                     .build();
-            log.debug("Redirigiendo de vuelta a form cambio pass: {}", formUri);
+            log.debug("Redirigiendo de vuelta al formulario de cambio de contraseña: {}", formUri);
             return Response.seeOther(formUri).build();
         } catch (Exception e) {
-            log.error("Error creando URI para redirect a cambiar pass: {}", e.getMessage(), e);
-            return Response.serverError().entity("Error interno redirect.").build();
+            log.error("Error al crear URI para redirección a cambiar password obligatorio: {}", e.getMessage(), e);
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+                    .entity("Error interno al intentar redirigir al formulario.")
+                    .build();
         }
     }
 
     /**
-     * Determina URL del dashboard según rol.
+     * Determina la URL relativa del dashboard al que redirigir después de un
+     * login o cambio de contraseña exitoso, basado en el rol del usuario.
+     *
+     * @param roleName El nombre del rol del usuario (ej: "PROMOTOR", "ADMIN").
+     * @return La URL relativa del dashboard correspondiente (ej:
+     * "/api/promotor/festivales").
      */
     private String determineDashboardUrlFromRole(String roleName) {
         if (RolUsuario.PROMOTOR.name().equalsIgnoreCase(roleName)) {
             return "/api/promotor/festivales";
         }
         // Añadir otros roles si es necesario
-        log.warn("Rol inesperado '{}' al determinar URL dashboard.", roleName);
-        return "/login.jsp?error=unexpected_role"; // Fallback
+        // if (RolUsuario.ADMIN.name().equalsIgnoreCase(roleName)) { return "/api/admin/dashboard"; }
+        log.warn("Rol inesperado '{}' al determinar URL de dashboard desde PromotorResource.", roleName);
+        return "/login?error=unexpected_role"; // Fallback a login
     }
 
+    /**
+     * Establece un mensaje flash (de éxito o error) en la sesión HTTP.
+     *
+     * @param request La petición actual.
+     * @param type "mensaje" para éxito, "error" para error.
+     * @param message El mensaje a guardar. Si es null, no se guarda nada.
+     */
+    private void setFlashMessage(HttpServletRequest request, String type, String message) {
+        if (message != null) {
+            HttpSession session = request.getSession();
+            session.setAttribute(type, message);
+            log.trace("Mensaje flash '{}' guardado en sesión con clave '{}'", message, type);
+        }
+    }
+
+    /**
+     * Comprueba si existen mensajes flash ("mensaje", "error",
+     * "passwordChangeError", "nuevaEntradaConError", "errorEntrada") en la
+     * sesión y, si es así, los mueve a atributos de la request y los elimina de
+     * la sesión.
+     *
+     * @param request La petición actual.
+     */
+    private void mostrarMensajeFlash(HttpServletRequest request) {
+        HttpSession session = request.getSession(false);
+        if (session != null) {
+            String mensaje = (String) session.getAttribute("mensaje");
+            if (mensaje != null) {
+                request.setAttribute("mensajeExito", mensaje);
+                session.removeAttribute("mensaje");
+                log.trace("Mensaje flash de éxito movido de sesión a request.");
+            }
+            String error = (String) session.getAttribute("error");
+            if (error != null) {
+                request.setAttribute("error", error);
+                session.removeAttribute("error");
+                log.trace("Mensaje flash de error movido de sesión a request.");
+            }
+            String passwordError = (String) session.getAttribute("passwordChangeError");
+            if (passwordError != null) {
+                request.setAttribute("error", passwordError); // Usar clave genérica 'error'
+                session.removeAttribute("passwordChangeError");
+                log.trace("Mensaje flash 'passwordChangeError' movido de sesión a request.");
+            }
+            EntradaDTO entradaConError = (EntradaDTO) session.getAttribute("nuevaEntradaConError");
+            if (entradaConError != null) {
+                request.setAttribute("nuevaEntrada", entradaConError);
+                session.removeAttribute("nuevaEntradaConError");
+                log.trace("Atributo flash 'nuevaEntradaConError' movido de sesión a request.");
+            }
+            Boolean errorEntrada = (Boolean) session.getAttribute("errorEntrada");
+            if (errorEntrada != null && errorEntrada) {
+                request.setAttribute("errorEntrada", true);
+                session.removeAttribute("errorEntrada");
+                log.trace("Flag flash 'errorEntrada' movido de sesión a request.");
+            }
+        }
+    }
 }

@@ -17,14 +17,12 @@
 
         <div class="container mx-auto p-4 md:p-8 max-w-7xl">
 
-            <%-- Menú con la página activa correcta --%>
             <jsp:include page="/WEB-INF/jsp/admin/_admin_menu.jsp">
                 <jsp:param name="activePage" value="promotores"/>
             </jsp:include>
 
             <h2 class="text-2xl font-semibold text-gray-700 mb-5">Gestionar Promotores</h2>
 
-            <%-- Botón Añadir apunta a la creación general de usuarios --%>
             <div class="flex justify-end mb-4 space-x-3">
                 <a href="${pageContext.request.contextPath}/api/admin/usuarios/crear"
                    class="btn btn-primary">
@@ -58,13 +56,12 @@
                         </tr>
                     </thead>
                     <tbody class="bg-white divide-y divide-gray-200">
-                        <%-- Usar la variable genérica "usuarios" --%>
                         <c:choose>
                             <c:when test="${empty usuarios}">
                                 <tr> <td colspan="6" class="px-6 py-4 text-center text-sm text-gray-500 italic">No hay promotores registrados.</td> </tr>
                             </c:when>
                             <c:otherwise>
-                                <c:forEach var="u" items="${usuarios}"> <%-- Variable genérica u --%>
+                                <c:forEach var="u" items="${usuarios}"> 
                                     <tr>
                                         <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-500">${u.idUsuario}</td>
                                         <td class="px-6 py-4 whitespace-nowrap">
@@ -77,15 +74,14 @@
                                             </span>
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap text-center text-sm font-medium">
-                                            <%-- Enlace Ver Festivales (específico de Promotor) --%>
+                                            <%-- Enlace Ver Festivales específico del usuario --%>
                                             <a href="${pageContext.request.contextPath}/api/admin/promotores/${u.idUsuario}/festivales" class="action-link action-link-view" title="Ver festivales de ${u.nombre}">
                                                 Ver Festivales
                                             </a>
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap text-center text-sm font-medium space-x-2">
-                                            <%-- Enlace Editar generalizado --%>
                                             <a href="${pageContext.request.contextPath}/api/admin/usuarios/${u.idUsuario}/editar" class="action-link action-link-edit" title="Editar datos de ${u.nombre}">Editar</a>
-                                            <%-- Formulario Cambiar Estado generalizado --%>
+                                            <%-- Formulario Cambiar Estado --%>
                                             <form action="${pageContext.request.contextPath}/api/admin/usuarios/cambiar-estado" method="post" class="inline">
                                                 <input type="hidden" name="idUsuario" value="${u.idUsuario}">
                                                 <input type="hidden" name="nuevoEstado" value="${!u.estado}">

@@ -41,7 +41,6 @@
                 </div>
             </c:if>
 
-            <%-- Formulario (para edición) o Div (para vista) --%>
             <form action="${pageContext.request.contextPath}/api/admin/asistentes/${asistente.idAsistente}/actualizar" method="post" class="bg-white p-6 md:p-8 rounded-lg shadow-md space-y-4">
 
                 <div>
@@ -59,7 +58,6 @@
                                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-500 focus:ring-opacity-50 sm:text-sm">
                         </c:when>
                         <c:otherwise>
-                            <%-- Campo readonly con clase CSS externa --%>
                             <p class="readonly-field">${asistente.nombre}</p>
                         </c:otherwise>
                     </c:choose>
@@ -67,7 +65,6 @@
 
                 <div>
                     <label for="email" class="block text-sm font-medium text-gray-500 mb-1">Email</label>
-                    <%-- Campo readonly con clase CSS externa --%>
                     <p class="readonly-field">${asistente.email}</p>
                     <c:if test="${editMode}">
                         <p class="mt-1 text-xs text-gray-500">El email no se puede modificar.</p>
@@ -83,7 +80,6 @@
                                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-500 focus:ring-opacity-50 sm:text-sm" placeholder="(Opcional)">
                         </c:when>
                         <c:otherwise>
-                            <%-- Campo readonly con clase CSS externa --%>
                             <p class="readonly-field">${not empty asistente.telefono ? asistente.telefono : '-'}</p>
                         </c:otherwise>
                     </c:choose>
@@ -91,7 +87,6 @@
 
                 <div>
                     <label class="block text-sm font-medium text-gray-500 mb-1">Fecha de Registro</label>
-                    <%-- Campo readonly con clase CSS externa --%>
                     <p class="readonly-field">
                         <c:catch var="formatError">
                             <fmt:formatDate value="${asistente.fechaCreacion}" pattern="dd/MM/yyyy HH:mm:ss"/>
@@ -100,16 +95,15 @@
                         </p>
                     </div>
 
-                <%-- Botones condicionales con clases CSS externas --%>
                 <div class="mt-6 pt-4 border-t border-gray-200 flex justify-end space-x-3">
                     <c:choose>
                         <c:when test="${editMode}">
-                            <%-- Botones en modo edición --%>
+                     
                             <a href="${pageContext.request.contextPath}/api/admin/asistentes/${asistente.idAsistente}" class="btn btn-secondary">Cancelar</a>
                             <button type="submit" class="btn btn-primary">Guardar Cambios</button>
                         </c:when>
                         <c:otherwise>
-                            <%-- Botón en modo vista --%>
+                   
                             <a href="${pageContext.request.contextPath}/api/admin/asistentes/${asistente.idAsistente}/editar" class="btn btn-edit">Editar</a>
                         </c:otherwise>
                     </c:choose>

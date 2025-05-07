@@ -21,7 +21,7 @@
                 Por seguridad, debes establecer una nueva contraseña para tu cuenta.
             </p>
 
-            <%-- Mostrar mensaje de error si existe (enviado desde PromotorResource en la sesión) --%>
+            <%-- Mostrar mensaje de error si existe --%>
             <c:if test="${not empty sessionScope.passwordChangeError}">
                 <div class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-4 rounded-md shadow-sm text-sm" role="alert">
                     <p><strong class="font-bold">Error:</strong> ${sessionScope.passwordChangeError}</p>
@@ -30,16 +30,12 @@
                 <% session.removeAttribute("passwordChangeError");%>
             </c:if>
 
-            <%-- Formulario apunta al endpoint POST de PromotorResource --%>
             <form action="${pageContext.request.contextPath}/api/promotor/cambiar-password-obligatorio" method="post" class="space-y-4">
-                <%-- No necesitamos enviar el ID, ya está en la sesión --%>
 
-                <div>
-                    <%-- Aplicar clases de Tailwind directamente a la etiqueta label --%>
+                <div>                
                     <label for="newPassword" class="block text-sm font-medium text-gray-700 mb-1">
-                        Nueva Contraseña <span class="text-red-500 ml-1">*</span> <%-- Clase 'required-star' aplicada directamente --%>
+                        Nueva Contraseña <span class="text-red-500 ml-1">*</span> 
                     </label>
-                    <%-- Aplicar clases de Tailwind directamente a la etiqueta input --%>
                     <input type="password" id="newPassword" name="newPassword" required minlength="8"
                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-500 focus:ring-opacity-50 sm:text-sm placeholder-gray-400"
                            placeholder="Mínimo 8 caracteres">
@@ -47,11 +43,9 @@
                 </div>
 
                 <div>
-                    <%-- Aplicar clases de Tailwind directamente a la etiqueta label --%>
                     <label for="confirmPassword" class="block text-sm font-medium text-gray-700 mb-1">
-                        Confirmar Nueva Contraseña <span class="text-red-500 ml-1">*</span> <%-- Clase 'required-star' aplicada directamente --%>
-                    </label>
-                    <%-- Aplicar clases de Tailwind directamente a la etiqueta input --%>
+                        Confirmar Nueva Contraseña <span class="text-red-500 ml-1">*</span> 
+                    </label>                 
                     <input type="password" id="confirmPassword" name="confirmPassword" required minlength="8"
                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-500 focus:ring-opacity-50 sm:text-sm placeholder-gray-400"
                            placeholder="Repite la contraseña">
@@ -65,7 +59,6 @@
                 </div>
             </form>
 
-            <%-- Opción de Logout si el usuario no quiere cambiarla ahora (lo sacará del sistema) --%>
             <div class="mt-4 text-center">
                 <form action="${pageContext.request.contextPath}/logout" method="post" class="inline">
                     <button type="submit" class="text-xs text-gray-500 hover:text-red-600 underline">Cerrar sesión</button>

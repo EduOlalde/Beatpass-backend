@@ -17,14 +17,13 @@
 
         <div class="container mx-auto p-4 md:p-8 max-w-7xl">
 
-            <%-- Incluir Menú Admin Común --%>
             <jsp:include page="/WEB-INF/jsp/admin/_admin_menu.jsp">
                 <jsp:param name="activePage" value="festivales"/>
             </jsp:include>
 
             <h2 class="text-2xl font-semibold text-gray-700 mb-5">Gestionar Todos los Festivales</h2>             
 
-            <%-- Mensajes flash (se mantienen clases de Tailwind) --%>
+            <%-- Mensajes flash --%>
             <c:if test="${not empty requestScope.mensajeExito}">
                 <div class="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 mb-4 rounded-md shadow-sm" role="alert">
                     <p class="font-bold">Éxito</p> <p>${requestScope.mensajeExito}</p>
@@ -36,7 +35,7 @@
                 </div>
             </c:if>
 
-            <%-- Filtro por estado (botones con clases CSS externas) --%>
+            <%-- Filtro por estado --%>
             <div class="mb-4 bg-white p-4 rounded shadow-sm">
                 <form action="${pageContext.request.contextPath}/api/admin/festivales/listar-todos" method="get" class="flex items-end space-x-3">
                     <div>
@@ -48,7 +47,6 @@
                             </c:forEach>
                         </select>
                     </div>
-                    <%-- Usamos btn-filter o btn-primary según preferencia --%>
                     <button type="submit" class="btn btn-filter"> 
                         Filtrar
                     </button>
@@ -87,7 +85,6 @@
                                         <td class="px-6 py-4 whitespace-nowrap"> <div class="text-sm font-medium text-gray-900">${f.nombre}</div> </td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                             <c:if test="${not empty f.nombrePromotor}">
-                                                <%-- Enlace con clases Tailwind, no requiere clase CSS específica --%>
                                                 <a href="${pageContext.request.contextPath}/api/admin/promotores/${f.idPromotor}/festivales" class="text-indigo-600 hover:underline" title="Ver promotor y sus festivales">
                                                     ${f.nombrePromotor} (ID: ${f.idPromotor})
                                                 </a>
@@ -107,7 +104,7 @@
                                                   </c:choose>
                                                   "> ${f.estado} </span>
                                         </td>
-                                        <%-- Acciones con clases CSS externas --%>
+                                        <%-- Acciones --%>
                                         <td class="px-6 py-4 whitespace-nowrap text-center text-sm font-medium space-x-2">
                                             <%-- Acciones de cambio de estado --%>
                                             <c:if test="${f.estado == 'BORRADOR'}">
@@ -128,7 +125,6 @@
                                                     <button type="submit" class="action-button action-button-finalize" title="Marcar como Finalizado">Finalizar</button>
                                                 </form>
                                             </c:if>
-                                            <%-- Enlace a pulseras --%>
                                             <a href="${pageContext.request.contextPath}/api/admin/festivales/${f.idFestival}/pulseras" class="action-link action-link-pulseras" title="Ver Pulseras NFC Asociadas">Pulseras</a>
                                         </td>
                                     </tr>

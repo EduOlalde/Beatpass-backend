@@ -1,8 +1,3 @@
-<%--
-    Document   : _admin_menu
-    Created on : 21 abr 2025, 17:26:31
-    Author     : Eduardo Olalde
---%>
 
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%@ taglib uri="jakarta.tags.core" prefix="c" %>
@@ -14,7 +9,6 @@
 --%>
 
 <header class="flex flex-col sm:flex-row justify-between items-center mb-6 pb-4 border-b border-gray-300">
-    <%-- Título del Panel --%>
     <h1 class="text-3xl font-bold text-purple-700 mb-4 sm:mb-0">Panel de Administración</h1>
 
     <%-- Menú de Navegación --%>
@@ -25,7 +19,6 @@
         </c:if>
 
         <%-- Enlaces de Navegación Usuarios --%>
-        <%-- CORRECCIÓN: Usar requestScope.activePage en lugar de param.activePage --%>
         <a href="${pageContext.request.contextPath}/api/admin/admins/listar"
            class="text-sm hover:underline ${requestScope.activePage == 'admins' ? 'font-medium text-purple-700' : 'text-indigo-600'}">
             Gestionar Admins

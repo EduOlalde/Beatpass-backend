@@ -1,9 +1,3 @@
-<%-- 
-    Document   : admin-cajeros
-    Created on : 28 abr 2025, 0:09:06
-    Author     : Eduardo Olalde
---%>
-
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%@ taglib uri="jakarta.tags.core" prefix="c" %>
 <%@ taglib uri="jakarta.tags.fmt" prefix="fmt" %>
@@ -30,7 +24,6 @@
 
             <h2 class="text-2xl font-semibold text-gray-700 mb-5">Gestionar Cajeros</h2>
 
-            <%-- Botón Añadir apunta a la creación general de usuarios --%>
             <div class="flex justify-end mb-4 space-x-3">
                 <a href="${pageContext.request.contextPath}/api/admin/usuarios/crear"
                    class="btn btn-primary">
@@ -63,40 +56,38 @@
                         </tr>
                     </thead>
                     <tbody class="bg-white divide-y divide-gray-200">
-                        <%-- Usar la variable genérica "usuarios" --%>
-                    <c:choose>
-                        <c:when test="${empty usuarios}">
-                            <tr> <td colspan="5" class="px-6 py-4 text-center text-sm text-gray-500 italic">No hay cajeros registrados.</td> </tr>
-                        </c:when>
-                        <c:otherwise>
-                            <c:forEach var="u" items="${usuarios}"> <%-- Variable genérica u --%>
-                                <tr>
-                                    <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-500">${u.idUsuario}</td>
-                                    <td class="px-6 py-4 whitespace-nowrap">
-                                        <div class="text-sm font-medium text-gray-900">${u.nombre}</div>
-                                    </td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${u.email}</td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-center">
-                                        <span class="badge ${u.estado ? 'badge-activa' : 'badge-inactiva'}">
-                                            ${u.estado ? 'Activo' : 'Inactivo'}
-                                        </span>
-                                    </td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-center text-sm font-medium space-x-2">
-                                        <%-- Enlace Editar generalizado --%>
-                                        <a href="${pageContext.request.contextPath}/api/admin/usuarios/${u.idUsuario}/editar" class="action-link action-link-edit" title="Editar datos de ${u.nombre}">Editar</a>
-                                        <%-- Formulario Cambiar Estado generalizado --%>
-                                        <form action="${pageContext.request.contextPath}/api/admin/usuarios/cambiar-estado" method="post" class="inline">
-                                            <input type="hidden" name="idUsuario" value="${u.idUsuario}">
-                                            <input type="hidden" name="nuevoEstado" value="${!u.estado}">
-                                            <button type="submit" class="action-button ${u.estado ? 'action-button-deactivate' : 'action-button-activate'}" title="${u.estado ? 'Desactivar cuenta' : 'Activar cuenta'}">
-                                                ${u.estado ? 'Desactivar' : 'Activar'}
-                                            </button>
-                                        </form>
-                                    </td>
-                                </tr>
-                            </c:forEach>
-                        </c:otherwise>
-                    </c:choose>
+                        <c:choose>
+                            <c:when test="${empty usuarios}">
+                                <tr> <td colspan="5" class="px-6 py-4 text-center text-sm text-gray-500 italic">No hay cajeros registrados.</td> </tr>
+                            </c:when>
+                            <c:otherwise>
+                                <c:forEach var="u" items="${usuarios}"> 
+                                    <tr>
+                                        <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-500">${u.idUsuario}</td>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <div class="text-sm font-medium text-gray-900">${u.nombre}</div>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${u.email}</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-center">
+                                            <span class="badge ${u.estado ? 'badge-activa' : 'badge-inactiva'}">
+                                                ${u.estado ? 'Activo' : 'Inactivo'}
+                                            </span>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-center text-sm font-medium space-x-2">
+                                            <a href="${pageContext.request.contextPath}/api/admin/usuarios/${u.idUsuario}/editar" class="action-link action-link-edit" title="Editar datos de ${u.nombre}">Editar</a>
+                                            <%-- Formulario Cambiar Estado --%>
+                                            <form action="${pageContext.request.contextPath}/api/admin/usuarios/cambiar-estado" method="post" class="inline">
+                                                <input type="hidden" name="idUsuario" value="${u.idUsuario}">
+                                                <input type="hidden" name="nuevoEstado" value="${!u.estado}">
+                                                <button type="submit" class="action-button ${u.estado ? 'action-button-deactivate' : 'action-button-activate'}" title="${u.estado ? 'Desactivar cuenta' : 'Activar cuenta'}">
+                                                    ${u.estado ? 'Desactivar' : 'Activar'}
+                                                </button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                </c:forEach>
+                            </c:otherwise>
+                        </c:choose>
                     </tbody>
                 </table>
             </div>

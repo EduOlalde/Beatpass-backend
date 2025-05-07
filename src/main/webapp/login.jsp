@@ -29,7 +29,6 @@
                 </div>
             </c:if>
 
-            <%-- El action apunta al LoginServlet mapeado en /login --%>
             <form action="${pageContext.request.contextPath}/login" method="post">
                 <div class="mb-4">
                     <label for="email" class="block text-sm font-medium text-gray-700 mb-1">Email</label>
@@ -43,7 +42,6 @@
                     <input type="password" id="password" name="password" required
                            class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                            placeholder="********">
-                    <%-- Podrías añadir un enlace para "¿Olvidaste tu contraseña?" aquí si implementas RF3 --%>
                 </div>
 
                 <div>

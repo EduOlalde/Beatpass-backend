@@ -17,7 +17,6 @@
 
         <div class="container mx-auto p-4 md:p-8 max-w-7xl">
 
-            <%-- Incluir Menú Admin Común --%>
             <jsp:include page="/WEB-INF/jsp/admin/_admin_menu.jsp">
                 <jsp:param name="activePage" value="festivales"/>
             </jsp:include>
@@ -27,7 +26,7 @@
                 <h2 class="text-2xl font-semibold text-gray-700">Pulseras NFC Asociadas: ${festival.nombre}</h2>
             </div>
 
-            <%-- Mensajes flash (se mantienen clases de Tailwind) --%>
+            <%-- Mensajes flash --%>
             <c:if test="${not empty requestScope.mensajeExito}">
                 <div class="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 mb-4 rounded-md shadow-sm" role="alert"> <p>${requestScope.mensajeExito}</p> </div>
             </c:if>
@@ -72,15 +71,11 @@
                                             </c:if>
                                             <c:if test="${empty p.idAsistente}"> - </c:if>
                                             </td>
-                                        <%-- Acciones con clases CSS externas --%>
+                                        <%-- Acciones --%>
                                         <td class="px-4 py-4 whitespace-nowrap text-center text-sm space-x-2">
-                                            <%-- TODO: Implementar vista real de detalles (recargas/consumos) --%>
                                             <a href="#" class="action-link action-link-view" title="Ver detalles de la pulsera (Pendiente)">Ver Detalles</a>
                                             <c:if test="${p.activa}">
-                                                <%-- TODO: Implementar acción de desactivación --%>
-                                                <%-- <form action="..." method="post" class="inline"> ... <button type="submit" class="action-button action-button-danger">Desactivar</button> </form> --%>
-                                                <%-- Ejemplo de cómo se vería el botón si estuviera implementado --%>
-                                                <%-- <button type="button" class="action-button action-button-danger" onclick="alert('Desactivar pulsera ${p.idPulsera} - Pendiente')">Desactivar</button> --%>
+                                                <%-- TODO: Implementar acción de desactivación --%>                                              
                                             </c:if>
                                         </td>
                                     </tr>
