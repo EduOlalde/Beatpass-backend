@@ -11,25 +11,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Implementación de {@link CompraRepository} utilizando JPA EntityManager.
- * Proporciona la lógica concreta para interactuar con la base de datos para la
- * entidad Compra.
- *
- * @author Eduardo Olalde
+ * Implementación de CompraRepository usando JPA EntityManager.
  */
 public class CompraRepositoryImpl implements CompraRepository {
 
     private static final Logger log = LoggerFactory.getLogger(CompraRepositoryImpl.class);
 
-    /**
-     * {@inheritDoc}
-     * <p>
-     * Esta implementación siempre realiza un {@code persist} ya que se asume
-     * que las compras no se actualizan directamente, solo se crean.</p>
-     */
     @Override
     public Compra save(EntityManager em, Compra compra) {
-        // Validación de precondiciones
         if (compra == null) {
             throw new IllegalArgumentException("La entidad Compra no puede ser nula.");
         }
@@ -37,25 +26,20 @@ public class CompraRepositoryImpl implements CompraRepository {
             throw new IllegalArgumentException("El Asistente asociado a la Compra no puede ser nulo y debe tener ID.");
         }
 
-        // Una compra siempre es nueva, usamos persist.
         log.debug("Intentando persistir nueva Compra para Asistente ID: {}", compra.getAsistente().getIdAsistente());
         try {
             em.persist(compra);
-            // em.flush(); // Descomentar si se necesita el ID inmediatamente
             log.info("Nueva Compra persistida con ID: {}", compra.getIdCompra());
             return compra;
         } catch (PersistenceException e) {
             log.error("Error de persistencia al guardar Compra: {}", e.getMessage(), e);
-            throw e; // Relanzar para manejo transaccional
+            throw e;
         } catch (Exception e) {
             log.error("Error inesperado al guardar Compra: {}", e.getMessage(), e);
             throw new PersistenceException("Error inesperado al guardar Compra", e);
         }
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public Optional<Compra> findById(EntityManager em, Integer id) {
         log.debug("Buscando Compra con ID: {}", id);
@@ -64,7 +48,6 @@ public class CompraRepositoryImpl implements CompraRepository {
             return Optional.empty();
         }
         try {
-            // em.find es eficiente para buscar por PK
             Compra compra = em.find(Compra.class, id);
             return Optional.ofNullable(compra);
         } catch (IllegalArgumentException e) {
@@ -76,20 +59,16 @@ public class CompraRepositoryImpl implements CompraRepository {
         }
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public List<Compra> findByAsistenteId(EntityManager em, Integer idAsistente) {
         log.debug("Buscando Compras para Asistente ID: {}", idAsistente);
         if (idAsistente == null) {
             log.warn("Intento de buscar compras para un ID de asistente nulo.");
-            return Collections.emptyList(); // Devuelve lista vacía si el ID es nulo
+            return Collections.emptyList();
         }
         try {
-            // Consulta JPQL para buscar compras por el ID del asistente asociado
             TypedQuery<Compra> query = em.createQuery(
-                    "SELECT c FROM Compra c WHERE c.asistente.idAsistente = :asistenteId ORDER BY c.fechaCompra DESC", // Ordenar por fecha descendente
+                    "SELECT c FROM Compra c WHERE c.asistente.idAsistente = :asistenteId ORDER BY c.fechaCompra DESC",
                     Compra.class);
             query.setParameter("asistenteId", idAsistente);
             List<Compra> compras = query.getResultList();
@@ -97,13 +76,10 @@ public class CompraRepositoryImpl implements CompraRepository {
             return compras;
         } catch (Exception e) {
             log.error("Error buscando Compras para Asistente ID {}: {}", idAsistente, e.getMessage(), e);
-            return Collections.emptyList(); // Devuelve lista vacía en caso de error
+            return Collections.emptyList();
         }
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public List<Compra> findByFestivalId(EntityManager em, Integer idFestival) {
         log.debug("Buscando Compras para Festival ID: {}", idFestival);
@@ -112,13 +88,11 @@ public class CompraRepositoryImpl implements CompraRepository {
             return Collections.emptyList();
         }
         try {
-            // Consulta JPQL para buscar compras únicas asociadas a un festival
-            // Se une Compra -> CompraEntrada -> Entrada -> Festival
             String jpql = "SELECT DISTINCT c FROM Compra c "
                     + "JOIN c.detallesCompra ce "
                     + "JOIN ce.entrada e "
                     + "WHERE e.festival.idFestival = :festivalId "
-                    + "ORDER BY c.fechaCompra DESC"; // Ordenar por fecha de compra descendente
+                    + "ORDER BY c.fechaCompra DESC";
 
             TypedQuery<Compra> query = em.createQuery(jpql, Compra.class);
             query.setParameter("festivalId", idFestival);

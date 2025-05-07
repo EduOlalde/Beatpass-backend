@@ -1,23 +1,19 @@
 package com.daw2edudiego.beatpasstfg.model;
 
 /**
- * Enumeración que define los posibles estados de un {@link Festival}.
- *
- * @author Eduardo Olalde
+ * Estados posibles de un Festival.
  */
 public enum EstadoFestival {
     /**
-     * El festival está siendo creado o modificado por el promotor, aún no es
-     * visible públicamente ni se pueden vender entradas.
+     * El festival está en creación/modificación, no visible ni vendible.
      */
     BORRADOR,
     /**
-     * El festival ha sido aprobado/publicado por un administrador y es visible,
-     * permitiendo la venta de entradas.
+     * El festival está aprobado, visible y se pueden vender entradas.
      */
     PUBLICADO,
     /**
-     * El festival ha sido cancelado (antes o durante su celebración).
+     * El festival ha sido cancelado.
      */
     CANCELADO,
     /**

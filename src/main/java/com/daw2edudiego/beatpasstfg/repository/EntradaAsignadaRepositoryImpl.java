@@ -12,22 +12,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Implementación de {@link EntradaAsignadaRepository} utilizando JPA
- * EntityManager. Proporciona la lógica concreta para interactuar con la base de
- * datos para la entidad EntradaAsignada.
- *
- * @author Eduardo Olalde
+ * Implementación de EntradaAsignadaRepository usando JPA EntityManager.
  */
 public class EntradaAsignadaRepositoryImpl implements EntradaAsignadaRepository {
 
     private static final Logger log = LoggerFactory.getLogger(EntradaAsignadaRepositoryImpl.class);
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public EntradaAsignada save(EntityManager em, EntradaAsignada entradaAsignada) {
-        // Validación de precondiciones
         if (entradaAsignada == null) {
             throw new IllegalArgumentException("La entidad EntradaAsignada no puede ser nula.");
         }
@@ -38,29 +30,24 @@ public class EntradaAsignadaRepositoryImpl implements EntradaAsignadaRepository 
             throw new IllegalArgumentException("El código QR de EntradaAsignada no puede ser nulo ni vacío.");
         }
 
-        // Truncar QR para logging por seguridad/brevedad
         String qrLog = entradaAsignada.getCodigoQr().substring(0, Math.min(20, entradaAsignada.getCodigoQr().length())) + "...";
         log.debug("Intentando guardar EntradaAsignada con ID: {} y QR: {}", entradaAsignada.getIdEntradaAsignada(), qrLog);
         try {
             if (entradaAsignada.getIdEntradaAsignada() == null) {
-                // Nueva entrada, usar persist
                 log.trace("Persistiendo nueva EntradaAsignada...");
                 em.persist(entradaAsignada);
-                // em.flush(); // Descomentar si se necesita ID inmediatamente
                 log.info("Nueva EntradaAsignada persistida con ID: {}", entradaAsignada.getIdEntradaAsignada());
                 return entradaAsignada;
             } else {
-                // Entrada existente, usar merge para actualizar
                 log.trace("Actualizando EntradaAsignada con ID: {}", entradaAsignada.getIdEntradaAsignada());
                 EntradaAsignada merged = em.merge(entradaAsignada);
                 log.info("EntradaAsignada actualizada con ID: {}", merged.getIdEntradaAsignada());
                 return merged;
             }
         } catch (PersistenceException e) {
-            // Capturar errores específicos, como violación de constraint único del QR
             log.error("Error de persistencia al guardar EntradaAsignada (ID: {}, QR: {}): {}",
                     entradaAsignada.getIdEntradaAsignada(), qrLog, e.getMessage(), e);
-            throw e; // Relanzar para manejo transaccional
+            throw e;
         } catch (Exception e) {
             log.error("Error inesperado al guardar EntradaAsignada (ID: {}, QR: {}): {}",
                     entradaAsignada.getIdEntradaAsignada(), qrLog, e.getMessage(), e);
@@ -68,9 +55,6 @@ public class EntradaAsignadaRepositoryImpl implements EntradaAsignadaRepository 
         }
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public Optional<EntradaAsignada> findById(EntityManager em, Integer id) {
         log.debug("Buscando EntradaAsignada con ID: {}", id);
@@ -90,9 +74,6 @@ public class EntradaAsignadaRepositoryImpl implements EntradaAsignadaRepository 
         }
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public Optional<EntradaAsignada> findByCodigoQr(EntityManager em, String codigoQr) {
         String qrLog = (codigoQr != null) ? codigoQr.substring(0, Math.min(20, codigoQr.length())) + "..." : "null";
@@ -116,9 +97,6 @@ public class EntradaAsignadaRepositoryImpl implements EntradaAsignadaRepository 
         }
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public List<EntradaAsignada> findByCompraEntradaId(EntityManager em, Integer idCompraEntrada) {
         log.debug("Buscando EntradasAsignadas para CompraEntrada ID: {}", idCompraEntrada);
@@ -139,9 +117,6 @@ public class EntradaAsignadaRepositoryImpl implements EntradaAsignadaRepository 
         }
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public List<EntradaAsignada> findByFestivalId(EntityManager em, Integer idFestival) {
         log.debug("Buscando EntradasAsignadas para Festival ID: {}", idFestival);
@@ -150,12 +125,11 @@ public class EntradaAsignadaRepositoryImpl implements EntradaAsignadaRepository 
             return Collections.emptyList();
         }
         try {
-            // JPQL con Joins para navegar: EntradaAsignada -> CompraEntrada -> Entrada -> Festival
             String jpql = "SELECT ea FROM EntradaAsignada ea "
                     + "JOIN ea.compraEntrada ce "
                     + "JOIN ce.entrada e "
                     + "WHERE e.festival.idFestival = :festivalId "
-                    + "ORDER BY ea.idEntradaAsignada"; // Ordenar por ID de la entrada asignada
+                    + "ORDER BY ea.idEntradaAsignada";
 
             TypedQuery<EntradaAsignada> query = em.createQuery(jpql, EntradaAsignada.class);
             query.setParameter("festivalId", idFestival);

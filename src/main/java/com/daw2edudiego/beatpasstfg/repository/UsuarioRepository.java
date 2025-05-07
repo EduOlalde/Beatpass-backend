@@ -7,91 +7,62 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Interfaz DAO (Data Access Object) para la entidad {@link Usuario}. Define las
- * operaciones de persistencia estándar para los usuarios del sistema (Admin,
- * Promotor, Cajero).
- *
- * @author Eduardo Olalde
+ * Interfaz DAO para la entidad Usuario.
  */
 public interface UsuarioRepository {
 
     /**
-     * Guarda (crea o actualiza) una entidad Usuario. Si el usuario tiene ID
-     * nulo, se persiste. Si tiene ID, se actualiza (merge).
-     * <p>
-     * <b>Nota:</b> Esta operación debe ejecutarse dentro de una transacción
-     * activa.
-     * </p>
+     * Guarda (crea o actualiza) un Usuario. Debe ejecutarse dentro de una
+     * transacción activa.
      *
      * @param em El EntityManager activo y transaccional.
-     * @param usuario El usuario a guardar. No debe ser nulo.
+     * @param usuario El usuario a guardar.
      * @return La entidad Usuario guardada o actualizada.
-     * @throws IllegalArgumentException si el usuario es nulo.
-     * @throws jakarta.persistence.PersistenceException si ocurre un error (ej:
-     * email duplicado).
      */
     Usuario save(EntityManager em, Usuario usuario);
 
     /**
-     * Busca un Usuario por su identificador único (clave primaria).
+     * Busca un Usuario por su ID.
      *
      * @param em El EntityManager activo.
-     * @param id El ID del usuario a buscar.
-     * @return Un {@link Optional} que contiene el Usuario si se encuentra, o un
-     * Optional vacío si no se encuentra o si el ID es nulo.
+     * @param id El ID a buscar.
+     * @return Un Optional con el Usuario si se encuentra, o vacío.
      */
     Optional<Usuario> findById(EntityManager em, Integer id);
 
     /**
-     * Busca un Usuario por su dirección de correo electrónico, que debe ser
-     * única.
+     * Busca un Usuario por su email (único).
      *
      * @param em El EntityManager activo.
-     * @param email El email del usuario a buscar.
-     * @return Un {@link Optional} que contiene el Usuario si se encuentra, o un
-     * Optional vacío si no se encuentra o si el email es nulo o vacío.
+     * @param email El email a buscar.
+     * @return Un Optional con el Usuario si se encuentra, o vacío.
      */
     Optional<Usuario> findByEmail(EntityManager em, String email);
 
     /**
-     * Busca y devuelve todos los usuarios registrados en el sistema. Los
-     * resultados se ordenan por nombre. ¡Precaución! Puede devolver muchos
-     * resultados. Considerar paginación en aplicaciones reales.
+     * Busca todos los usuarios. Usar con precaución.
      *
      * @param em El EntityManager activo.
-     * @return Una lista (posiblemente vacía) con todos los usuarios.
+     * @return Una lista con todos los usuarios.
      */
     List<Usuario> findAll(EntityManager em);
 
     /**
-     * Busca y devuelve todos los usuarios que tienen un rol específico. Los
-     * resultados se ordenan por nombre.
+     * Busca todos los usuarios con un rol específico.
      *
      * @param em El EntityManager activo.
-     * @param rol El {@link RolUsuario} a buscar.
-     * @return Una lista (posiblemente vacía) de usuarios con el rol
-     * especificado. Devuelve lista vacía si el rol es nulo o si ocurre un
-     * error.
+     * @param rol El RolUsuario a buscar.
+     * @return Una lista (posiblemente vacía) de usuarios.
      */
     List<Usuario> findByRol(EntityManager em, RolUsuario rol);
 
     /**
-     * Elimina un usuario por su ID. Busca la entidad y, si existe, la marca
-     * para eliminar.
-     * <p>
-     * <b>Nota:</b> Esta operación debe ejecutarse dentro de una transacción
-     * activa. ¡Precaución! Puede fallar si existen restricciones de clave
-     * foránea (ej: un Promotor con Festivales asociados, un Cajero con Recargas
-     * asociadas). Considerar la desactivación (cambiar estado a false) en lugar
-     * del borrado físico.
-     * </p>
+     * Elimina un usuario por su ID. Debe ejecutarse dentro de una transacción
+     * activa. ¡Precaución con FKs!
      *
      * @param em El EntityManager activo y transaccional.
-     * @param id El ID del usuario a eliminar.
-     * @return {@code true} si la entidad fue encontrada y marcada para
-     * eliminar, {@code false} si no se encontró.
-     * @throws jakarta.persistence.PersistenceException si ocurre un error
-     * durante la eliminación (ej: violación de FK).
+     * @param id El ID a eliminar.
+     * @return true si se encontró y marcó para eliminar, false si no.
      */
     boolean deleteById(EntityManager em, Integer id);
 

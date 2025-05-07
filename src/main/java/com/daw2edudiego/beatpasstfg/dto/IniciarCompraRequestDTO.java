@@ -5,8 +5,6 @@ import jakarta.validation.constraints.NotNull;
 
 /**
  * DTO para recibir la solicitud de inicio de compra desde el frontend.
- *
- * @author Eduardo Olalde
  */
 public class IniciarCompraRequestDTO {
 

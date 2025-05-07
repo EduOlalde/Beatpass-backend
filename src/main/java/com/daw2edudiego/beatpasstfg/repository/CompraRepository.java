@@ -6,72 +6,45 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Interfaz DAO (Data Access Object) para la entidad {@link Compra}. Define las
- * operaciones de persistencia para las cabeceras de compra.
- *
- * @author Eduardo Olalde
+ * Interfaz DAO para la entidad Compra (cabecera de compra).
  */
 public interface CompraRepository {
 
     /**
-     * Guarda una nueva entidad Compra en la base de datos. Se asume que la
-     * entidad Compra ya tiene asociado el
-     * {@link com.daw2edudiego.beatpasstfg.model.Asistente} correspondiente. Los
-     * detalles (CompraEntrada) normalmente se guardan por separado o mediante
-     * cascada.
-     * <p>
-     * <b>Nota:</b> Esta operación debe ejecutarse dentro de una transacción
-     * activa.
-     * </p>
+     * Guarda una nueva Compra. Asume que no se actualizan. Debe ejecutarse
+     * dentro de una transacción activa.
      *
      * @param em El EntityManager activo y transaccional.
-     * @param compra La entidad Compra a guardar. No debe ser nula, ni su
-     * Asistente asociado.
-     * @return La entidad Compra guardada, con su ID asignado por la base de
-     * datos.
-     * @throws IllegalArgumentException si compra o su asistente asociado son
-     * nulos.
-     * @throws jakarta.persistence.PersistenceException si ocurre un error
-     * durante la persistencia.
+     * @param compra La Compra a guardar.
+     * @return La Compra guardada con su ID.
      */
     Compra save(EntityManager em, Compra compra);
 
     /**
-     * Busca una Compra por su identificador único (clave primaria).
+     * Busca una Compra por su ID.
      *
      * @param em El EntityManager activo.
      * @param id El ID de la compra a buscar.
-     * @return Un {@link Optional} que contiene la Compra si se encuentra, o un
-     * Optional vacío si no se encuentra o si el ID es nulo.
+     * @return Un Optional con la Compra si se encuentra, o vacío.
      */
     Optional<Compra> findById(EntityManager em, Integer id);
 
     /**
-     * Busca y devuelve todas las compras realizadas por un asistente
-     * específico.
+     * Busca todas las compras realizadas por un Asistente específico.
      *
      * @param em El EntityManager activo.
-     * @param idAsistente El ID del Asistente cuyas compras se quieren obtener.
-     * @return Una lista (posiblemente vacía) de entidades Compra realizadas por
-     * el asistente. Devuelve una lista vacía si el idAsistente es nulo o si
-     * ocurre un error.
+     * @param idAsistente El ID del Asistente.
+     * @return Una lista (posiblemente vacía) de Compras.
      */
     List<Compra> findByAsistenteId(EntityManager em, Integer idAsistente);
 
     /**
-     * Busca y devuelve todas las compras asociadas a un festival específico. La
-     * consulta navega a través de CompraEntrada y Entrada para filtrar por el
-     * ID del festival. Se devuelven las compras únicas (DISTINCT).
+     * Busca todas las compras asociadas a un Festival específico.
      *
      * @param em El EntityManager activo.
-     * @param idFestival El ID del festival cuyas compras se quieren obtener.
-     * @return Una lista (posiblemente vacía) de entidades Compra únicas
-     * asociadas al festival, ordenadas por fecha descendente. Devuelve lista
-     * vacía si el idFestival es nulo o si ocurre un error.
+     * @param idFestival El ID del Festival.
+     * @return Una lista (posiblemente vacía) de Compras únicas.
      */
-    List<Compra> findByFestivalId(EntityManager em, Integer idFestival); // NUEVO MÉTODO
+    List<Compra> findByFestivalId(EntityManager em, Integer idFestival);
 
-    // Podrían añadirse otros métodos como:
-    // List<Compra> findByFechaBetween(EntityManager em, LocalDateTime inicio, LocalDateTime fin);
-    // void delete(EntityManager em, Compra compra);
 }

@@ -12,22 +12,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Implementación de {@link PulseraNFCRepository} utilizando JPA EntityManager.
- * Proporciona la lógica concreta para interactuar con la base de datos para la
- * entidad PulseraNFC.
- *
- * @author Eduardo Olalde
+ * Implementación de PulseraNFCRepository usando JPA EntityManager.
  */
 public class PulseraNFCRepositoryImpl implements PulseraNFCRepository {
 
     private static final Logger log = LoggerFactory.getLogger(PulseraNFCRepositoryImpl.class);
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public PulseraNFC save(EntityManager em, PulseraNFC pulsera) {
-        // Validación de precondiciones
         if (pulsera == null) {
             throw new IllegalArgumentException("La entidad PulseraNFC no puede ser nula.");
         }
@@ -38,24 +30,20 @@ public class PulseraNFCRepositoryImpl implements PulseraNFCRepository {
         log.debug("Intentando guardar PulseraNFC ID: {}, UID: {}", pulsera.getIdPulsera(), pulsera.getCodigoUid());
         try {
             if (pulsera.getIdPulsera() == null) {
-                // Nueva pulsera, usar persist
                 log.trace("Persistiendo nueva PulseraNFC...");
                 em.persist(pulsera);
-                // em.flush(); // Descomentar si se necesita ID inmediatamente
                 log.info("Nueva PulseraNFC persistida con ID: {}", pulsera.getIdPulsera());
                 return pulsera;
             } else {
-                // Pulsera existente, usar merge para actualizar
                 log.trace("Actualizando PulseraNFC con ID: {}", pulsera.getIdPulsera());
                 PulseraNFC merged = em.merge(pulsera);
                 log.info("PulseraNFC actualizada con ID: {}", merged.getIdPulsera());
                 return merged;
             }
         } catch (PersistenceException e) {
-            // Capturar errores como violación de constraint único del UID
             log.error("Error de persistencia al guardar PulseraNFC (ID: {}, UID: {}): {}",
                     pulsera.getIdPulsera(), pulsera.getCodigoUid(), e.getMessage(), e);
-            throw e; // Relanzar para manejo transaccional
+            throw e;
         } catch (Exception e) {
             log.error("Error inesperado al guardar PulseraNFC (ID: {}, UID: {}): {}",
                     pulsera.getIdPulsera(), pulsera.getCodigoUid(), e.getMessage(), e);
@@ -63,9 +51,6 @@ public class PulseraNFCRepositoryImpl implements PulseraNFCRepository {
         }
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public Optional<PulseraNFC> findById(EntityManager em, Integer id) {
         log.debug("Buscando PulseraNFC ID: {}", id);
@@ -85,9 +70,6 @@ public class PulseraNFCRepositoryImpl implements PulseraNFCRepository {
         }
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public Optional<PulseraNFC> findByCodigoUid(EntityManager em, String codigoUid) {
         log.debug("Buscando PulseraNFC UID: {}", codigoUid);
@@ -110,9 +92,6 @@ public class PulseraNFCRepositoryImpl implements PulseraNFCRepository {
         }
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public Optional<PulseraNFC> findByEntradaAsignadaId(EntityManager em, Integer idEntradaAsignada) {
         log.debug("Buscando PulseraNFC por EntradaAsignada ID: {}", idEntradaAsignada);
@@ -121,20 +100,16 @@ public class PulseraNFCRepositoryImpl implements PulseraNFCRepository {
             return Optional.empty();
         }
         try {
-            // Consulta JPQL para buscar la pulsera a través de la relación
-            // Asume que la relación OneToOne está mapeada en PulseraNFC con el campo 'entradaAsignada'
             TypedQuery<PulseraNFC> query = em.createQuery(
                     "SELECT p FROM PulseraNFC p WHERE p.entradaAsignada.idEntradaAsignada = :eaId", PulseraNFC.class);
             query.setParameter("eaId", idEntradaAsignada);
-            // Usar getResultList para manejar el caso de 0 resultados sin excepción
             List<PulseraNFC> results = query.getResultList();
             if (results.isEmpty()) {
                 log.trace("No se encontró PulseraNFC para EntradaAsignada ID: {}", idEntradaAsignada);
                 return Optional.empty();
             } else {
-                // Debería haber solo una por la constraint UNIQUE en la BD, pero por si acaso...
                 if (results.size() > 1) {
-                    log.warn("¡Inconsistencia de datos! Se encontraron múltiples PulserasNFC ({}) para una única EntradaAsignada ID: {}. Devolviendo la primera.", results.size(), idEntradaAsignada);
+                    log.warn("¡Inconsistencia! Múltiples PulserasNFC ({}) para EntradaAsignada ID: {}. Devolviendo la primera.", results.size(), idEntradaAsignada);
                 }
                 log.trace("Encontrada PulseraNFC ID {} para EntradaAsignada ID: {}", results.get(0).getIdPulsera(), idEntradaAsignada);
                 return Optional.of(results.get(0));
@@ -145,9 +120,6 @@ public class PulseraNFCRepositoryImpl implements PulseraNFCRepository {
         }
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public List<PulseraNFC> findByFestivalId(EntityManager em, Integer idFestival) {
         log.debug("Buscando PulserasNFC para Festival ID: {}", idFestival);
@@ -156,14 +128,8 @@ public class PulseraNFCRepositoryImpl implements PulseraNFCRepository {
             return Collections.emptyList();
         }
         try {
-            // JPQL con Joins: PulseraNFC -> EntradaAsignada -> CompraEntrada -> Entrada -> Festival
-            String jpql = "SELECT DISTINCT p FROM PulseraNFC p " // DISTINCT por si hubiera mapeos extraños
-                    + "JOIN p.entradaAsignada ea " // Pulsera tiene que estar asociada a una entrada
-                    + "JOIN ea.compraEntrada ce "
-                    + "JOIN ce.entrada e "
-                    + "WHERE e.festival.idFestival = :festivalId "
-                    + "ORDER BY p.idPulsera"; // Ordenar por ID de pulsera
-
+            // Consulta directa usando la relación PulseraNFC -> Festival
+            String jpql = "SELECT p FROM PulseraNFC p WHERE p.festival.idFestival = :festivalId ORDER BY p.idPulsera";
             TypedQuery<PulseraNFC> query = em.createQuery(jpql, PulseraNFC.class);
             query.setParameter("festivalId", idFestival);
             List<PulseraNFC> pulseras = query.getResultList();

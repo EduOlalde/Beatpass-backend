@@ -1,7 +1,7 @@
 package com.daw2edudiego.beatpasstfg.config;
 
 import com.daw2edudiego.beatpasstfg.security.AuthenticationFilter;
-import com.daw2edudiego.beatpasstfg.web.*; // Importar todos los recursos web
+import com.daw2edudiego.beatpasstfg.web.*; 
 
 import jakarta.ws.rs.ApplicationPath;
 import jakarta.ws.rs.core.Application;
@@ -50,11 +50,10 @@ public class ApplicationConfig extends Application {
         resources.add(UsuarioResource.class);       // Endpoints para /api/usuarios
         resources.add(AuthResource.class);          // Endpoints para /api/auth (login JWT)
         resources.add(PuntoVentaResource.class);    // Endpoints para /api/pos (operaciones POS/NFC)
-        resources.add(PublicVentaResource.class);   // Endpoints para /api/public/venta ---
+        resources.add(PublicVentaResource.class);   // Endpoints para /api/public/venta 
 
 
         // Recursos que actúan como controladores para paneles web (usan JSPs)
-        // Aunque usen Servlets/JSP internamente, se registran si tienen anotaciones JAX-RS (@Path, @GET, etc.)
         resources.add(PromotorResource.class);      // Endpoints para /api/promotor (panel promotor)
         resources.add(AdminResource.class);         // Endpoints para /api/admin (panel admin)
 
@@ -62,10 +61,6 @@ public class ApplicationConfig extends Application {
         // Filtros, Interceptores, Mapeadores de Excepciones, etc.
         resources.add(AuthenticationFilter.class);  // Filtro para validar tokens JWT
 
-        // Añadir aquí otros providers si se crean, por ejemplo:
-        // resources.add(JsonProcessingExceptionMapper.class);
-        // resources.add(ConstraintViolationExceptionMapper.class);
-        // resources.add(LoggingFilter.class);
         return resources;
     }
 }

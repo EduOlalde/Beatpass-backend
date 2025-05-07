@@ -3,17 +3,13 @@ package com.daw2edudiego.beatpasstfg.dto;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.List; // Para detalles de entradas
+import java.util.List;
 import java.util.Objects;
 
 /**
- * DTO (Data Transfer Object) para representar la información de una
- * {@link com.daw2edudiego.beatpasstfg.model.Compra} realizada. Se utiliza para
- * transferir datos de compras a las vistas o APIs.
- *
- * @author Eduardo Olalde
+ * DTO para representar la información de una Compra realizada.
  */
-@JsonInclude(JsonInclude.Include.NON_NULL) // No incluir campos nulos en la respuesta JSON
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class CompraDTO {
 
     private Integer idCompra;
@@ -25,39 +21,20 @@ public class CompraDTO {
     private String nombreAsistente;
     private String emailAsistente;
 
-    // Información resumida de las entradas compradas en esta transacción
+    // Información resumida de las entradas compradas
     private List<String> resumenEntradas; // Ej: ["2 x General", "1 x VIP"]
 
     /**
-     * Lista de DTOs representando las entradas individuales generadas como
-     * resultado de esta compra específica. Se poblará solo en la respuesta de
-     * confirmación de compra.
+     * Lista de DTOs de las entradas individuales generadas para esta compra. Se
+     * poblará solo en la respuesta de confirmación.
      */
     private List<EntradaAsignadaDTO> entradasGeneradas;
 
     // --- Campos de Pago (Stripe) ---
-    /**
-     * Identificador del PaymentIntent de Stripe asociado a esta compra. Será
-     * null si la compra no usó Stripe o antes de la confirmación.
-     */
     private String stripePaymentIntentId;
-
-    /**
-     * Estado del pago registrado en nuestro sistema (ej: "PENDIENTE", "PAGADO",
-     * "FALLIDO"). Podría ser null si el estado no es relevante o conocido.
-     */
-    private String estadoPago;
-
-    /**
-     * Fecha y hora en que se confirmó el pago. Será null si el pago no está
-     * confirmado.
-     */
+    private String estadoPago; // Ej: "PAGADO"
     private LocalDateTime fechaPagoConfirmado;
 
-    // --- Fin Campos de Pago ---
-    /**
-     * Constructor por defecto.
-     */
     public CompraDTO() {
     }
 
@@ -126,68 +103,31 @@ public class CompraDTO {
         this.entradasGeneradas = entradasGeneradas;
     }
 
-    /**
-     * Obtiene el ID del PaymentIntent de Stripe asociado.
-     *
-     * @return El ID del PaymentIntent o null.
-     */
     public String getStripePaymentIntentId() {
         return stripePaymentIntentId;
     }
 
-    /**
-     * Establece el ID del PaymentIntent de Stripe asociado.
-     *
-     * @param stripePaymentIntentId El ID del PaymentIntent.
-     */
     public void setStripePaymentIntentId(String stripePaymentIntentId) {
         this.stripePaymentIntentId = stripePaymentIntentId;
     }
 
-    /**
-     * Obtiene el estado del pago registrado localmente.
-     *
-     * @return El estado del pago (ej: "PAGADO") o null.
-     */
     public String getEstadoPago() {
         return estadoPago;
     }
 
-    /**
-     * Establece el estado del pago registrado localmente.
-     *
-     * @param estadoPago El estado del pago.
-     */
     public void setEstadoPago(String estadoPago) {
         this.estadoPago = estadoPago;
     }
 
-    /**
-     * Obtiene la fecha y hora en que se confirmó el pago.
-     *
-     * @return La fecha y hora de confirmación o null.
-     */
     public LocalDateTime getFechaPagoConfirmado() {
         return fechaPagoConfirmado;
     }
 
-    /**
-     * Establece la fecha y hora en que se confirmó el pago.
-     *
-     * @param fechaPagoConfirmado La fecha y hora de confirmación.
-     */
     public void setFechaPagoConfirmado(LocalDateTime fechaPagoConfirmado) {
         this.fechaPagoConfirmado = fechaPagoConfirmado;
     }
 
     // --- equals, hashCode y toString ---
-    /**
-     * Compara este CompraDTO con otro objeto. La igualdad se basa únicamente en
-     * idCompra.
-     *
-     * @param o El objeto a comparar.
-     * @return true si los IDs son iguales, false en caso contrario.
-     */
     @Override
     public boolean equals(Object o) {
         if (this == o) {
@@ -197,27 +137,14 @@ public class CompraDTO {
             return false;
         }
         CompraDTO compraDTO = (CompraDTO) o;
-        // La igualdad se basa solo en el ID si está presente
         return Objects.equals(idCompra, compraDTO.idCompra);
     }
 
-    /**
-     * Calcula el código hash basado únicamente en idCompra.
-     *
-     * @return El código hash.
-     */
     @Override
     public int hashCode() {
-        // Basar el hash solo en el ID si está presente
         return Objects.hash(idCompra);
     }
 
-    /**
-     * Devuelve una representación en cadena del DTO, incluyendo los campos de
-     * pago.
-     *
-     * @return Una cadena representando el CompraDTO.
-     */
     @Override
     public String toString() {
         return "CompraDTO{"
@@ -229,8 +156,7 @@ public class CompraDTO {
                 + ", emailAsistente='" + emailAsistente + '\''
                 + ", resumenEntradas=" + resumenEntradas
                 + ", entradasGeneradasCount=" + (entradasGeneradas != null ? entradasGeneradas.size() : 0)
-                + // Log count
-                ", stripePaymentIntentId='" + stripePaymentIntentId + '\''
+                + ", stripePaymentIntentId='" + stripePaymentIntentId + '\''
                 + ", estadoPago='" + estadoPago + '\''
                 + ", fechaPagoConfirmado=" + fechaPagoConfirmado
                 + '}';

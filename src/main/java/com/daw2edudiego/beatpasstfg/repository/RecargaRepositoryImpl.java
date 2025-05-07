@@ -11,25 +11,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Implementación de {@link RecargaRepository} utilizando JPA EntityManager.
- * Proporciona la lógica concreta para interactuar con la base de datos para la
- * entidad Recarga.
- *
- * @author Eduardo Olalde
+ * Implementación de RecargaRepository usando JPA EntityManager.
  */
 public class RecargaRepositoryImpl implements RecargaRepository {
 
     private static final Logger log = LoggerFactory.getLogger(RecargaRepositoryImpl.class);
 
-    /**
-     * {@inheritDoc}
-     * <p>
-     * Esta implementación siempre realiza un {@code persist} ya que se asume
-     * que los registros de recarga no se actualizan, solo se crean.</p>
-     */
     @Override
     public Recarga save(EntityManager em, Recarga recarga) {
-        // Validación de precondiciones
         if (recarga == null) {
             throw new IllegalArgumentException("La entidad Recarga no puede ser nula.");
         }
@@ -42,23 +31,18 @@ public class RecargaRepositoryImpl implements RecargaRepository {
 
         log.debug("Intentando guardar Recarga para Pulsera ID: {}", recarga.getPulseraNFC().getIdPulsera());
         try {
-            // Siempre es nueva, usamos persist
             em.persist(recarga);
-            // em.flush(); // Descomentar si se necesita ID inmediatamente
             log.info("Nueva Recarga persistida con ID: {}", recarga.getIdRecarga());
             return recarga;
         } catch (PersistenceException e) {
             log.error("Error de persistencia al guardar Recarga: {}", e.getMessage(), e);
-            throw e; // Relanzar para manejo transaccional
+            throw e;
         } catch (Exception e) {
             log.error("Error inesperado al guardar Recarga: {}", e.getMessage(), e);
             throw new PersistenceException("Error inesperado al guardar Recarga", e);
         }
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public Optional<Recarga> findById(EntityManager em, Integer id) {
         log.debug("Buscando Recarga ID: {}", id);
@@ -78,9 +62,6 @@ public class RecargaRepositoryImpl implements RecargaRepository {
         }
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public List<Recarga> findByPulseraId(EntityManager em, Integer idPulsera) {
         log.debug("Buscando Recargas para Pulsera ID: {}", idPulsera);

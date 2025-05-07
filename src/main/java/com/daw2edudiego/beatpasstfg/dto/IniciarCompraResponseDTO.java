@@ -3,8 +3,6 @@ package com.daw2edudiego.beatpasstfg.dto;
 /**
  * DTO para enviar la respuesta al frontend al iniciar el proceso de compra.
  * Contiene el client_secret necesario para Stripe Elements/Checkout.
- *
- * @author Eduardo Olalde
  */
 public class IniciarCompraResponseDTO {
 
@@ -14,7 +12,6 @@ public class IniciarCompraResponseDTO {
         this.clientSecret = clientSecret;
     }
 
-    // Getter (Setter no es necesario si solo se construye)
     public String getClientSecret() {
         return clientSecret;
     }

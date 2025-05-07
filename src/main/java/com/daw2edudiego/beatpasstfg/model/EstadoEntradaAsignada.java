@@ -1,24 +1,19 @@
 package com.daw2edudiego.beatpasstfg.model;
 
 /**
- * Enumeración que define los posibles estados de una {@link EntradaAsignada}.
- *
- * @author Eduardo Olalde
+ * Estados posibles de una EntradaAsignada.
  */
 public enum EstadoEntradaAsignada {
     /**
-     * La entrada ha sido generada y/o nominada, está lista para ser usada o
-     * asociada a una pulsera.
+     * La entrada ha sido generada y/o nominada, lista para usarse.
      */
     ACTIVA,
     /**
-     * La entrada ya ha sido validada en el control de acceso o utilizada de
-     * alguna forma.
+     * La entrada ya ha sido validada o utilizada.
      */
     USADA,
     /**
-     * La entrada ha sido cancelada por un promotor o administrador y ya no es
-     * válida.
+     * La entrada ha sido cancelada y ya no es válida.
      */
     CANCELADA
 }

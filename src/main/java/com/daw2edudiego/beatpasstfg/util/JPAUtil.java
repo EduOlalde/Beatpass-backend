@@ -11,60 +11,46 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Clase de utilidad para gestionar el {@link EntityManagerFactory} de JPA.
- * <p>
- * Sigue el patrón Singleton para asegurar que solo se cree una instancia del
- * EntityManagerFactory. Lee la configuración de la base de datos (URL, usuario,
- * contraseña) desde variables de entorno (DB_URL, DB_USER, DB_PASSWORD).
- * </p>
- *
- * @author Eduardo Olalde
+ * Clase de utilidad Singleton para gestionar el EntityManagerFactory de JPA.
+ * Lee la configuración de BD desde variables de entorno.
  */
 public class JPAUtil {
 
-    // El nombre de la unidad de persistencia definida en persistence.xml
     private static final String PERSISTENCE_UNIT_NAME = "beatpassPersistenceUnit";
     private static EntityManagerFactory emf;
     private static final Logger log = LoggerFactory.getLogger(JPAUtil.class);
 
-    // Bloque inicializador estático para crear el EntityManagerFactory cuando se carga la clase.
     static {
         try {
             log.info("Inicializando EntityManagerFactory para la unidad de persistencia: {}", PERSISTENCE_UNIT_NAME);
 
-            // Crear un mapa para pasar propiedades programáticamente
             Map<String, String> properties = new HashMap<>();
 
-            // Leer variables de entorno
             String dbUrl = System.getenv("TFG_DB_URL");
             String dbUser = System.getenv("TFG_DB_USER");
             String dbPassword = System.getenv("TFG_DB_PASSWORD");
 
-            // Verificar si las variables de entorno existen
             if (dbUrl == null || dbUrl.trim().isEmpty()) {
-                log.error("¡Variable de entorno DB_URL no definida o vacía!");
-                throw new RuntimeException("Variable de entorno DB_URL no definida o vacía.");
+                throw new RuntimeException("Variable de entorno TFG_DB_URL no definida o vacía.");
             }
             if (dbUser == null || dbUser.trim().isEmpty()) {
-                log.error("¡Variable de entorno DB_USER no definida o vacía!");
-                throw new RuntimeException("Variable de entorno DB_USER no definida o vacía.");
+                throw new RuntimeException("Variable de entorno TFG_DB_USER no definida o vacía.");
             }
             if (dbPassword == null) {
-                // Permitir contraseña vacía, pero loguear si no está definida
-                log.warn("Variable de entorno DB_PASSWORD no definida. Se usará una cadena vacía si es necesario.");
-                dbPassword = ""; // O manejar como error si siempre se requiere contraseña
+                log.warn("Variable de entorno TFG_DB_PASSWORD no definida. Se usará una cadena vacía.");
+                dbPassword = "";
             }
 
-            log.info("Usando DB_URL obtenida de variable de entorno."); // No loguear la URL completa por seguridad
+            log.info("Usando DB_URL obtenida de variable de entorno."); // No loguear URL
             log.info("Usando DB_USER obtenido de variable de entorno: {}", dbUser);
-            log.info("Usando DB_PASSWORD obtenida de variable de entorno."); // NUNCA loguear la contraseña
+            log.info("Usando DB_PASSWORD obtenida de variable de entorno."); // No loguear PASS
 
-            // Añadir las propiedades leídas al mapa
             properties.put("jakarta.persistence.jdbc.url", dbUrl);
             properties.put("jakarta.persistence.jdbc.user", dbUser);
             properties.put("jakarta.persistence.jdbc.password", dbPassword);
 
             try {
+                // Asegurar que el driver esté disponible
                 Class.forName("com.mysql.cj.jdbc.Driver");
                 log.info("Driver MySQL cargado explícitamente.");
             } catch (ClassNotFoundException e) {
@@ -72,33 +58,24 @@ public class JPAUtil {
                 throw new RuntimeException("Driver MySQL no encontrado", e);
             }
 
-            // 5. Crear el EntityManagerFactory pasando el mapa de propiedades
-            // Las propiedades en el mapa sobrescriben o complementan las de persistence.xml
             emf = Persistence.createEntityManagerFactory(PERSISTENCE_UNIT_NAME, properties);
-
             log.info("EntityManagerFactory inicializado correctamente usando variables de entorno.");
 
-        } catch (PersistenceException ex) { // Capturar PersistenceException específica
-            if (ex.getCause() != null) {
-                log.error("Causa raíz del error de inicialización de EntityManagerFactory: ", ex.getCause());
-            }
-            log.error("ERROR FATAL inicializando EntityManagerFactory: {}", ex.getMessage(), ex);
+        } catch (PersistenceException ex) {
+            log.error("ERROR FATAL inicializando EntityManagerFactory: {}", ex.getMessage(), ex.getCause() != null ? ex.getCause() : ex);
             throw new ExceptionInInitializerError(ex);
-        } catch (Throwable ex) { // Capturar cualquier otro error inesperado
+        } catch (Throwable ex) {
             log.error("ERROR FATAL inesperado durante la inicialización de EntityManagerFactory: {}", ex.getMessage(), ex);
             throw new ExceptionInInitializerError(ex);
         }
     }
 
     /**
-     * Devuelve la instancia singleton de {@link EntityManagerFactory}.
-     *
-     * @return El EntityManagerFactory inicializado.
-     * @throws IllegalStateException si el EntityManagerFactory no se inicializó
-     * correctamente.
+     * Devuelve la instancia singleton de EntityManagerFactory.
      */
     public static EntityManagerFactory getEntityManagerFactory() {
         if (emf == null) {
+            // Esto no debería ocurrir si el bloque static funcionó, pero como salvaguarda
             log.error("EntityManagerFactory no está inicializado. Revisa los logs de inicialización.");
             throw new IllegalStateException("EntityManagerFactory no ha sido inicializado.");
         }
@@ -106,12 +83,8 @@ public class JPAUtil {
     }
 
     /**
-     * Crea una nueva instancia de {@link EntityManager} desde la factoría.
-     * <p>
-     * Recuerda cerrar el EntityManager después de usarlo.
-     * </p>
-     *
-     * @return Una nueva instancia de EntityManager.
+     * Crea una nueva instancia de EntityManager. Recordar cerrarlo después de
+     * usar.
      */
     public static EntityManager createEntityManager() {
         log.debug("Creando nueva instancia de EntityManager.");
@@ -119,7 +92,7 @@ public class JPAUtil {
     }
 
     /**
-     * Cierra la instancia singleton de {@link EntityManagerFactory}.
+     * Cierra la instancia singleton de EntityManagerFactory.
      */
     public static void closeEntityManagerFactory() {
         if (emf != null && emf.isOpen()) {
@@ -131,10 +104,7 @@ public class JPAUtil {
         }
     }
 
-    /**
-     * Constructor privado para prevenir la instanciación.
-     */
+    // Prevenir instanciación
     private JPAUtil() {
-        // Clase de utilidad, no debe ser instanciada.
     }
 }

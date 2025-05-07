@@ -11,25 +11,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Implementación de {@link ConsumoRepository} utilizando JPA EntityManager.
- * Proporciona la lógica concreta para interactuar con la base de datos para la
- * entidad Consumo.
- *
- * @author Eduardo Olalde
+ * Implementación de ConsumoRepository usando JPA EntityManager.
  */
 public class ConsumoRepositoryImpl implements ConsumoRepository {
 
     private static final Logger log = LoggerFactory.getLogger(ConsumoRepositoryImpl.class);
 
-    /**
-     * {@inheritDoc}
-     * <p>
-     * Esta implementación siempre realiza un {@code persist} ya que se asume
-     * que los registros de consumo no se actualizan, solo se crean.</p>
-     */
     @Override
     public Consumo save(EntityManager em, Consumo consumo) {
-        // Validación de precondiciones
         if (consumo == null) {
             throw new IllegalArgumentException("La entidad Consumo no puede ser nula.");
         }
@@ -46,23 +35,18 @@ public class ConsumoRepositoryImpl implements ConsumoRepository {
         log.debug("Intentando guardar Consumo para Pulsera ID: {} en Festival ID: {}",
                 consumo.getPulseraNFC().getIdPulsera(), consumo.getFestival().getIdFestival());
         try {
-            // Siempre es nuevo, usamos persist
             em.persist(consumo);
-            // em.flush(); // Descomentar si se necesita el ID inmediatamente
             log.info("Nuevo Consumo persistido con ID: {}", consumo.getIdConsumo());
             return consumo;
         } catch (PersistenceException e) {
             log.error("Error de persistencia al guardar Consumo: {}", e.getMessage(), e);
-            throw e; // Relanzar para manejo transaccional
+            throw e;
         } catch (Exception e) {
             log.error("Error inesperado al guardar Consumo: {}", e.getMessage(), e);
             throw new PersistenceException("Error inesperado al guardar Consumo", e);
         }
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public Optional<Consumo> findById(EntityManager em, Integer id) {
         log.debug("Buscando Consumo con ID: {}", id);
@@ -82,9 +66,6 @@ public class ConsumoRepositoryImpl implements ConsumoRepository {
         }
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public List<Consumo> findByPulseraId(EntityManager em, Integer idPulsera) {
         log.debug("Buscando Consumos para Pulsera ID: {}", idPulsera);
@@ -105,9 +86,6 @@ public class ConsumoRepositoryImpl implements ConsumoRepository {
         }
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public List<Consumo> findByFestivalId(EntityManager em, Integer idFestival) {
         log.debug("Buscando Consumos para Festival ID: {}", idFestival);

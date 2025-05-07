@@ -1,101 +1,54 @@
 package com.daw2edudiego.beatpasstfg.dto;
 
 import com.daw2edudiego.beatpasstfg.model.EstadoFestival;
-import com.fasterxml.jackson.annotation.JsonFormat; // Para formateo de fechas en JSON
-import com.fasterxml.jackson.annotation.JsonInclude; // Para excluir nulos
-import jakarta.validation.constraints.*; // Validaciones
+import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import jakarta.validation.constraints.*;
 import java.time.LocalDate;
 import java.util.Objects;
 
 /**
- * DTO (Data Transfer Object) para representar la información de un
- * {@link com.daw2edudiego.beatpasstfg.model.Festival}. Utilizado para
- * transferir datos entre capas y para la entrada/salida en la API REST. Incluye
- * validaciones para la creación/actualización de festivales.
- *
- * @author Eduardo Olalde
+ * DTO para representar la información de un Festival.
  */
-@JsonInclude(JsonInclude.Include.NON_NULL) // Opcional: Omite campos nulos en JSON
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class FestivalDTO {
 
-    /**
-     * ID del festival (null al crear, presente al mostrar/actualizar).
-     */
     private Integer idFestival;
 
-    /**
-     * Nombre del festival. Obligatorio.
-     */
     @NotBlank(message = "El nombre del festival no puede estar vacío.")
     @Size(max = 100, message = "El nombre no puede exceder los 100 caracteres.")
     private String nombre;
 
-    /**
-     * Descripción del festival (opcional).
-     */
     private String descripcion;
 
-    /**
-     * Fecha de inicio. Obligatoria. Formato YYYY-MM-DD.
-     */
     @NotNull(message = "La fecha de inicio es obligatoria.")
-    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd") // Formato para JSON
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd")
     private LocalDate fechaInicio;
 
-    /**
-     * Fecha de fin. Obligatoria. Formato YYYY-MM-DD.
-     */
     @NotNull(message = "La fecha de fin es obligatoria.")
-    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd") // Formato para JSON
-    // @AssertTrue(message = "La fecha de fin debe ser igual o posterior a la fecha de inicio.")
-    // La validación AssertTrue requiere un método getter boolean isFechaFinValida()
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd")
     private LocalDate fechaFin;
 
-    /**
-     * Ubicación (opcional).
-     */
     @Size(max = 255, message = "La ubicación no puede exceder los 255 caracteres.")
     private String ubicacion;
 
-    /**
-     * Aforo (opcional, debe ser positivo si se indica).
-     */
     @Positive(message = "El aforo debe ser un número positivo.")
     private Integer aforo;
 
-    /**
-     * URL de la imagen (opcional, formato URL).
-     */
     @Size(max = 255, message = "La URL de la imagen no puede exceder los 255 caracteres.")
-    // @URL(message = "El formato de la URL de la imagen no es válido.") // Requiere dependencia hibernate-validator
     private String imagenUrl;
 
-    /**
-     * Estado del festival (generalmente gestionado por el sistema, no enviado
-     * al crear).
-     */
     private EstadoFestival estado;
 
-    /**
-     * ID del promotor asociado (obligatorio al crear si no se obtiene del
-     * contexto de seguridad).
-     */
-    @NotNull(message = "Se requiere el ID del promotor.") // Puede ser opcional si se obtiene del usuario autenticado
+    @NotNull(message = "Se requiere el ID del promotor.")
     private Integer idPromotor;
 
-    /**
-     * Nombre del promotor (informativo, se puede añadir al consultar).
-     */
-    private String nombrePromotor;
+    private String nombrePromotor; // Informativo
 
-    /**
-     * Constructor por defecto.
-     */
     public FestivalDTO() {
     }
 
     // --- Getters y Setters ---
-    // (Omitidos por brevedad, pero deben estar presentes todos los getters y setters)
     public Integer getIdFestival() {
         return idFestival;
     }
@@ -184,21 +137,7 @@ public class FestivalDTO {
         this.nombrePromotor = nombrePromotor;
     }
 
-    // --- Método de Validación Adicional (Ejemplo) ---
-    /**
-     * Método para validación personalizada (ej: fecha fin >= fecha inicio).
-     * Debe anotarse con @AssertTrue a nivel de clase si se usa Bean Validation.
-     *
-     * @return true si las fechas son válidas, false si no.
-     */
-    /*
-    @AssertTrue(message = "La fecha de fin debe ser igual o posterior a la fecha de inicio.")
-    public boolean isFechaFinValida() {
-        // Permite fechas nulas (gestionado por @NotNull) pero si ambas existen, compara
-        return fechaInicio == null || fechaFin == null || !fechaFin.isBefore(fechaInicio);
-    }
-     */
-    // --- equals y hashCode basados en ID ---
+    // --- equals y hashCode ---
     @Override
     public boolean equals(Object o) {
         if (this == o) {
