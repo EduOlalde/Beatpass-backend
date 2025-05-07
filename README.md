@@ -28,6 +28,7 @@ El proyecto incluye:
     * API pública para consultar detalles de festivales y tipos de entrada disponibles.
     * API pública para realizar compras, registrando al asistente (o creándolo si no existe).
     * API pública para nominar una entrada comprada a un asistente específico usando su código QR.
+	* Integración de pasarela de pago
 * **Gestión de Asistentes:**
     * Registro automático al comprar o nominar.
     * Listado y búsqueda de asistentes (panel de admin).
@@ -62,6 +63,7 @@ El proyecto incluye:
     * Logging: SLF4J API 2.0.7 + Logback Classic 1.4.7
     * Filtro CORS: Jetty CrossOriginFilter 11.0.20
     * Construcción/Dependencias: Apache Maven
+	* Pasarela de pago: Stripe
 * **Frontend (Simuladores):**
     * HTML5
     * CSS3 (Tailwind CSS vía CDN y estilos personalizados)

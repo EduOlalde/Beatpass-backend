@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: mysql-beatpasstfg.alwaysdata.net
--- Generation Time: Apr 26, 2025 at 07:47 PM
+-- Generation Time: May 07, 2025 at 10:35 PM
 -- Server version: 10.11.11-MariaDB
 -- PHP Version: 7.4.33
 
@@ -61,7 +61,19 @@ INSERT INTO `asistentes` (`id_asistente`, `nombre`, `email`, `telefono`, `fecha_
 (46, 'Daniel Mora Vidal', 'daniel.mora@email.net', NULL, '2025-04-26 14:14:08', '2025-04-26 14:14:08'),
 (47, 'Cristina Pascual Serrano', 'cristina.pascual@email.com', '645678901', '2025-04-26 14:14:08', '2025-04-26 14:14:08'),
 (48, 'Rubén Soler Camacho', 'ruben.soler@email.org', '656789012', '2025-04-26 14:14:08', '2025-04-26 14:14:08'),
-(49, 'Edu Ardo', 'edu@edu.com', '718273645', '2025-04-26 17:46:10', '2025-04-26 17:46:10');
+(49, 'Edu Ardo', 'edu@edu.com', '718273645', '2025-04-26 17:46:10', '2025-04-26 17:46:10'),
+(50, 'Cris Crissi', 'cris@cris.com', '817264537', '2025-04-26 20:33:24', '2025-04-26 20:33:24'),
+(51, 'Patri', 'patri@email.com', '987654323', '2025-04-26 20:35:45', '2025-04-26 20:35:45'),
+(52, 'Fertxito', 'fertxo@email.com', '', '2025-04-26 20:51:18', '2025-04-26 20:51:18'),
+(53, 'Jose Antonio Rosales Justisiero', 'jarosalesnu@gmail.com', '999555999', '2025-04-27 10:30:42', '2025-04-27 10:30:42'),
+(54, 'Gaco', 'gcorper@gmail.com', '666666666', '2025-04-27 15:20:14', '2025-04-27 15:20:14'),
+(55, 'Ed2', 'ed2@email.com', '', '2025-04-28 15:36:43', '2025-04-28 15:36:43'),
+(56, 'Ed2', 'ed2@beatpass.com', '', '2025-04-28 15:44:39', '2025-04-28 15:44:39'),
+(57, 'Maria', 'maria@email.com', '', '2025-04-29 20:12:48', '2025-04-29 20:12:48'),
+(58, 'Maria', 'maria@email.con', '', '2025-04-29 20:13:26', '2025-04-29 20:13:26'),
+(59, 'Edu Olalde', 'edu@email.com', '', '2025-05-06 08:30:07', '2025-05-06 08:30:07'),
+(60, 'Stripe', 'stripe@email.com', '666111333', '2025-05-07 20:31:41', '2025-05-07 20:31:41'),
+(61, 'Stripe2', 'email@stripe.com', '666111444', '2025-05-07 20:33:06', '2025-05-07 20:33:06');
 
 -- --------------------------------------------------------
 
@@ -73,21 +85,33 @@ CREATE TABLE `compras` (
   `id_compra` int(11) NOT NULL,
   `id_asistente` int(11) NOT NULL,
   `fecha_compra` datetime DEFAULT current_timestamp(),
-  `total` decimal(10,2) NOT NULL CHECK (`total` >= 0)
+  `total` decimal(10,2) NOT NULL CHECK (`total` >= 0),
+  `stripe_payment_intent_id` varchar(255) DEFAULT NULL,
+  `estado_pago` varchar(50) DEFAULT NULL,
+  `fecha_pago_confirmado` datetime DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `compras`
 --
 
-INSERT INTO `compras` (`id_compra`, `id_asistente`, `fecha_compra`, `total`) VALUES
-(29, 29, '2025-04-26 14:57:46', 150.00),
-(30, 32, '2025-04-26 14:57:46', 120.00),
-(31, 35, '2025-04-26 14:57:46', 270.00),
-(32, 41, '2025-04-26 14:57:46', 210.00),
-(33, 48, '2025-04-26 14:57:46', 120.00),
-(34, 29, '2025-04-26 14:56:46', 900.00),
-(35, 49, '2025-04-26 17:46:11', 60.00);
+INSERT INTO `compras` (`id_compra`, `id_asistente`, `fecha_compra`, `total`, `stripe_payment_intent_id`, `estado_pago`, `fecha_pago_confirmado`) VALUES
+(29, 29, '2025-04-26 14:57:46', 150.00, NULL, NULL, NULL),
+(30, 32, '2025-04-26 14:57:46', 120.00, NULL, NULL, NULL),
+(31, 35, '2025-04-26 14:57:46', 270.00, NULL, NULL, NULL),
+(32, 41, '2025-04-26 14:57:46', 210.00, NULL, NULL, NULL),
+(33, 48, '2025-04-26 14:57:46', 120.00, NULL, NULL, NULL),
+(34, 29, '2025-04-26 14:56:46', 900.00, NULL, NULL, NULL),
+(35, 49, '2025-04-26 17:46:11', 60.00, NULL, NULL, NULL),
+(36, 50, '2025-04-26 20:33:25', 100.00, NULL, NULL, NULL),
+(37, 52, '2025-04-26 20:51:19', 150.00, NULL, NULL, NULL),
+(38, 53, '2025-04-27 10:30:45', 120.00, NULL, NULL, NULL),
+(40, 55, '2025-04-28 15:36:44', 240.00, NULL, NULL, NULL),
+(41, 57, '2025-04-29 20:12:49', 120.00, NULL, NULL, NULL),
+(42, 59, '2025-05-06 08:30:08', 120.00, 'pi_3RLf104Et9Src69R0zKbcvZt', 'PAGADO', '2025-05-06 08:30:06'),
+(43, 59, '2025-05-06 08:59:21', 150.00, 'pi_3RLfTH4Et9Src69R0XqyzhOK', 'PAGADO', '2025-05-06 08:59:19'),
+(44, 60, '2025-05-07 20:31:42', 150.00, 'pi_3RMCkp4Et9Src69R0sQkgjfC', 'PAGADO', '2025-05-07 18:31:39'),
+(45, 61, '2025-05-07 20:33:07', 120.00, 'pi_3RMCmD4Et9Src69R06McczJ8', 'PAGADO', '2025-05-07 18:33:05');
 
 -- --------------------------------------------------------
 
@@ -115,7 +139,16 @@ INSERT INTO `compra_entradas` (`id_compra_entrada`, `id_compra`, `id_entrada`, `
 (36, 32, 49, 1, 60.00),
 (37, 33, 52, 2, 60.00),
 (38, 34, 50, 10, 90.00),
-(39, 35, 49, 1, 60.00);
+(39, 35, 49, 1, 60.00),
+(40, 36, 48, 2, 50.00),
+(41, 37, 54, 1, 150.00),
+(42, 38, 47, 1, 120.00),
+(44, 40, 47, 2, 120.00),
+(45, 41, 47, 1, 120.00),
+(46, 42, 47, 1, 120.00),
+(47, 43, 54, 1, 150.00),
+(48, 44, 54, 1, 150.00),
+(49, 45, 47, 1, 120.00);
 
 -- --------------------------------------------------------
 
@@ -158,14 +191,14 @@ INSERT INTO `entradas` (`id_entrada`, `id_festival`, `tipo`, `descripcion`, `pre
 (44, 18, 'Abono General', 'Acceso los 3 días al recinto general.', 75.00, 10000, '2025-04-26 14:57:46', '2025-04-26 14:57:46'),
 (45, 18, 'Abono VIP', 'Acceso los 3 días a zona VIP y general.', 150.00, 2000, '2025-04-26 14:57:46', '2025-04-26 14:57:46'),
 (46, 18, 'Entrada Jueves', 'Acceso el jueves 10 de Julio.', 35.00, 3000, '2025-04-26 14:57:46', '2025-04-26 14:57:46'),
-(47, 19, 'Abono Completo', 'Acceso todos los días + camping.', 120.00, 15000, '2025-04-26 14:57:46', '2025-04-26 14:57:46'),
-(48, 19, 'Entrada Viernes', 'Acceso el viernes 22 de Agosto.', 50.00, 5000, '2025-04-26 14:57:46', '2025-04-26 14:57:46'),
+(47, 19, 'Abono Completo', 'Acceso todos los días + camping.', 120.00, 14893, '2025-04-26 14:57:46', '2025-05-07 21:18:09'),
+(48, 19, 'Entrada Viernes', 'Acceso el viernes 22 de Agosto.', 50.00, 4998, '2025-04-26 14:57:46', '2025-04-26 20:33:26'),
 (49, 19, 'Entrada Sábado', 'Acceso el sábado 23 de Agosto.', 60.00, 4999, '2025-04-26 14:57:46', '2025-04-26 17:46:12'),
 (50, 20, 'Abono General', 'Acceso los 3 días.', 90.00, 20000, '2025-04-26 14:57:46', '2025-04-26 14:57:46'),
 (51, 20, 'Abono Premium', 'Acceso 3 días + Front Stage.', 180.00, 3000, '2025-04-26 14:57:46', '2025-04-26 14:57:46'),
 (52, 21, 'Abono Eco-Friendly', 'Acceso 3 días + Taller reciclaje.', 60.00, 5000, '2025-04-26 14:57:46', '2025-04-26 14:57:46'),
 (53, 21, 'Entrada Sábado', 'Acceso sábado 21 de Junio.', 30.00, 2000, '2025-04-26 14:57:46', '2025-04-26 14:57:46'),
-(54, 19, 'Abono VIP', 'Acceso todos los días + acceso VIP', 150.00, 1000, '2025-04-26 19:21:12', '2025-04-26 19:21:49');
+(54, 19, 'Abono VIP', 'Acceso todos los días + acceso VIP', 150.00, 997, '2025-04-26 19:21:12', '2025-05-07 20:31:42');
 
 -- --------------------------------------------------------
 
@@ -210,7 +243,18 @@ INSERT INTO `entradas_asignadas` (`id_entrada_asignada`, `id_compra_entrada`, `i
 (71, 38, 45, 'QR-F20-NULL-0cc31977-229e-11f0-86e0-c1bc6dea4ec9', 'ACTIVA', '2025-04-26 14:57:46', NULL, '2025-04-26 14:57:46', '2025-04-26 14:57:46'),
 (72, 38, 46, 'QR-F20-NULL-0cc319f7-229e-11f0-86e0-c1bc6dea4ec9', 'ACTIVA', '2025-04-26 14:57:46', NULL, '2025-04-26 14:57:46', '2025-04-26 14:57:46'),
 (73, 38, 47, 'QR-F20-NULL-0cc31a85-229e-11f0-86e0-c1bc6dea4ec9', 'ACTIVA', '2025-04-26 14:57:46', NULL, '2025-04-26 14:57:46', '2025-04-26 14:57:46'),
-(74, 39, 49, 'BEATPASS-TICKET-abfc45b6-2cc6-4ed5-8373-631ccf9e3616', 'ACTIVA', '2025-04-26 15:46:40', NULL, '2025-04-26 17:46:11', '2025-04-26 17:46:41');
+(74, 39, 49, 'BEATPASS-TICKET-abfc45b6-2cc6-4ed5-8373-631ccf9e3616', 'ACTIVA', '2025-04-26 15:46:40', NULL, '2025-04-26 17:46:11', '2025-04-26 17:46:41'),
+(75, 40, 51, 'BEATPASS-TICKET-b6c9eec5-39cd-49a2-ad76-e5938a68f84b', 'ACTIVA', '2025-04-26 18:35:45', NULL, '2025-04-26 20:33:25', '2025-04-26 20:35:45'),
+(76, 40, 50, 'BEATPASS-TICKET-6965ad13-867b-4c30-a9d0-2cd278f0690b', 'ACTIVA', '2025-04-26 18:34:37', NULL, '2025-04-26 20:33:25', '2025-04-26 20:34:38'),
+(77, 41, 52, 'BEATPASS-TICKET-178353c6-8995-4178-bf36-2cdb15fe1d48', 'ACTIVA', '2025-04-26 18:52:09', NULL, '2025-04-26 20:51:19', '2025-04-26 20:52:09'),
+(78, 42, 53, 'BEATPASS-TICKET-2822ea9a-1143-46f1-83d6-452a414dfbbb', 'ACTIVA', '2025-04-27 08:34:43', NULL, '2025-04-27 10:30:45', '2025-04-27 10:34:43'),
+(179, 44, NULL, 'BEATPASS-TICKET-3d8b7ec5-55b0-4787-a75f-2a6a6f9cc66c', 'ACTIVA', NULL, NULL, '2025-04-28 15:36:44', '2025-04-28 15:36:44'),
+(180, 44, 56, 'BEATPASS-TICKET-2e2efc3e-81ce-40d4-a4f2-17b71e310112', 'ACTIVA', '2025-04-28 13:44:40', NULL, '2025-04-28 15:36:44', '2025-04-28 15:44:40'),
+(181, 45, 58, 'BEATPASS-TICKET-20819a99-1b30-416a-a19d-236aded2db9d', 'ACTIVA', '2025-04-29 18:13:26', NULL, '2025-04-29 20:12:49', '2025-04-29 20:13:26'),
+(182, 46, NULL, 'BEATPASS-TICKET-a0b78540-4a2f-4622-96e7-35d7a258d37d', 'ACTIVA', NULL, NULL, '2025-05-06 08:30:08', '2025-05-06 08:30:08'),
+(183, 47, 59, 'BEATPASS-TICKET-771f441d-702f-4ed9-8134-f3397a058026', 'ACTIVA', '2025-05-06 08:59:55', NULL, '2025-05-06 08:59:21', '2025-05-06 08:59:55'),
+(184, 48, NULL, 'BEATPASS-TICKET-30306ff7-097b-48e1-82d4-dd9e67cd6671', 'ACTIVA', NULL, NULL, '2025-05-07 20:31:42', '2025-05-07 20:31:42'),
+(185, 49, NULL, 'BEATPASS-TICKET-3f1cc589-36b7-4c3d-afd1-735d229f2f8b', 'ACTIVA', NULL, NULL, '2025-05-07 20:33:07', '2025-05-07 20:33:07');
 
 -- --------------------------------------------------------
 
@@ -255,7 +299,7 @@ CREATE TABLE `festivales` (
 
 INSERT INTO `festivales` (`id_festival`, `nombre`, `descripcion`, `fecha_inicio`, `fecha_fin`, `ubicacion`, `id_promotor`, `aforo`, `imagen_url`, `estado`, `fecha_creacion`, `fecha_modificacion`) VALUES
 (18, 'Festival del Sol Naciente', 'Música electrónica y alternativa bajo el sol.', '2025-07-10', '2025-07-12', 'Playa de Levante, Benidorm', 9, 15000, 'https://placehold.co/600x400/F2994A/ffffff?text=Festival+Sol+Naciente', 'PUBLICADO', '2025-04-26 14:57:46', '2025-04-26 14:57:46'),
-(19, 'Luna Negra Fest', 'Rock y metal en un entorno único.', '2025-08-22', '2025-08-24', 'Recinto Ferial, Villarrobledo', 10, 25000, 'https://placehold.co/600x400/333333/ffffff?text=Luna+Negra+Fest', 'PUBLICADO', '2025-04-26 14:57:46', '2025-04-26 14:57:46'),
+(19, 'Luna Negra Fest', 'Rock y metal en un entorno único.', '2025-08-22', '2025-08-24', 'Recinto Ferial, Villarrobledo', 10, 25000, 'https://placehold.co/600x400/333333/ffffff?text=Luna+Negra+Fest', 'PUBLICADO', '2025-04-26 14:57:46', '2025-05-07 21:37:24'),
 (20, 'Ritmos del Sur', 'Festival de música urbana y latina.', '2025-09-05', '2025-09-07', 'Estadio Olímpico, Sevilla', 11, 30000, 'https://placehold.co/600x400/EB5757/ffffff?text=Ritmos+del+Sur', 'PUBLICADO', '2025-04-26 14:57:46', '2025-04-26 14:57:46'),
 (21, 'EcoSound Festival', 'Música indie y pop con conciencia ecológica.', '2025-06-20', '2025-06-22', 'Parque Natural, Sierra de Gredos', 12, 8000, 'https://placehold.co/600x400/27AE60/ffffff?text=EcoSound+Festival', 'BORRADOR', '2025-04-26 14:57:46', '2025-04-26 14:57:46');
 
@@ -287,7 +331,7 @@ INSERT INTO `pulseras_nfc` (`id_pulsera`, `codigo_uid`, `id_entrada_asignada`, `
 (1, 'PULSERA-001', 1, 95.00, 1, 18, NULL, '2025-04-21 21:54:09', '2025-04-26 18:39:28', '2025-04-21 21:54:09', '2025-04-26 18:39:28'),
 (2, 'PULSERA-002', 54, 0.00, 1, 18, '2025-04-26 14:57:46', '2025-04-21 21:54:09', '2025-04-26 18:27:38', '2025-04-21 21:54:09', '2025-04-26 18:27:38'),
 (3, 'PULSERA-003', 56, 0.00, 1, 19, '2025-04-26 14:57:46', '2025-04-21 21:54:09', '2025-04-26 18:27:38', '2025-04-21 21:54:09', '2025-04-26 18:27:38'),
-(4, 'PULSERA-004', 74, 0.00, 1, 19, '2025-04-26 14:57:46', '2025-04-21 21:54:09', '2025-04-26 18:27:38', '2025-04-21 21:54:09', '2025-04-26 18:27:38'),
+(4, 'PULSERA-004', 74, 100.00, 1, 19, '2025-04-26 14:57:46', '2025-04-21 21:54:09', '2025-04-26 20:37:14', '2025-04-21 21:54:09', '2025-04-26 20:37:14'),
 (5, 'PULSERA-005', 8, 50.00, 1, 18, NULL, '2025-04-21 21:54:09', '2025-04-26 18:39:28', '2025-04-21 21:54:09', '2025-04-26 18:39:28'),
 (6, 'PULSERA-006', 13, 0.00, 1, 18, NULL, '2025-04-21 21:54:09', '2025-04-26 18:39:28', '2025-04-21 21:54:09', '2025-04-26 18:39:28'),
 (7, 'PULSERA-007', 60, 0.00, 1, 18, '2025-04-26 14:57:46', '2025-04-21 21:54:09', '2025-04-26 18:27:38', '2025-04-21 21:54:09', '2025-04-26 18:27:38'),
@@ -400,6 +444,13 @@ CREATE TABLE `recargas` (
   `id_usuario_cajero` int(11) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+--
+-- Dumping data for table `recargas`
+--
+
+INSERT INTO `recargas` (`id_recarga`, `id_pulsera`, `monto`, `fecha`, `metodo_pago`, `id_usuario_cajero`) VALUES
+(3, 4, 100.00, '2025-04-26 20:37:14', 'Efectivo', 4);
+
 -- --------------------------------------------------------
 
 --
@@ -426,9 +477,10 @@ INSERT INTO `usuarios` (`id_usuario`, `nombre`, `email`, `password`, `rol`, `est
 (1, 'admin', 'admin@beatpass.com', '$2a$12$UzQ4wCJ/9WC9qTvXU3Rwg.BQdF1Ct8sGwA7eg1OCycSiiqExwwZPe', 'ADMIN', 1, 0, '2025-04-18 17:11:43', '2025-04-22 23:23:01'),
 (4, 'Punto Venta 1', 'cajero@beatpass.com', '$2a$12$UzQ4wCJ/9WC9qTvXU3Rwg.BQdF1Ct8sGwA7eg1OCycSiiqExwwZPe', 'CAJERO', 1, 0, '2025-04-22 23:23:49', '2025-04-22 23:23:49'),
 (9, 'Promociones FiestaTotal', 'contacto@fiestatotal.com', '$2a$12$p.1C/PPo/9SSgatchToISeRRG3xsnpzEzYmfFEfVpRxDhVnatOtMy', 'PROMOTOR', 1, 1, '2025-04-26 14:14:08', '2025-04-26 14:16:26'),
-(10, 'Eventos Luna Llena', 'info@eventoslunallena.es', '$2a$12$Yr8obyuaQZEpXBuhDITvuugOxtAdCqxWJZyGuB5arl5LczkX9gbRe', 'PROMOTOR', 1, 0, '2025-04-26 14:14:08', '2025-04-26 14:37:12'),
+(10, 'Eventos Luna Llena', 'info@eventoslunallena.es', '$2a$12$Yr8obyuaQZEpXBuhDITvuugOxtAdCqxWJZyGuB5arl5LczkX9gbRe', 'PROMOTOR', 1, 0, '2025-04-26 14:14:08', '2025-05-07 21:20:39'),
 (11, 'Ritmo Producciones', 'gestion@ritmoproducciones.com', '$2a$12$p.1C/PPo/9SSgatchToISeRRG3xsnpzEzYmfFEfVpRxDhVnatOtMy', 'PROMOTOR', 1, 0, '2025-04-26 14:14:08', '2025-04-26 14:16:26'),
-(12, 'Noches de Verano SL', 'admin@nochesverano.es', '$2a$12$p.1C/PPo/9SSgatchToISeRRG3xsnpzEzYmfFEfVpRxDhVnatOtMy', 'PROMOTOR', 1, 1, '2025-04-26 14:14:08', '2025-04-26 14:16:26');
+(12, 'Noches de Verano SL', 'admin@nochesverano.es', '$2a$12$p.1C/PPo/9SSgatchToISeRRG3xsnpzEzYmfFEfVpRxDhVnatOtMy', 'PROMOTOR', 1, 1, '2025-04-26 14:14:08', '2025-04-27 23:33:52'),
+(13, 'Punto Venta 2', 'cajero2@beatpass.com', '$2a$12$SSmhSya66QM1nBm2BzASreN9rr104wacFb5zgiswP2A5tPLGfNn7u', 'CAJERO', 1, 1, '2025-04-28 00:44:47', '2025-04-28 00:44:47');
 
 --
 -- Indexes for dumped tables
@@ -447,8 +499,10 @@ ALTER TABLE `asistentes`
 --
 ALTER TABLE `compras`
   ADD PRIMARY KEY (`id_compra`),
+  ADD UNIQUE KEY `stripe_payment_intent_id` (`stripe_payment_intent_id`),
   ADD KEY `idx_compras_asistente` (`id_asistente`),
-  ADD KEY `idx_compras_fecha` (`fecha_compra`);
+  ADD KEY `idx_compras_fecha` (`fecha_compra`),
+  ADD KEY `idx_stripe_payment_intent` (`stripe_payment_intent_id`);
 
 --
 -- Indexes for table `compra_entradas`
@@ -538,19 +592,19 @@ ALTER TABLE `usuarios`
 -- AUTO_INCREMENT for table `asistentes`
 --
 ALTER TABLE `asistentes`
-  MODIFY `id_asistente` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=50;
+  MODIFY `id_asistente` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=62;
 
 --
 -- AUTO_INCREMENT for table `compras`
 --
 ALTER TABLE `compras`
-  MODIFY `id_compra` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=36;
+  MODIFY `id_compra` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=46;
 
 --
 -- AUTO_INCREMENT for table `compra_entradas`
 --
 ALTER TABLE `compra_entradas`
-  MODIFY `id_compra_entrada` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=40;
+  MODIFY `id_compra_entrada` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=50;
 
 --
 -- AUTO_INCREMENT for table `consumos`
@@ -568,7 +622,7 @@ ALTER TABLE `entradas`
 -- AUTO_INCREMENT for table `entradas_asignadas`
 --
 ALTER TABLE `entradas_asignadas`
-  MODIFY `id_entrada_asignada` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=75;
+  MODIFY `id_entrada_asignada` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=186;
 
 --
 -- AUTO_INCREMENT for table `festivales`
@@ -586,13 +640,13 @@ ALTER TABLE `pulseras_nfc`
 -- AUTO_INCREMENT for table `recargas`
 --
 ALTER TABLE `recargas`
-  MODIFY `id_recarga` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+  MODIFY `id_recarga` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
 -- AUTO_INCREMENT for table `usuarios`
 --
 ALTER TABLE `usuarios`
-  MODIFY `id_usuario` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=13;
+  MODIFY `id_usuario` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=14;
 
 --
 -- Constraints for dumped tables
