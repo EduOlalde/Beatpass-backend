@@ -113,8 +113,8 @@
                                                 </c:otherwise>
                                             </c:choose>
                                         </td>
-                                        <td class="px-4 py-4 whitespace-nowrap text-center text-sm space-x-2">
-                                            <a href="${pageContext.request.contextPath}/api/admin/asistentes/${a.idAsistente}" class="action-link action-link-view" title="Ver detalles de ${a.nombre}">Ver</a>
+                                        <td class="px-4 py-4 whitespace-nowrap text-center text-sm space-x-2">                                  
+                                            <a href="${pageContext.request.contextPath}/api/admin/asistentes/${a.idAsistente}" class="action-link action-link-view" title="Ver detalles de ${a.nombre}">Ver</a>                                           
                                             <a href="${pageContext.request.contextPath}/api/admin/asistentes/${a.idAsistente}/editar" class="action-link action-link-edit" title="Editar datos de ${a.nombre}">Editar</a>
                                         </td>
                                     </tr>

@@ -53,14 +53,6 @@ public class VentaServiceImpl implements VentaService {
     }
 
     @Override
-    @Deprecated
-    public void registrarVenta(Integer idAsistente, Integer idEntrada, int cantidad) {
-        log.warn("Llamada a método obsoleto registrarVenta - Asistente ID: {}, Entrada ID: {}, Cantidad: {}",
-                idAsistente, idEntrada, cantidad);
-        throw new UnsupportedOperationException("Este método está obsoleto. Use confirmarVentaConPago.");
-    }
-
-    @Override
     public CompraDTO confirmarVentaConPago(Integer idAsistente, Integer idEntrada, int cantidad, String paymentIntentId)
             throws AsistenteNotFoundException, EntradaNotFoundException, FestivalNoPublicadoException,
             StockInsuficienteException, PagoInvalidoException, IllegalArgumentException {

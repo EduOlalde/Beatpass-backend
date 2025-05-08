@@ -44,22 +44,20 @@ public class ApplicationConfig extends Application {
     public Set<Class<?>> getClasses() {
         Set<Class<?>> resources = new HashSet<>();
 
-        // --- Registrar Clases de Recursos (@Path) ---
         // Recursos RESTful que devuelven principalmente JSON
-        resources.add(FestivalResource.class);      // Endpoints para /api/festivales
-        resources.add(UsuarioResource.class);       // Endpoints para /api/usuarios
-        resources.add(AuthResource.class);          // Endpoints para /api/auth (login JWT)
-        resources.add(PuntoVentaResource.class);    // Endpoints para /api/pos (operaciones POS/NFC)
-        resources.add(PublicVentaResource.class);   // Endpoints para /api/public/venta 
+        resources.add(FestivalResource.class);      
+        resources.add(UsuarioResource.class);      
+        resources.add(AuthResource.class);          
+        resources.add(PuntoVentaResource.class);   
+        resources.add(PublicVentaResource.class);   
 
 
         // Recursos que actúan como controladores para paneles web (usan JSPs)
-        resources.add(PromotorResource.class);      // Endpoints para /api/promotor (panel promotor)
-        resources.add(AdminResource.class);         // Endpoints para /api/admin (panel admin)
+        resources.add(PromotorResource.class);     
+        resources.add(AdminResource.class);         
 
-        // --- Registrar Clases Proveedoras (@Provider) ---
         // Filtros, Interceptores, Mapeadores de Excepciones, etc.
-        resources.add(AuthenticationFilter.class);  // Filtro para validar tokens JWT
+        resources.add(AuthenticationFilter.class);  
 
         return resources;
     }

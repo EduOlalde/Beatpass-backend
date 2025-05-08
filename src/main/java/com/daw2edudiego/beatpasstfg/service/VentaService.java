@@ -11,15 +11,6 @@ import com.daw2edudiego.beatpasstfg.exception.*;
 public interface VentaService {
 
     /**
-     * Registra una venta simple (sin verificación de pago online).
-     *
-     * @deprecated Usar
-     * {@link #confirmarVentaConPago(Integer, Integer, int, String)}.
-     */
-    @Deprecated
-    void registrarVenta(Integer idAsistente, Integer idEntrada, int cantidad);
-
-    /**
      * Confirma una venta después de verificar un pago exitoso con Stripe.
      * Realiza validaciones, crea la compra, genera entradas y actualiza stock.
      * Es transaccional.
