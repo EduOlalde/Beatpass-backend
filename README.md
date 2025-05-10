@@ -63,11 +63,7 @@ El proyecto incluye:
     * Logging: SLF4J API 2.0.7 + Logback Classic 1.4.7
     * Filtro CORS: Jetty CrossOriginFilter 11.0.20
     * Construcción/Dependencias: Apache Maven
-	* Pasarela de pago: Stripe
-* **Frontend (Simuladores):**
-    * HTML5
-    * CSS3 (Tailwind CSS vía CDN y estilos personalizados)
-    * JavaScript (Vanilla JS para llamadas API y lógica de UI)
+    * Pasarela de pago: Stripe
 * **Base de Datos:**
     * SQL (Script `beatpasstfg_db.sql` para MariaDB/MySQL)
 
@@ -112,11 +108,6 @@ El proyecto incluye:
         * Admin: `admin@beatpass.com` / `password` (según datos iniciales)
         * Promotor: `info@eventoslunallena.es` / `pass` (requiere cambio)
     * **API:** Los endpoints de la API estarán disponibles bajo `http://localhost:8080/BeatpassTFG/api/`.
-7.  **Simuladores Frontend:**
-    * Los archivos `index.html`, `festival.html`, `pos.html` y sus JS/CSS asociados se pueden abrir directamente en el navegador o, preferiblemente, servirse con una extensión como "Live Server" en VS Code.
-    * **Importante:** Asegúrate de que la constante `API_BASE_URL` en `festival_simulator.js` y `pos_simulator.js` apunte a la URL correcta de tu backend local (`http://localhost:8080/BeatpassTFG/api`).
-    * Ajusta el `FESTIVAL_ID` en `festival_simulator.js` y el `posFestivalId` en `pos.html` para que coincidan con IDs válidos en tu base de datos.
-    * Configura CORS en `web.xml` para permitir el origen desde donde sirves los simuladores (ej: `http://localhost:5500` si usas Live Server).
 
 ## Despliegue
 
