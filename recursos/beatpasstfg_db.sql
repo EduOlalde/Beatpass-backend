@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: mysql-beatpasstfg.alwaysdata.net
--- Generation Time: May 07, 2025 at 10:45 PM
+-- Generation Time: May 12, 2025 at 01:08 PM
 -- Server version: 10.11.11-MariaDB
 -- PHP Version: 7.4.33
 
@@ -41,39 +41,13 @@ CREATE TABLE `asistentes` (
 --
 
 INSERT INTO `asistentes` (`id_asistente`, `nombre`, `email`, `telefono`, `fecha_creacion`, `fecha_modificacion`) VALUES
-(29, 'Ana García López', 'ana.garcia@email.com', '611223344', '2025-04-26 14:14:08', '2025-04-26 14:14:08'),
-(30, 'Luis Martínez Ruiz', 'luis.martinez@email.es', '622334455', '2025-04-26 14:14:08', '2025-04-26 14:14:08'),
-(31, 'Elena Sánchez Gómez', 'elena.sanchez@email.net', NULL, '2025-04-26 14:14:08', '2025-04-26 14:14:08'),
-(32, 'David Fernández Pérez', 'david.fernandez@email.org', '633445566', '2025-04-26 14:14:08', '2025-04-26 14:14:08'),
-(33, 'Laura Jiménez González', 'laura.jimenez@email.com', '644556677', '2025-04-26 14:14:08', '2025-04-26 14:14:08'),
-(34, 'Sergio Rodríguez Díaz', 'sergio.rodriguez@email.es', NULL, '2025-04-26 14:14:08', '2025-04-26 14:14:08'),
-(35, 'Carmen Moreno Álvarez', 'carmen.moreno@email.com', '655667788', '2025-04-26 14:14:08', '2025-04-26 14:14:08'),
-(36, 'Pablo Romero Navarro', 'pablo.romero@email.net', '666778899', '2025-04-26 14:14:08', '2025-04-26 14:14:08'),
-(37, 'Isabel Gutiérrez Iglesias', 'isabel.gutierrez@email.org', '677889900', '2025-04-26 14:14:08', '2025-04-26 14:14:08'),
-(38, 'Javier Vázquez Blanco', 'javier.vazquez@email.com', NULL, '2025-04-26 14:14:08', '2025-04-26 14:14:08'),
-(39, 'Raquel Molina Castrillo', 'raquel.molina@email.es', '688990011', '2025-04-26 14:14:08', '2025-04-26 14:14:08'),
-(40, 'Francisco Domínguez Soto', 'francisco.dominguez@email.net', '699001122', '2025-04-26 14:14:08', '2025-04-26 14:14:08'),
-(41, 'Beatriz Ramos Gil', 'beatriz.ramos@email.com', '600112233', '2025-04-26 14:14:08', '2025-04-26 14:14:08'),
-(42, 'Álvaro Ortega Crespo', 'alvaro.ortega@email.es', NULL, '2025-04-26 14:14:08', '2025-04-26 14:14:08'),
-(43, 'Marta Reyes Gallego', 'marta.reyes@email.org', '612345678', '2025-04-26 14:14:08', '2025-04-26 14:14:08'),
-(44, 'Adrián Santos Rubio', 'adrian.santos@email.com', '623456789', '2025-04-26 14:14:08', '2025-04-26 14:14:08'),
-(45, 'Natalia Alonso Marín', 'natalia.alonso@email.es', '634567890', '2025-04-26 14:14:08', '2025-04-26 14:14:08'),
-(46, 'Daniel Mora Vidal', 'daniel.mora@email.net', NULL, '2025-04-26 14:14:08', '2025-04-26 14:14:08'),
-(47, 'Cristina Pascual Serrano', 'cristina.pascual@email.com', '645678901', '2025-04-26 14:14:08', '2025-04-26 14:14:08'),
-(48, 'Rubén Soler Camacho', 'ruben.soler@email.org', '656789012', '2025-04-26 14:14:08', '2025-04-26 14:14:08'),
-(49, 'Edu Ardo', 'edu@edu.com', '718273645', '2025-04-26 17:46:10', '2025-04-26 17:46:10'),
-(50, 'Cris Crissi', 'cris@cris.com', '817264537', '2025-04-26 20:33:24', '2025-04-26 20:33:24'),
-(51, 'Patri', 'patri@email.com', '987654323', '2025-04-26 20:35:45', '2025-04-26 20:35:45'),
-(52, 'Fertxito', 'fertxo@email.com', '', '2025-04-26 20:51:18', '2025-04-26 20:51:18'),
-(53, 'Jose Antonio Rosales Justisiero', 'jarosalesnu@gmail.com', '999555999', '2025-04-27 10:30:42', '2025-04-27 10:30:42'),
-(54, 'Gaco', 'gcorper@gmail.com', '666666666', '2025-04-27 15:20:14', '2025-04-27 15:20:14'),
-(55, 'Ed2', 'ed2@email.com', '', '2025-04-28 15:36:43', '2025-04-28 15:36:43'),
-(56, 'Ed2', 'ed2@beatpass.com', '', '2025-04-28 15:44:39', '2025-04-28 15:44:39'),
-(57, 'Maria', 'maria@email.com', '', '2025-04-29 20:12:48', '2025-04-29 20:12:48'),
-(58, 'Maria', 'maria@email.con', '', '2025-04-29 20:13:26', '2025-04-29 20:13:26'),
-(59, 'Edu Olalde', 'edu@email.com', '', '2025-05-06 08:30:07', '2025-05-06 08:30:07'),
-(60, 'Stripe', 'stripe@email.com', '666111333', '2025-05-07 20:31:41', '2025-05-07 20:31:41'),
-(61, 'Stripe2', 'email@stripe.com', '666111444', '2025-05-07 20:33:06', '2025-05-07 20:33:06');
+(62, 'Cristina Martínez', 'cristinam@gmail.com', '', '2025-05-12 12:13:36', '2025-05-12 12:13:36'),
+(63, 'Patricia Martínez', 'patrim@gmail.com', '678123456', '2025-05-12 12:16:40', '2025-05-12 12:16:40'),
+(64, 'Eduardo Martínez', 'edumar@gmail.com', '634123512', '2025-05-12 12:17:29', '2025-05-12 12:17:29'),
+(65, 'Pedro Ramirez', 'pedroram@hotmail.com', '624312987', '2025-05-12 12:36:24', '2025-05-12 12:36:24'),
+(66, 'Mario Lopez', 'mariolop@gmail.com', '', '2025-05-12 12:37:45', '2025-05-12 12:37:45'),
+(67, 'Carlos Lopez', 'carlos90@gamil.com', '', '2025-05-12 12:38:11', '2025-05-12 12:38:11'),
+(68, 'Raul Ramirez', 'raul91@hotmail.com', '', '2025-05-12 12:39:43', '2025-05-12 12:39:43');
 
 -- --------------------------------------------------------
 
@@ -96,22 +70,9 @@ CREATE TABLE `compras` (
 --
 
 INSERT INTO `compras` (`id_compra`, `id_asistente`, `fecha_compra`, `total`, `stripe_payment_intent_id`, `estado_pago`, `fecha_pago_confirmado`) VALUES
-(29, 29, '2025-04-26 14:57:46', 150.00, NULL, NULL, NULL),
-(30, 32, '2025-04-26 14:57:46', 120.00, NULL, NULL, NULL),
-(31, 35, '2025-04-26 14:57:46', 270.00, NULL, NULL, NULL),
-(32, 41, '2025-04-26 14:57:46', 210.00, NULL, NULL, NULL),
-(33, 48, '2025-04-26 14:57:46', 120.00, NULL, NULL, NULL),
-(34, 29, '2025-04-26 14:56:46', 900.00, NULL, NULL, NULL),
-(35, 49, '2025-04-26 17:46:11', 60.00, NULL, NULL, NULL),
-(36, 50, '2025-04-26 20:33:25', 100.00, NULL, NULL, NULL),
-(37, 52, '2025-04-26 20:51:19', 150.00, NULL, NULL, NULL),
-(38, 53, '2025-04-27 10:30:45', 120.00, NULL, NULL, NULL),
-(40, 55, '2025-04-28 15:36:44', 240.00, NULL, NULL, NULL),
-(41, 57, '2025-04-29 20:12:49', 120.00, NULL, NULL, NULL),
-(42, 59, '2025-05-06 08:30:08', 120.00, 'pi_3RLf104Et9Src69R0zKbcvZt', 'PAGADO', '2025-05-06 08:30:06'),
-(43, 59, '2025-05-06 08:59:21', 150.00, 'pi_3RLfTH4Et9Src69R0XqyzhOK', 'PAGADO', '2025-05-06 08:59:19'),
-(44, 60, '2025-05-07 20:31:42', 150.00, 'pi_3RMCkp4Et9Src69R0sQkgjfC', 'PAGADO', '2025-05-07 18:31:39'),
-(45, 61, '2025-05-07 20:33:07', 120.00, 'pi_3RMCmD4Et9Src69R06McczJ8', 'PAGADO', '2025-05-07 18:33:05');
+(46, 62, '2025-05-12 12:13:37', 360.00, 'pi_3RNtMV4Et9Src69R1tAn3EBg', 'PAGADO', '2025-05-12 10:13:31'),
+(47, 65, '2025-05-12 12:36:25', 360.00, 'pi_3RNtid4Et9Src69R0cRWJytG', 'PAGADO', '2025-05-12 10:36:23'),
+(48, 65, '2025-05-12 13:02:38', 170.00, 'pi_3RNu804Et9Src69R1YxTBRN2', 'PAGADO', '2025-05-12 11:02:36');
 
 -- --------------------------------------------------------
 
@@ -132,23 +93,9 @@ CREATE TABLE `compra_entradas` (
 --
 
 INSERT INTO `compra_entradas` (`id_compra_entrada`, `id_compra`, `id_entrada`, `cantidad`, `precio_unitario`) VALUES
-(32, 29, 44, 2, 75.00),
-(33, 30, 47, 1, 120.00),
-(34, 31, 50, 3, 90.00),
-(35, 32, 45, 1, 150.00),
-(36, 32, 49, 1, 60.00),
-(37, 33, 52, 2, 60.00),
-(38, 34, 50, 10, 90.00),
-(39, 35, 49, 1, 60.00),
-(40, 36, 48, 2, 50.00),
-(41, 37, 54, 1, 150.00),
-(42, 38, 47, 1, 120.00),
-(44, 40, 47, 2, 120.00),
-(45, 41, 47, 1, 120.00),
-(46, 42, 47, 1, 120.00),
-(47, 43, 54, 1, 150.00),
-(48, 44, 54, 1, 150.00),
-(49, 45, 47, 1, 120.00);
+(50, 46, 47, 3, 120.00),
+(51, 47, 50, 4, 90.00),
+(52, 48, 55, 2, 85.00);
 
 -- --------------------------------------------------------
 
@@ -165,6 +112,13 @@ CREATE TABLE `consumos` (
   `fecha` datetime DEFAULT current_timestamp(),
   `id_punto_venta` int(11) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `consumos`
+--
+
+INSERT INTO `consumos` (`id_consumo`, `id_pulsera`, `id_festival`, `descripcion`, `monto`, `fecha`, `id_punto_venta`) VALUES
+(2, 104, 22, 'Bebida', 12.00, '2025-05-12 13:05:00', NULL);
 
 -- --------------------------------------------------------
 
@@ -191,14 +145,16 @@ INSERT INTO `entradas` (`id_entrada`, `id_festival`, `tipo`, `descripcion`, `pre
 (44, 18, 'Abono General', 'Acceso los 3 días al recinto general.', 75.00, 10000, '2025-04-26 14:57:46', '2025-04-26 14:57:46'),
 (45, 18, 'Abono VIP', 'Acceso los 3 días a zona VIP y general.', 150.00, 2000, '2025-04-26 14:57:46', '2025-04-26 14:57:46'),
 (46, 18, 'Entrada Jueves', 'Acceso el jueves 10 de Julio.', 35.00, 3000, '2025-04-26 14:57:46', '2025-04-26 14:57:46'),
-(47, 19, 'Abono Completo', 'Acceso todos los días + camping.', 120.00, 14893, '2025-04-26 14:57:46', '2025-05-07 21:18:09'),
-(48, 19, 'Entrada Viernes', 'Acceso el viernes 22 de Agosto.', 50.00, 4998, '2025-04-26 14:57:46', '2025-04-26 20:33:26'),
-(49, 19, 'Entrada Sábado', 'Acceso el sábado 23 de Agosto.', 60.00, 4999, '2025-04-26 14:57:46', '2025-04-26 17:46:12'),
-(50, 20, 'Abono General', 'Acceso los 3 días.', 90.00, 20000, '2025-04-26 14:57:46', '2025-04-26 14:57:46'),
-(51, 20, 'Abono Premium', 'Acceso 3 días + Front Stage.', 180.00, 3000, '2025-04-26 14:57:46', '2025-04-26 14:57:46'),
+(47, 19, 'Abono Completo', 'Acceso todos los días + camping.', 120.00, 12997, '2025-04-26 14:57:46', '2025-05-12 12:14:50'),
+(48, 19, 'Entrada Viernes', 'Acceso el viernes 22 de Agosto.', 50.00, 3000, '2025-04-26 14:57:46', '2025-05-12 12:14:29'),
+(49, 19, 'Entrada Sábado', 'Acceso el sábado 23 de Agosto.', 60.00, 3000, '2025-04-26 14:57:46', '2025-05-12 12:14:37'),
+(50, 20, 'Abono General', 'Acceso los 3 días.', 90.00, 19996, '2025-04-26 14:57:46', '2025-05-12 12:36:25'),
+(51, 20, 'Abono Premium', 'Acceso 3 días + Front Stage.', 135.00, 3000, '2025-04-26 14:57:46', '2025-05-12 13:01:36'),
 (52, 21, 'Abono Eco-Friendly', 'Acceso 3 días + Taller reciclaje.', 60.00, 5000, '2025-04-26 14:57:46', '2025-04-26 14:57:46'),
 (53, 21, 'Entrada Sábado', 'Acceso sábado 21 de Junio.', 30.00, 2000, '2025-04-26 14:57:46', '2025-04-26 14:57:46'),
-(54, 19, 'Abono VIP', 'Acceso todos los días + acceso VIP', 150.00, 997, '2025-04-26 19:21:12', '2025-05-07 20:31:42');
+(54, 19, 'Abono VIP', 'Acceso todos los días + acceso VIP', 150.00, 1000, '2025-04-26 19:21:12', '2025-05-12 12:14:09'),
+(55, 22, 'Abono General', 'Acceso los 3 días.', 85.00, 17998, '2025-05-12 13:00:48', '2025-05-12 13:02:38'),
+(56, 22, 'Abono VIP', 'Acceso 3 días + Front Stage.', 130.00, 2000, '2025-05-12 13:01:24', '2025-05-12 13:01:24');
 
 -- --------------------------------------------------------
 
@@ -223,38 +179,15 @@ CREATE TABLE `entradas_asignadas` (
 --
 
 INSERT INTO `entradas_asignadas` (`id_entrada_asignada`, `id_compra_entrada`, `id_asistente`, `codigo_qr`, `estado`, `fecha_asignacion`, `fecha_uso`, `fecha_creacion`, `fecha_modificacion`) VALUES
-(54, 32, 29, 'QR-F18-A29-0cbeac4b-229e-11f0-86e0-c1bc6dea4ec9', 'ACTIVA', '2025-04-26 14:57:46', NULL, '2025-04-26 14:57:46', '2025-04-26 14:57:46'),
-(55, 32, 30, 'QR-F18-NULL-0cbeaecb-229e-11f0-86e0-c1bc6dea4ec9', 'ACTIVA', '2025-04-26 14:57:46', NULL, '2025-04-26 14:57:46', '2025-04-26 14:57:46'),
-(56, 33, 32, 'QR-F19-A32-0cbf2963-229e-11f0-86e0-c1bc6dea4ec9', 'ACTIVA', '2025-04-26 14:57:46', NULL, '2025-04-26 14:57:46', '2025-04-26 14:57:46'),
-(57, 34, 35, 'QR-F20-A35-0cbf83f4-229e-11f0-86e0-c1bc6dea4ec9', 'ACTIVA', '2025-04-26 14:57:46', NULL, '2025-04-26 14:57:46', '2025-04-26 14:57:46'),
-(58, 34, 31, 'QR-F20-NULL-0cbf862b-229e-11f0-86e0-c1bc6dea4ec9', 'ACTIVA', '2025-04-26 14:57:46', NULL, '2025-04-26 14:57:46', '2025-04-26 14:57:46'),
-(59, 34, 33, 'QR-F20-NULL-0cbf8720-229e-11f0-86e0-c1bc6dea4ec9', 'ACTIVA', '2025-04-26 14:57:46', NULL, '2025-04-26 14:57:46', '2025-04-26 14:57:46'),
-(60, 35, 41, 'QR-F18VIP-A41-0cc01a3d-229e-11f0-86e0-c1bc6dea4ec9', 'ACTIVA', '2025-04-26 14:57:46', NULL, '2025-04-26 14:57:46', '2025-04-26 14:57:46'),
-(61, 36, 34, 'QR-F19SAB-NULL-0cc06328-229e-11f0-86e0-c1bc6dea4ec9', 'ACTIVA', '2025-04-26 14:57:46', NULL, '2025-04-26 14:57:46', '2025-04-26 14:57:46'),
-(62, 37, 48, 'QR-F21-A48-0cc0a645-229e-11f0-86e0-c1bc6dea4ec9', 'ACTIVA', '2025-04-26 14:57:46', NULL, '2025-04-26 14:57:46', '2025-04-26 14:57:46'),
-(63, 37, 36, 'QR-F21-NULL-0cc0a79f-229e-11f0-86e0-c1bc6dea4ec9', 'ACTIVA', '2025-04-26 14:57:46', NULL, '2025-04-26 14:57:46', '2025-04-26 14:57:46'),
-(64, 38, 37, 'QR-F20-NULL-0cc312eb-229e-11f0-86e0-c1bc6dea4ec9', 'ACTIVA', '2025-04-26 14:57:46', NULL, '2025-04-26 14:57:46', '2025-04-26 14:57:46'),
-(65, 38, 38, 'QR-F20-NULL-0cc31564-229e-11f0-86e0-c1bc6dea4ec9', 'ACTIVA', '2025-04-26 14:57:46', NULL, '2025-04-26 14:57:46', '2025-04-26 14:57:46'),
-(66, 38, 39, 'QR-F20-NULL-0cc3163d-229e-11f0-86e0-c1bc6dea4ec9', 'ACTIVA', '2025-04-26 14:57:46', NULL, '2025-04-26 14:57:46', '2025-04-26 14:57:46'),
-(67, 38, 40, 'QR-F20-NULL-0cc316f1-229e-11f0-86e0-c1bc6dea4ec9', 'ACTIVA', '2025-04-26 14:57:46', NULL, '2025-04-26 14:57:46', '2025-04-26 14:57:46'),
-(68, 38, 42, 'QR-F20-NULL-0cc3179e-229e-11f0-86e0-c1bc6dea4ec9', 'ACTIVA', '2025-04-26 14:57:46', NULL, '2025-04-26 14:57:46', '2025-04-26 14:57:46'),
-(69, 38, 43, 'QR-F20-NULL-0cc31844-229e-11f0-86e0-c1bc6dea4ec9', 'ACTIVA', '2025-04-26 14:57:46', NULL, '2025-04-26 14:57:46', '2025-04-26 14:57:46'),
-(70, 38, 44, 'QR-F20-NULL-0cc318d7-229e-11f0-86e0-c1bc6dea4ec9', 'ACTIVA', '2025-04-26 14:57:46', NULL, '2025-04-26 14:57:46', '2025-04-26 14:57:46'),
-(71, 38, 45, 'QR-F20-NULL-0cc31977-229e-11f0-86e0-c1bc6dea4ec9', 'ACTIVA', '2025-04-26 14:57:46', NULL, '2025-04-26 14:57:46', '2025-04-26 14:57:46'),
-(72, 38, 46, 'QR-F20-NULL-0cc319f7-229e-11f0-86e0-c1bc6dea4ec9', 'ACTIVA', '2025-04-26 14:57:46', NULL, '2025-04-26 14:57:46', '2025-04-26 14:57:46'),
-(73, 38, 47, 'QR-F20-NULL-0cc31a85-229e-11f0-86e0-c1bc6dea4ec9', 'ACTIVA', '2025-04-26 14:57:46', NULL, '2025-04-26 14:57:46', '2025-04-26 14:57:46'),
-(74, 39, 49, 'BEATPASS-TICKET-abfc45b6-2cc6-4ed5-8373-631ccf9e3616', 'ACTIVA', '2025-04-26 15:46:40', NULL, '2025-04-26 17:46:11', '2025-04-26 17:46:41'),
-(75, 40, 51, 'BEATPASS-TICKET-b6c9eec5-39cd-49a2-ad76-e5938a68f84b', 'ACTIVA', '2025-04-26 18:35:45', NULL, '2025-04-26 20:33:25', '2025-04-26 20:35:45'),
-(76, 40, 50, 'BEATPASS-TICKET-6965ad13-867b-4c30-a9d0-2cd278f0690b', 'ACTIVA', '2025-04-26 18:34:37', NULL, '2025-04-26 20:33:25', '2025-04-26 20:34:38'),
-(77, 41, 52, 'BEATPASS-TICKET-178353c6-8995-4178-bf36-2cdb15fe1d48', 'ACTIVA', '2025-04-26 18:52:09', NULL, '2025-04-26 20:51:19', '2025-04-26 20:52:09'),
-(78, 42, 53, 'BEATPASS-TICKET-2822ea9a-1143-46f1-83d6-452a414dfbbb', 'ACTIVA', '2025-04-27 08:34:43', NULL, '2025-04-27 10:30:45', '2025-04-27 10:34:43'),
-(179, 44, NULL, 'BEATPASS-TICKET-3d8b7ec5-55b0-4787-a75f-2a6a6f9cc66c', 'ACTIVA', NULL, NULL, '2025-04-28 15:36:44', '2025-04-28 15:36:44'),
-(180, 44, 56, 'BEATPASS-TICKET-2e2efc3e-81ce-40d4-a4f2-17b71e310112', 'ACTIVA', '2025-04-28 13:44:40', NULL, '2025-04-28 15:36:44', '2025-04-28 15:44:40'),
-(181, 45, 58, 'BEATPASS-TICKET-20819a99-1b30-416a-a19d-236aded2db9d', 'ACTIVA', '2025-04-29 18:13:26', NULL, '2025-04-29 20:12:49', '2025-04-29 20:13:26'),
-(182, 46, NULL, 'BEATPASS-TICKET-a0b78540-4a2f-4622-96e7-35d7a258d37d', 'ACTIVA', NULL, NULL, '2025-05-06 08:30:08', '2025-05-06 08:30:08'),
-(183, 47, 59, 'BEATPASS-TICKET-771f441d-702f-4ed9-8134-f3397a058026', 'ACTIVA', '2025-05-06 08:59:55', NULL, '2025-05-06 08:59:21', '2025-05-06 08:59:55'),
-(184, 48, NULL, 'BEATPASS-TICKET-30306ff7-097b-48e1-82d4-dd9e67cd6671', 'ACTIVA', NULL, NULL, '2025-05-07 20:31:42', '2025-05-07 20:31:42'),
-(185, 49, NULL, 'BEATPASS-TICKET-3f1cc589-36b7-4c3d-afd1-735d229f2f8b', 'ACTIVA', NULL, NULL, '2025-05-07 20:33:07', '2025-05-07 20:33:07');
+(186, 50, 62, 'BEATPASS-TICKET-d8643481-c856-452d-af04-008506a6e99f', 'ACTIVA', '2025-05-12 10:15:40', NULL, '2025-05-12 12:13:37', '2025-05-12 12:15:40'),
+(187, 50, 63, 'BEATPASS-TICKET-8c884382-dd83-4d38-9463-b1bb37fa43b9', 'ACTIVA', '2025-05-12 10:16:40', NULL, '2025-05-12 12:13:37', '2025-05-12 12:16:40'),
+(188, 50, 64, 'BEATPASS-TICKET-fafca816-cf86-4ec9-9343-e110dccea27a', 'ACTIVA', '2025-05-12 10:17:29', NULL, '2025-05-12 12:13:37', '2025-05-12 12:17:29'),
+(189, 51, 65, 'BEATPASS-TICKET-4d04960d-6847-4b87-b797-7b5a528dbce3', 'ACTIVA', '2025-05-12 10:36:56', NULL, '2025-05-12 12:36:25', '2025-05-12 12:36:56'),
+(190, 51, 66, 'BEATPASS-TICKET-4dffde9f-54c8-4ce6-a808-02961f5fc8f3', 'ACTIVA', '2025-05-12 10:37:45', NULL, '2025-05-12 12:36:25', '2025-05-12 12:37:45'),
+(191, 51, 67, 'BEATPASS-TICKET-8208aaed-0947-48cc-b082-5b57bca419fd', 'ACTIVA', '2025-05-12 10:38:11', NULL, '2025-05-12 12:36:25', '2025-05-12 12:38:11'),
+(192, 51, 68, 'BEATPASS-TICKET-2cf2c110-936f-4977-aff9-41fdf5dbca55', 'ACTIVA', '2025-05-12 10:39:43', NULL, '2025-05-12 12:36:25', '2025-05-12 12:39:43'),
+(193, 52, 65, 'BEATPASS-TICKET-30c84976-d23f-4ece-97f9-36f47feb98f7', 'ACTIVA', '2025-05-12 11:02:49', NULL, '2025-05-12 13:02:38', '2025-05-12 13:02:49'),
+(194, 52, 68, 'BEATPASS-TICKET-5ad1e96a-e206-4599-b86b-bfd2dc8ea859', 'ACTIVA', '2025-05-12 11:03:03', NULL, '2025-05-12 13:02:38', '2025-05-12 13:03:03');
 
 -- --------------------------------------------------------
 
@@ -300,8 +233,9 @@ CREATE TABLE `festivales` (
 INSERT INTO `festivales` (`id_festival`, `nombre`, `descripcion`, `fecha_inicio`, `fecha_fin`, `ubicacion`, `id_promotor`, `aforo`, `imagen_url`, `estado`, `fecha_creacion`, `fecha_modificacion`) VALUES
 (18, 'Festival del Sol Naciente', 'Música electrónica y alternativa bajo el sol.', '2025-07-10', '2025-07-12', 'Playa de Levante, Benidorm', 9, 15000, 'https://placehold.co/600x400/F2994A/ffffff?text=Festival+Sol+Naciente', 'PUBLICADO', '2025-04-26 14:57:46', '2025-04-26 14:57:46'),
 (19, 'Luna Negra Fest', 'Rock y metal en un entorno único.', '2025-08-22', '2025-08-24', 'Recinto Ferial, Villarrobledo', 10, 25000, 'https://placehold.co/600x400/333333/ffffff?text=Luna+Negra+Fest', 'PUBLICADO', '2025-04-26 14:57:46', '2025-05-07 21:37:24'),
-(20, 'Ritmos del Sur', 'Festival de música urbana y latina.', '2025-09-05', '2025-09-07', 'Estadio Olímpico, Sevilla', 11, 30000, 'https://placehold.co/600x400/EB5757/ffffff?text=Ritmos+del+Sur', 'PUBLICADO', '2025-04-26 14:57:46', '2025-04-26 14:57:46'),
-(21, 'EcoSound Festival', 'Música indie y pop con conciencia ecológica.', '2025-06-20', '2025-06-22', 'Parque Natural, Sierra de Gredos', 12, 8000, 'https://placehold.co/600x400/27AE60/ffffff?text=EcoSound+Festival', 'BORRADOR', '2025-04-26 14:57:46', '2025-04-26 14:57:46');
+(20, 'Ritmos del Sur', 'Festival de música urbana y latina. Edición del 2025.', '2025-09-05', '2025-09-07', 'Estadio Olímpico, Sevilla', 11, 30000, 'https://placehold.co/600x400/EB5757/ffffff?text=Ritmos+del+Sur', 'PUBLICADO', '2025-04-26 14:57:46', '2025-05-12 12:52:41'),
+(21, 'EcoSound Festival', 'Música indie y pop con conciencia ecológica.', '2025-06-20', '2025-06-22', 'Parque Natural, Sierra de Gredos', 12, 8000, 'https://placehold.co/600x400/27AE60/ffffff?text=EcoSound+Festival', 'BORRADOR', '2025-04-26 14:57:46', '2025-04-26 14:57:46'),
+(22, 'Ritmos del Sur', 'Festival de música urbana y latina. Edición del 2024.', '2024-09-06', '2024-09-08', 'Estadio Olímpico, Sevilla', 11, 20000, 'https://placehold.co/600x400/EB5757/ffffff?text=Ritmos+del+Sur', 'PUBLICADO', '2025-05-12 12:53:20', '2025-05-12 12:56:26');
 
 -- --------------------------------------------------------
 
@@ -326,106 +260,10 @@ CREATE TABLE `pulseras_nfc` (
 --
 
 INSERT INTO `pulseras_nfc` (`id_pulsera`, `codigo_uid`, `id_entrada_asignada`, `saldo`, `activa`, `id_festival`, `fecha_asociacion`, `fecha_alta`, `ultima_modificacion`) VALUES
-(1, 'PULSERA-001', 1, 95.00, 1, 18, NULL, '2025-04-21 21:54:09', '2025-04-26 18:39:28'),
-(2, 'PULSERA-002', 54, 0.00, 1, 18, '2025-04-26 14:57:46', '2025-04-21 21:54:09', '2025-04-26 18:27:38'),
-(3, 'PULSERA-003', 56, 0.00, 1, 19, '2025-04-26 14:57:46', '2025-04-21 21:54:09', '2025-04-26 18:27:38'),
-(4, 'PULSERA-004', 74, 100.00, 1, 19, '2025-04-26 14:57:46', '2025-04-21 21:54:09', '2025-04-26 20:37:14'),
-(5, 'PULSERA-005', 8, 50.00, 1, 18, NULL, '2025-04-21 21:54:09', '2025-04-26 18:39:28'),
-(6, 'PULSERA-006', 13, 0.00, 1, 18, NULL, '2025-04-21 21:54:09', '2025-04-26 18:39:28'),
-(7, 'PULSERA-007', 60, 0.00, 1, 18, '2025-04-26 14:57:46', '2025-04-21 21:54:09', '2025-04-26 18:27:38'),
-(8, 'PULSERA-008', 66, 0.00, 1, 20, '2025-04-26 14:57:46', '2025-04-21 21:54:09', '2025-04-26 18:27:38'),
-(9, 'PULSERA-009', NULL, 0.00, 1, 18, NULL, '2025-04-21 21:54:09', '2025-04-26 18:27:38'),
-(10, 'PULSERA-010', NULL, 0.00, 1, 18, NULL, '2025-04-21 21:54:09', '2025-04-26 18:27:38'),
-(11, 'PULSERA-011', NULL, 0.00, 1, 18, NULL, '2025-04-21 21:54:09', '2025-04-26 18:27:38'),
-(12, 'PULSERA-012', NULL, 0.00, 1, 18, NULL, '2025-04-21 21:54:09', '2025-04-26 18:27:38'),
-(13, 'PULSERA-013', NULL, 0.00, 1, 18, NULL, '2025-04-21 21:54:09', '2025-04-26 18:27:38'),
-(14, 'PULSERA-014', NULL, 0.00, 1, 18, NULL, '2025-04-21 21:54:09', '2025-04-26 18:27:38'),
-(15, 'PULSERA-015', NULL, 0.00, 1, 18, NULL, '2025-04-21 21:54:09', '2025-04-26 18:27:38'),
-(16, 'PULSERA-016', NULL, 0.00, 1, 18, NULL, '2025-04-21 21:54:09', '2025-04-26 18:27:38'),
-(17, 'PULSERA-017', NULL, 0.00, 1, 18, NULL, '2025-04-21 21:54:09', '2025-04-26 18:27:38'),
-(18, 'PULSERA-018', NULL, 0.00, 1, 18, NULL, '2025-04-21 21:54:09', '2025-04-26 18:27:38'),
-(19, 'PULSERA-019', NULL, 0.00, 1, 18, NULL, '2025-04-21 21:54:09', '2025-04-26 18:27:38'),
-(20, 'PULSERA-020', NULL, 0.00, 1, 18, NULL, '2025-04-21 21:54:09', '2025-04-26 18:27:38'),
-(21, 'PULSERA-021', NULL, 0.00, 1, 18, NULL, '2025-04-21 21:54:09', '2025-04-26 18:27:38'),
-(22, 'PULSERA-022', NULL, 0.00, 1, 18, NULL, '2025-04-21 21:54:09', '2025-04-26 18:27:38'),
-(23, 'PULSERA-023', NULL, 0.00, 1, 18, NULL, '2025-04-21 21:54:09', '2025-04-26 18:27:38'),
-(24, 'PULSERA-024', NULL, 0.00, 1, 18, NULL, '2025-04-21 21:54:09', '2025-04-26 18:27:38'),
-(25, 'PULSERA-025', NULL, 0.00, 1, 18, NULL, '2025-04-21 21:54:09', '2025-04-26 18:27:38'),
-(26, 'PULSERA-026', NULL, 0.00, 1, 18, NULL, '2025-04-21 21:54:09', '2025-04-26 18:27:38'),
-(27, 'PULSERA-027', NULL, 0.00, 1, 18, NULL, '2025-04-21 21:54:09', '2025-04-26 18:27:38'),
-(28, 'PULSERA-028', NULL, 0.00, 1, 18, NULL, '2025-04-21 21:54:09', '2025-04-26 18:27:38'),
-(29, 'PULSERA-029', NULL, 0.00, 1, 18, NULL, '2025-04-21 21:54:09', '2025-04-26 18:27:38'),
-(30, 'PULSERA-030', NULL, 0.00, 1, 18, NULL, '2025-04-21 21:54:09', '2025-04-26 18:27:38'),
-(31, 'PULSERA-031', NULL, 0.00, 1, 18, NULL, '2025-04-21 21:54:09', '2025-04-26 18:27:38'),
-(32, 'PULSERA-032', NULL, 0.00, 1, 18, NULL, '2025-04-21 21:54:09', '2025-04-26 18:27:38'),
-(33, 'PULSERA-033', NULL, 0.00, 1, 18, NULL, '2025-04-21 21:54:09', '2025-04-26 18:27:38'),
-(34, 'PULSERA-034', NULL, 0.00, 1, 18, NULL, '2025-04-21 21:54:09', '2025-04-26 18:27:38'),
-(35, 'PULSERA-035', NULL, 0.00, 1, 18, NULL, '2025-04-21 21:54:09', '2025-04-26 18:27:38'),
-(36, 'PULSERA-036', NULL, 0.00, 1, 18, NULL, '2025-04-21 21:54:09', '2025-04-26 18:27:38'),
-(37, 'PULSERA-037', NULL, 0.00, 1, 18, NULL, '2025-04-21 21:54:09', '2025-04-26 18:27:38'),
-(38, 'PULSERA-038', NULL, 0.00, 1, 18, NULL, '2025-04-21 21:54:09', '2025-04-26 18:27:38'),
-(39, 'PULSERA-039', NULL, 0.00, 1, 18, NULL, '2025-04-21 21:54:09', '2025-04-26 18:27:38'),
-(40, 'PULSERA-040', NULL, 0.00, 1, 18, NULL, '2025-04-21 21:54:09', '2025-04-26 18:27:38'),
-(41, 'PULSERA-041', NULL, 0.00, 1, 18, NULL, '2025-04-21 21:54:09', '2025-04-26 18:27:38'),
-(42, 'PULSERA-042', NULL, 0.00, 1, 18, NULL, '2025-04-21 21:54:09', '2025-04-26 18:27:38'),
-(43, 'PULSERA-043', NULL, 0.00, 1, 18, NULL, '2025-04-21 21:54:09', '2025-04-26 18:27:38'),
-(44, 'PULSERA-044', NULL, 0.00, 1, 18, NULL, '2025-04-21 21:54:09', '2025-04-26 18:27:38'),
-(45, 'PULSERA-045', NULL, 0.00, 1, 18, NULL, '2025-04-21 21:54:09', '2025-04-26 18:27:38'),
-(46, 'PULSERA-046', NULL, 0.00, 1, 18, NULL, '2025-04-21 21:54:09', '2025-04-26 18:27:38'),
-(47, 'PULSERA-047', NULL, 0.00, 1, 18, NULL, '2025-04-21 21:54:09', '2025-04-26 18:27:38'),
-(48, 'PULSERA-048', NULL, 0.00, 1, 18, NULL, '2025-04-21 21:54:09', '2025-04-26 18:27:38'),
-(49, 'PULSERA-049', NULL, 0.00, 1, 18, NULL, '2025-04-21 21:54:09', '2025-04-26 18:27:38'),
-(50, 'PULSERA-050', NULL, 0.00, 1, 18, NULL, '2025-04-21 21:54:09', '2025-04-26 18:27:38'),
-(51, 'PULSERA-051', NULL, 0.00, 1, 18, NULL, '2025-04-21 21:54:09', '2025-04-26 18:27:38'),
-(52, 'PULSERA-052', NULL, 0.00, 1, 18, NULL, '2025-04-21 21:54:09', '2025-04-26 18:27:38'),
-(53, 'PULSERA-053', NULL, 0.00, 1, 18, NULL, '2025-04-21 21:54:09', '2025-04-26 18:27:38'),
-(54, 'PULSERA-054', NULL, 0.00, 1, 18, NULL, '2025-04-21 21:54:09', '2025-04-26 18:27:38'),
-(55, 'PULSERA-055', NULL, 0.00, 1, 18, NULL, '2025-04-21 21:54:09', '2025-04-26 18:27:38'),
-(56, 'PULSERA-056', NULL, 0.00, 1, 18, NULL, '2025-04-21 21:54:09', '2025-04-26 18:27:38'),
-(57, 'PULSERA-057', NULL, 0.00, 1, 18, NULL, '2025-04-21 21:54:09', '2025-04-26 18:27:38'),
-(58, 'PULSERA-058', NULL, 0.00, 1, 18, NULL, '2025-04-21 21:54:09', '2025-04-26 18:27:38'),
-(59, 'PULSERA-059', NULL, 0.00, 1, 18, NULL, '2025-04-21 21:54:09', '2025-04-26 18:27:38'),
-(60, 'PULSERA-060', NULL, 0.00, 1, 18, NULL, '2025-04-21 21:54:09', '2025-04-26 18:27:38'),
-(61, 'PULSERA-061', NULL, 0.00, 1, 18, NULL, '2025-04-21 21:54:09', '2025-04-26 18:27:38'),
-(62, 'PULSERA-062', NULL, 0.00, 1, 18, NULL, '2025-04-21 21:54:09', '2025-04-26 18:27:38'),
-(63, 'PULSERA-063', NULL, 0.00, 1, 18, NULL, '2025-04-21 21:54:09', '2025-04-26 18:27:38'),
-(64, 'PULSERA-064', NULL, 0.00, 1, 18, NULL, '2025-04-21 21:54:09', '2025-04-26 18:27:38'),
-(65, 'PULSERA-065', NULL, 0.00, 1, 18, NULL, '2025-04-21 21:54:09', '2025-04-26 18:27:38'),
-(66, 'PULSERA-066', NULL, 0.00, 1, 18, NULL, '2025-04-21 21:54:09', '2025-04-26 18:27:38'),
-(67, 'PULSERA-067', NULL, 0.00, 1, 18, NULL, '2025-04-21 21:54:09', '2025-04-26 18:27:38'),
-(68, 'PULSERA-068', NULL, 0.00, 1, 18, NULL, '2025-04-21 21:54:09', '2025-04-26 18:27:38'),
-(69, 'PULSERA-069', NULL, 0.00, 1, 18, NULL, '2025-04-21 21:54:09', '2025-04-26 18:27:38'),
-(70, 'PULSERA-070', NULL, 0.00, 1, 18, NULL, '2025-04-21 21:54:09', '2025-04-26 18:27:38'),
-(71, 'PULSERA-071', NULL, 0.00, 1, 18, NULL, '2025-04-21 21:54:09', '2025-04-26 18:27:38'),
-(72, 'PULSERA-072', NULL, 0.00, 1, 18, NULL, '2025-04-21 21:54:09', '2025-04-26 18:27:38'),
-(73, 'PULSERA-073', NULL, 0.00, 1, 18, NULL, '2025-04-21 21:54:09', '2025-04-26 18:27:38'),
-(74, 'PULSERA-074', NULL, 0.00, 1, 18, NULL, '2025-04-21 21:54:09', '2025-04-26 18:27:38'),
-(75, 'PULSERA-075', NULL, 0.00, 1, 18, NULL, '2025-04-21 21:54:09', '2025-04-26 18:27:38'),
-(76, 'PULSERA-076', NULL, 0.00, 1, 18, NULL, '2025-04-21 21:54:09', '2025-04-26 18:27:38'),
-(77, 'PULSERA-077', NULL, 0.00, 1, 18, NULL, '2025-04-21 21:54:09', '2025-04-26 18:27:38'),
-(78, 'PULSERA-078', NULL, 0.00, 1, 18, NULL, '2025-04-21 21:54:09', '2025-04-26 18:27:38'),
-(79, 'PULSERA-079', NULL, 0.00, 1, 18, NULL, '2025-04-21 21:54:09', '2025-04-26 18:27:38'),
-(80, 'PULSERA-080', NULL, 0.00, 1, 18, NULL, '2025-04-21 21:54:09', '2025-04-26 18:27:38'),
-(81, 'PULSERA-081', NULL, 0.00, 1, 18, NULL, '2025-04-21 21:54:09', '2025-04-26 18:27:38'),
-(82, 'PULSERA-082', NULL, 0.00, 1, 18, NULL, '2025-04-21 21:54:09', '2025-04-26 18:27:38'),
-(83, 'PULSERA-083', NULL, 0.00, 1, 18, NULL, '2025-04-21 21:54:09', '2025-04-26 18:27:38'),
-(84, 'PULSERA-084', NULL, 0.00, 1, 18, NULL, '2025-04-21 21:54:09', '2025-04-26 18:27:38'),
-(85, 'PULSERA-085', NULL, 0.00, 1, 18, NULL, '2025-04-21 21:54:09', '2025-04-26 18:27:38'),
-(86, 'PULSERA-086', NULL, 0.00, 1, 18, NULL, '2025-04-21 21:54:09', '2025-04-26 18:27:38'),
-(87, 'PULSERA-087', NULL, 0.00, 1, 18, NULL, '2025-04-21 21:54:09', '2025-04-26 18:27:38'),
-(88, 'PULSERA-088', NULL, 0.00, 1, 18, NULL, '2025-04-21 21:54:09', '2025-04-26 18:27:38'),
-(89, 'PULSERA-089', NULL, 0.00, 1, 18, NULL, '2025-04-21 21:54:09', '2025-04-26 18:27:38'),
-(90, 'PULSERA-090', NULL, 0.00, 1, 18, NULL, '2025-04-21 21:54:09', '2025-04-26 18:27:38'),
-(91, 'PULSERA-091', NULL, 0.00, 1, 18, NULL, '2025-04-21 21:54:09', '2025-04-26 18:27:38'),
-(92, 'PULSERA-092', NULL, 0.00, 1, 18, NULL, '2025-04-21 21:54:09', '2025-04-26 18:27:38'),
-(93, 'PULSERA-093', NULL, 0.00, 1, 18, NULL, '2025-04-21 21:54:09', '2025-04-26 18:27:38'),
-(94, 'PULSERA-094', NULL, 0.00, 1, 18, NULL, '2025-04-21 21:54:09', '2025-04-26 18:27:38'),
-(95, 'PULSERA-095', NULL, 0.00, 1, 18, NULL, '2025-04-21 21:54:09', '2025-04-26 18:27:38'),
-(96, 'PULSERA-096', NULL, 0.00, 1, 18, NULL, '2025-04-21 21:54:09', '2025-04-26 18:27:38'),
-(97, 'PULSERA-097', NULL, 0.00, 1, 18, NULL, '2025-04-21 21:54:09', '2025-04-26 18:27:38'),
-(98, 'PULSERA-098', NULL, 0.00, 1, 18, NULL, '2025-04-21 21:54:09', '2025-04-26 18:27:38'),
-(99, 'PULSERA-099', NULL, 0.00, 1, 18, NULL, '2025-04-21 21:54:09', '2025-04-26 18:27:38'),
-(100, 'PULSERA-100', NULL, 0.00, 1, 18, NULL, '2025-04-21 21:54:09', '2025-04-26 18:27:38');
+(101, 'pulsera-001', 186, 100.00, 1, 19, '2025-05-12 10:21:01', '2025-05-12 12:21:01', '2025-05-12 12:21:59'),
+(102, 'pritmos-001', 189, 50.00, 1, 20, '2025-05-12 10:51:42', '2025-05-12 12:51:42', '2025-05-12 13:08:09'),
+(103, 'prit2024-001', 193, 100.00, 1, 22, '2025-05-12 11:03:40', '2025-05-12 13:03:40', '2025-05-12 13:04:32'),
+(104, 'prit2024-002', 194, 108.00, 1, 22, '2025-05-12 11:03:47', '2025-05-12 13:03:47', '2025-05-12 13:05:00');
 
 -- --------------------------------------------------------
 
@@ -447,7 +285,10 @@ CREATE TABLE `recargas` (
 --
 
 INSERT INTO `recargas` (`id_recarga`, `id_pulsera`, `monto`, `fecha`, `metodo_pago`, `id_usuario_cajero`) VALUES
-(3, 4, 100.00, '2025-04-26 20:37:14', 'Efectivo', 4);
+(4, 101, 100.00, '2025-05-12 12:21:59', 'Tarjeta', 4),
+(5, 103, 100.00, '2025-05-12 13:04:32', 'Efectivo', 4),
+(6, 104, 120.00, '2025-05-12 13:04:48', 'Efectivo', 4),
+(7, 102, 50.00, '2025-05-12 13:08:09', 'Efectivo', 4);
 
 -- --------------------------------------------------------
 
@@ -590,55 +431,55 @@ ALTER TABLE `usuarios`
 -- AUTO_INCREMENT for table `asistentes`
 --
 ALTER TABLE `asistentes`
-  MODIFY `id_asistente` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=62;
+  MODIFY `id_asistente` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=69;
 
 --
 -- AUTO_INCREMENT for table `compras`
 --
 ALTER TABLE `compras`
-  MODIFY `id_compra` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=46;
+  MODIFY `id_compra` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=49;
 
 --
 -- AUTO_INCREMENT for table `compra_entradas`
 --
 ALTER TABLE `compra_entradas`
-  MODIFY `id_compra_entrada` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=50;
+  MODIFY `id_compra_entrada` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=53;
 
 --
 -- AUTO_INCREMENT for table `consumos`
 --
 ALTER TABLE `consumos`
-  MODIFY `id_consumo` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `id_consumo` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
 -- AUTO_INCREMENT for table `entradas`
 --
 ALTER TABLE `entradas`
-  MODIFY `id_entrada` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=55;
+  MODIFY `id_entrada` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=57;
 
 --
 -- AUTO_INCREMENT for table `entradas_asignadas`
 --
 ALTER TABLE `entradas_asignadas`
-  MODIFY `id_entrada_asignada` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=186;
+  MODIFY `id_entrada_asignada` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=195;
 
 --
 -- AUTO_INCREMENT for table `festivales`
 --
 ALTER TABLE `festivales`
-  MODIFY `id_festival` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=22;
+  MODIFY `id_festival` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=23;
 
 --
 -- AUTO_INCREMENT for table `pulseras_nfc`
 --
 ALTER TABLE `pulseras_nfc`
-  MODIFY `id_pulsera` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=101;
+  MODIFY `id_pulsera` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=105;
 
 --
 -- AUTO_INCREMENT for table `recargas`
 --
 ALTER TABLE `recargas`
-  MODIFY `id_recarga` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+  MODIFY `id_recarga` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
 
 --
 -- AUTO_INCREMENT for table `usuarios`
