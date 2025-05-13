@@ -58,8 +58,8 @@
                             <tr>
                                 <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-500">${compra.idCompra}</td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                    <fmt:parseDate value="${compra.fechaCompra}" pattern="yyyy-MM-dd'T'HH:mm:ss" var="parsedDateTime" type="both" />
-                                    <fmt:formatDate value="${parsedDateTime}" pattern="dd/MM/yyyy HH:mm:ss" />
+                                    <fmt:parseDate value="${compra.fechaCompra}" pattern="yyyy-MM-dd'T'HH:mm" var="parsedDateTime" type="both" />
+                                    <fmt:formatDate value="${parsedDateTime}" pattern="dd/MM/yyyy HH:mm" />
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                                     ${compra.nombreAsistente}<br>
