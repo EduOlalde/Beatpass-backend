@@ -23,9 +23,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.time.LocalDateTime;
-import java.util.HashMap;
 import java.util.Map;
-import java.util.Optional;
 
 /**
  * Recurso JAX-RS para endpoints públicos de venta y nominación
@@ -39,8 +37,8 @@ public class PublicVentaResource {
 
     private final VentaService ventaService;
     private final AsistenteService asistenteService;
-    private final EntradaAsignadaRepository entradaAsignadaRepository; // Para /nominar
-    private final EntradaAsignadaService entradaAsignadaService; // Para /nominar
+    private final EntradaAsignadaRepository entradaAsignadaRepository;
+    private final EntradaAsignadaService entradaAsignadaService;
 
     public PublicVentaResource() {
         this.ventaService = new VentaServiceImpl();

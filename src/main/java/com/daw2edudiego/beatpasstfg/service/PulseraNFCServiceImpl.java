@@ -347,7 +347,144 @@ public class PulseraNFCServiceImpl implements PulseraNFCService {
         }
     }
 
+    @Override
+    public PulseraNFCDTO asociarPulseraViaQrEntrada(String codigoQrEntrada, String codigoUidPulsera, Integer idFestivalContexto)
+            throws EntradaAsignadaNotFoundException, PulseraNFCNotFoundException,
+            PulseraYaAsociadaException, EntradaAsignadaNoNominadaException,
+            IllegalStateException, FestivalNotFoundException, SecurityException {
+
+        log.info("Service: Iniciando asociación de pulsera UID {} a entrada con QR {} (Contexto Fest. ID: {})",
+                codigoUidPulsera, (codigoQrEntrada != null ? codigoQrEntrada.substring(0, Math.min(15, codigoQrEntrada.length())) + "..." : "null"), idFestivalContexto);
+
+        if (codigoQrEntrada == null || codigoQrEntrada.isBlank() || codigoUidPulsera == null || codigoUidPulsera.isBlank()) {
+            throw new IllegalArgumentException("El código QR de la entrada y el UID de la pulsera son requeridos.");
+        }
+
+        EntityManager em = null;
+        EntityTransaction tx = null;
+        try {
+            em = JPAUtil.createEntityManager();
+            tx = em.getTransaction();
+            tx.begin();
+
+            // 1. Obtener EntradaAsignada por QR
+            EntradaAsignada entradaAsignada = entradaAsignadaRepository.findByCodigoQr(em, codigoQrEntrada)
+                    .orElseThrow(() -> new EntradaAsignadaNotFoundException("Entrada no encontrada con el código QR proporcionado."));
+            log.debug("Entrada Asignada ID {} encontrada para QR: {}", entradaAsignada.getIdEntradaAsignada(), codigoQrEntrada);
+
+            // 2. Validar EntradaAsignada
+            if (entradaAsignada.getEstado() != EstadoEntradaAsignada.ACTIVA) {
+                throw new IllegalStateException("La entrada (QR: " + codigoQrEntrada + ") no está activa. Estado actual: " + entradaAsignada.getEstado());
+            }
+            if (entradaAsignada.getAsistente() == null) {
+                throw new EntradaAsignadaNoNominadaException("La entrada (QR: " + codigoQrEntrada + ") debe estar nominada a un asistente antes de asociar una pulsera.");
+            }
+
+            // 3. Obtener y validar Festival
+            Festival festivalDeLaEntrada = obtenerFestivalDesdeEntradaAsignada(entradaAsignada); // Usa tu método existente
+            if (festivalDeLaEntrada == null) { // Doble check por si obtenerFestivalDesdeEntradaAsignada no lanza excepción
+                throw new FestivalNotFoundException("No se pudo determinar el festival para la entrada QR: " + codigoQrEntrada);
+            }
+            log.debug("Festival ID {} determinado desde la entrada.", festivalDeLaEntrada.getIdFestival());
+
+            if (idFestivalContexto != null && !festivalDeLaEntrada.getIdFestival().equals(idFestivalContexto)) {
+                log.warn("Conflicto de festival: Entrada pertenece a Fest.ID {} pero el contexto es Fest.ID {}", festivalDeLaEntrada.getIdFestival(), idFestivalContexto);
+                throw new SecurityException("La entrada no pertenece al festival indicado en el contexto de la operación.");
+            }
+            if (festivalDeLaEntrada.getEstado() != EstadoFestival.PUBLICADO) {
+                // Podrías permitir asociar en festivales BORRADOR si es para pruebas, pero PUBLICADO es más seguro para producción.
+                // O incluso permitirlo si es el día del festival independientemente del estado, pero eso añade complejidad.
+                log.warn("Intento de asociar pulsera para festival '{}' (ID:{}) que no está PUBLICADO. Estado actual: {}",
+                        festivalDeLaEntrada.getNombre(), festivalDeLaEntrada.getIdFestival(), festivalDeLaEntrada.getEstado());
+                throw new IllegalStateException("Solo se pueden asociar pulseras para festivales que están PUBLICADOS.");
+            }
+
+            // 4. Gestionar PulseraNFC
+            Optional<PulseraNFC> pulseraOpt = pulseraNFCRepository.findByCodigoUid(em, codigoUidPulsera);
+            PulseraNFC pulsera;
+
+            if (pulseraOpt.isPresent()) {
+                pulsera = pulseraOpt.get();
+                log.debug("Pulsera existente encontrada con UID {}. ID: {}. Verificando...", codigoUidPulsera, pulsera.getIdPulsera());
+                em.lock(pulsera, LockModeType.PESSIMISTIC_WRITE); // Bloquear para evitar concurrencia
+
+                if (!Boolean.TRUE.equals(pulsera.getActiva())) {
+                    throw new IllegalStateException("La pulsera con UID " + codigoUidPulsera + " no está activa.");
+                }
+                // Verificar si ya está asociada a OTRA entrada ACTIVA del MISMO festival
+                if (pulsera.getEntradaAsignada() != null
+                        && !pulsera.getEntradaAsignada().getIdEntradaAsignada().equals(entradaAsignada.getIdEntradaAsignada())
+                        && pulsera.getEntradaAsignada().getEstado() == EstadoEntradaAsignada.ACTIVA
+                        && pulsera.getFestival() != null
+                        && pulsera.getFestival().getIdFestival().equals(festivalDeLaEntrada.getIdFestival())) {
+                    throw new PulseraYaAsociadaException("La pulsera UID " + codigoUidPulsera + " ya está asociada a otra entrada activa (ID: " + pulsera.getEntradaAsignada().getIdEntradaAsignada() + ") de este festival.");
+                }
+                // Si la pulsera es de otro festival, no permitir.
+                if (pulsera.getFestival() != null && !pulsera.getFestival().getIdFestival().equals(festivalDeLaEntrada.getIdFestival())) {
+                    throw new SecurityException("La pulsera UID " + codigoUidPulsera + " pertenece a un festival diferente (ID: " + pulsera.getFestival().getIdFestival() + ").");
+                }
+                // Si la pulsera no tiene festival (caso raro, debería tenerlo si está asociada), o si es el mismo festival
+                if (pulsera.getFestival() == null) {
+                    log.warn("Pulsera existente UID {} no tiene festival asociado. Vinculando a festival ID {}.", codigoUidPulsera, festivalDeLaEntrada.getIdFestival());
+                    pulsera.setFestival(festivalDeLaEntrada);
+                }
+
+            } else {
+                log.debug("Pulsera con UID {} no encontrada. Creando nueva pulsera para el festival ID {}.", codigoUidPulsera, festivalDeLaEntrada.getIdFestival());
+                pulsera = new PulseraNFC();
+                pulsera.setCodigoUid(codigoUidPulsera);
+                pulsera.setSaldo(BigDecimal.ZERO); // Saldo inicial
+                pulsera.setActiva(true);
+                pulsera.setFestival(festivalDeLaEntrada); // Asociar al festival de la entrada
+            }
+
+            // 5. Realizar la asociación
+            if (entradaAsignada.getPulseraAsociada() != null && !entradaAsignada.getPulseraAsociada().getCodigoUid().equals(codigoUidPulsera)) {
+                // Si la entrada ya tenía OTRA pulsera, esto es un caso anómalo.
+                // Se podría desasociar la antigua o lanzar error. Por ahora, sobreescribimos.
+                log.warn("La entrada ID {} ya estaba asociada a la pulsera UID {}. Se re-asociará a la pulsera UID {}.",
+                        entradaAsignada.getIdEntradaAsignada(), entradaAsignada.getPulseraAsociada().getCodigoUid(), codigoUidPulsera);
+                // Aquí podría ser necesario anular la asociación de la pulsera anterior
+                PulseraNFC pulseraAntigua = entradaAsignada.getPulseraAsociada();
+                pulseraAntigua.setEntradaAsignada(null);
+                pulseraAntigua.setFechaAsociacion(null);
+                pulseraNFCRepository.save(em, pulseraAntigua);
+            }
+
+            pulsera.setEntradaAsignada(entradaAsignada);
+            pulsera.setFechaAsociacion(LocalDateTime.now());
+            // La entidad EntradaAsignada tiene 'mappedBy', así que la FK está en PulseraNFC
+            // No es necesario hacer entradaAsignada.setPulseraAsociada(pulsera) para la persistencia de la FK.
+
+            PulseraNFC pulseraGuardada = pulseraNFCRepository.save(em, pulsera);
+            // Si necesitas actualizar algo en EntradaAsignada que no sea la FK (ej. un estado "PULSERA_ASOCIADA")
+            // entradaAsignada.setAlgunCampo(...);
+            // entradaAsignadaRepository.save(em, entradaAsignada);
+
+            tx.commit();
+            log.info("Pulsera UID {} (ID: {}) asociada exitosamente a Entrada ID {} (QR: {}) del Festival ID {} en {}",
+                    pulseraGuardada.getCodigoUid(), pulseraGuardada.getIdPulsera(),
+                    entradaAsignada.getIdEntradaAsignada(), codigoQrEntrada,
+                    festivalDeLaEntrada.getIdFestival(), pulseraGuardada.getFechaAsociacion());
+
+            return mapEntityToDto(pulseraGuardada); // mapEntityToDto debe poblar los datos del DTO
+
+        } catch (Exception e) {
+            handleException(e, tx, "asociar pulsera UID " + codigoUidPulsera + " a entrada con QR " + codigoQrEntrada);
+            // Re-lanzar la excepción específica si es una de las declaradas, o una genérica
+            if (e instanceof EntradaAsignadaNotFoundException || e instanceof PulseraNFCNotFoundException
+                    || e instanceof PulseraYaAsociadaException || e instanceof EntradaAsignadaNoNominadaException
+                    || e instanceof IllegalStateException || e instanceof FestivalNotFoundException || e instanceof SecurityException) {
+                throw e;
+            }
+            throw mapException(e); // Tu método mapException existente
+        } finally {
+            closeEntityManager(em);
+        }
+
+    }
     // --- Métodos Privados de Ayuda ---
+
     /**
      * Verifica si un usuario existe y tiene uno de los roles permitidos.
      */
