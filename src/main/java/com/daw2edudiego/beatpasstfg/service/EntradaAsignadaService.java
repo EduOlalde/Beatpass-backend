@@ -11,15 +11,18 @@ import java.util.Optional;
 public interface EntradaAsignadaService {
 
     /**
-     * Asigna (nomina) una entrada específica a un asistente. Crea el asistente
-     * si no existe. Verifica permisos del promotor y estado de la entrada. Es
-     * transaccional.
+     * Asigna (nomina) una entrada específica a un asistente, identificado por
+     * el ID de la entrada asignada. Este método es típicamente usado por un
+     * promotor. Crea el asistente si no existe. Verifica permisos del promotor
+     * y estado de la entrada. Es transaccional. Envía un email de confirmación
+     * al asistente nominado.
      *
      * @param idEntradaAsignada ID de la entrada a nominar.
      * @param emailAsistente Email del asistente (obligatorio).
      * @param nombreAsistente Nombre del asistente (obligatorio si se crea).
      * @param telefonoAsistente Teléfono del asistente (opcional).
      * @param idPromotor ID del promotor que realiza la acción.
+     * @return EntradaAsignadaDTO con los datos de la entrada nominada.
      * @throws EntradaAsignadaNotFoundException si la entrada no existe.
      * @throws UsuarioNotFoundException si el promotor no existe.
      * @throws SecurityException si el promotor no es dueño del festival
@@ -28,7 +31,28 @@ public interface EntradaAsignadaService {
      * nominada.
      * @throws IllegalArgumentException si faltan datos o son inválidos.
      */
-    void nominarEntrada(Integer idEntradaAsignada, String emailAsistente, String nombreAsistente, String telefonoAsistente, Integer idPromotor);
+    EntradaAsignadaDTO nominarEntrada(Integer idEntradaAsignada, String emailAsistente, String nombreAsistente, String telefonoAsistente, Integer idPromotor);
+
+    /**
+     * Asigna (nomina) una entrada específica a un asistente, identificado por
+     * su código QR. Este método es típicamente usado para la nominación pública
+     * por el propio usuario/comprador. Crea el asistente si no existe. Verifica
+     * el estado de la entrada. Es transaccional. Envía un email de confirmación
+     * al asistente nominado.
+     *
+     * @param codigoQr Código QR de la entrada a nominar.
+     * @param emailAsistenteNominado Email del asistente (obligatorio).
+     * @param nombreAsistenteNominado Nombre del asistente (obligatorio si se
+     * crea).
+     * @param telefonoAsistenteNominado Teléfono del asistente (opcional).
+     * @return EntradaAsignadaDTO con los datos de la entrada nominada.
+     * @throws EntradaAsignadaNotFoundException si la entrada no existe con ese
+     * código QR.
+     * @throws IllegalStateException si la entrada no está ACTIVA o ya está
+     * nominada.
+     * @throws IllegalArgumentException si faltan datos o son inválidos.
+     */
+    EntradaAsignadaDTO nominarEntradaPorQr(String codigoQr, String emailAsistenteNominado, String nombreAsistenteNominado, String telefonoAsistenteNominado);
 
     /**
      * Obtiene las entradas asignadas para un festival específico. Verifica
