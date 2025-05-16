@@ -7,6 +7,11 @@
 -- Server version: 10.11.11-MariaDB
 -- PHP Version: 7.4.33
 
+drop database beatpasstfg_db;
+
+create database beatpasstfg_db;
+use beatpasstfg_db;
+
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 START TRANSACTION;
 SET time_zone = "+00:00";

@@ -41,6 +41,7 @@ public class VentaServiceImpl implements VentaService {
     private final CompraRepository compraRepository;
     private final CompraEntradaRepository compraEntradaRepository;
     private final EntradaAsignadaRepository entradaAsignadaRepository;
+    private final EmailService emailService;
 
     private static final String EXPECTED_CURRENCY = "eur";
 
@@ -50,6 +51,7 @@ public class VentaServiceImpl implements VentaService {
         this.compraRepository = new CompraRepositoryImpl();
         this.compraEntradaRepository = new CompraEntradaRepositoryImpl();
         this.entradaAsignadaRepository = new EntradaAsignadaRepositoryImpl();
+        this.emailService = new EmailServiceImpl();
     }
 
     @Override
@@ -64,58 +66,100 @@ public class VentaServiceImpl implements VentaService {
 
         EntityManager em = null;
         EntityTransaction tx = null;
-        Entrada entrada;
-        List<EntradaAsignada> entradasGeneradasPersistidas = new ArrayList<>();
+
+        // Variables para el email, se obtienen antes o dentro de la TX principal
+        Asistente asistenteParaEmail = null;
+        Festival festivalParaEmail = null;
+        Compra compraPersistidaParaEmail = null; // Para el ID de compra en logs de email
+
+        List<EntradaAsignadaDTO> entradasCompradasDTOsParaEmail = new ArrayList<>();
 
         try {
-            // Validaciones previas y cálculo del total esperado (sin TX)
+            // 1. Validaciones previas y cálculo del total esperado (sin TX activa aquí)
             em = JPAUtil.createEntityManager();
-            asistenteRepository.findById(em, idAsistente)
-                    .orElseThrow(() -> new AsistenteNotFoundException("Asistente no encontrado con ID: " + idAsistente));
-            entrada = entradaRepository.findById(em, idEntrada)
-                    .orElseThrow(() -> new EntradaNotFoundException("Tipo de entrada no encontrado con ID: " + idEntrada));
-            Festival festival = entrada.getFestival();
-            if (festival == null) {
-                throw new IllegalStateException("Entrada sin festival asociado.");
-            }
-            if (festival.getEstado() != EstadoFestival.PUBLICADO) {
-                throw new FestivalNoPublicadoException("Festival '" + festival.getNombre() + "' no está publicado.");
-            }
-            BigDecimal totalEsperadoDecimal = entrada.getPrecio().multiply(new BigDecimal(cantidad));
-            long totalEsperadoCentimos = totalEsperadoDecimal.multiply(new BigDecimal(100)).longValueExact();
-            closeEntityManager(em); // Cerrar EM inicial
 
-            // Verificación del Pago con Stripe
+            asistenteParaEmail = asistenteRepository.findById(em, idAsistente)
+                    .orElseThrow(() -> new AsistenteNotFoundException("Asistente no encontrado con ID: " + idAsistente));
+
+            Entrada entradaValidada = entradaRepository.findById(em, idEntrada)
+                    .orElseThrow(() -> new EntradaNotFoundException("Tipo de entrada no encontrado con ID: " + idEntrada));
+
+            festivalParaEmail = entradaValidada.getFestival();
+            if (festivalParaEmail == null) {
+                throw new IllegalStateException("Entrada ID " + idEntrada + " sin festival asociado.");
+            }
+            if (festivalParaEmail.getEstado() != EstadoFestival.PUBLICADO) {
+                throw new FestivalNoPublicadoException("Festival '" + festivalParaEmail.getNombre() + "' no está publicado.");
+            }
+
+            BigDecimal totalEsperadoDecimal = entradaValidada.getPrecio().multiply(new BigDecimal(cantidad));
+            long totalEsperadoCentimos = totalEsperadoDecimal.multiply(new BigDecimal(100)).longValueExact();
+            closeEntityManager(em);
+
+            // 2. Verificación del Pago con Stripe
             PaymentIntent paymentIntent = verificarPagoStripe(paymentIntentId, totalEsperadoCentimos);
 
-            // Lógica de negocio (Transacción JPA)
+            // 3. Lógica de negocio principal (Transacción JPA)
             em = JPAUtil.createEntityManager();
             tx = em.getTransaction();
             tx.begin();
 
-            Asistente asistente = asistenteRepository.findById(em, idAsistente) // Re-obtener dentro de TX
-                    .orElseThrow(() -> new AsistenteNotFoundException("Asistente no encontrado con ID: " + idAsistente));
-            entrada = em.find(Entrada.class, idEntrada, LockModeType.PESSIMISTIC_WRITE); // Bloquear
-            if (entrada == null) {
-                throw new EntradaNotFoundException("Tipo de entrada no encontrado con ID: " + idEntrada);
+            Asistente asistenteEnTx = asistenteRepository.findById(em, idAsistente)
+                    .orElseThrow(() -> new AsistenteNotFoundException("Asistente no encontrado con ID: " + idAsistente + " dentro de TX."));
+
+            Entrada entradaEnTx = em.find(Entrada.class, idEntrada, LockModeType.PESSIMISTIC_WRITE);
+            if (entradaEnTx == null) {
+                throw new EntradaNotFoundException("Tipo de entrada no encontrado con ID: " + idEntrada + " dentro de TX.");
             }
-            if (entrada.getStock() == null || entrada.getStock() < cantidad) {
-                throw new StockInsuficienteException("Stock (" + entrada.getStock() + ") insuficiente para entrada '" + entrada.getTipo() + "'.");
+            if (entradaEnTx.getStock() == null || entradaEnTx.getStock() < cantidad) {
+                throw new StockInsuficienteException("Stock (" + entradaEnTx.getStock() + ") insuficiente para entrada '" + entradaEnTx.getTipo() + "'.");
             }
 
-            Compra compra = crearYGuardarCompra(em, asistente, totalEsperadoDecimal, paymentIntent);
-            CompraEntrada compraEntrada = crearYGuardarCompraEntrada(em, compra, entrada, cantidad);
+            compraPersistidaParaEmail = crearYGuardarCompra(em, asistenteEnTx, totalEsperadoDecimal, paymentIntent);
+            CompraEntrada compraEntrada = crearYGuardarCompraEntrada(em, compraPersistidaParaEmail, entradaEnTx, cantidad);
+
+            List<EntradaAsignada> entradasGeneradasPersistidas = new ArrayList<>();
             generarYGuardarEntradasAsignadas(em, compraEntrada, cantidad, entradasGeneradasPersistidas);
-            actualizarStockEntrada(em, entrada, cantidad);
+            actualizarStockEntrada(em, entradaEnTx, cantidad);
+
+            // Poblar DTOs para email DENTRO de la transacción para asegurar acceso a datos lazy si es necesario
+            for (EntradaAsignada ea : entradasGeneradasPersistidas) {
+                entradasCompradasDTOsParaEmail.add(mapEntradaAsignadaToDTO(ea));
+            }
 
             tx.commit();
-            log.info("Venta confirmada con pago y TX completada. Compra ID: {}, PI: {}", compra.getIdCompra(), paymentIntentId);
+            log.info("Venta confirmada con pago y TX completada. Compra ID: {}, PI: {}", compraPersistidaParaEmail.getIdCompra(), paymentIntentId);
 
-            return mapCompraToDTO(compra, entradasGeneradasPersistidas);
+            // --- Envío de Email ---
+            if (asistenteParaEmail != null && festivalParaEmail != null && !entradasCompradasDTOsParaEmail.isEmpty()) {
+                try {
+                    log.debug("Intentando enviar email de confirmación a {} para festival {}", asistenteParaEmail.getEmail(), festivalParaEmail.getNombre());
+                    emailService.enviarEmailEntradasCompradas(
+                            asistenteParaEmail.getEmail(),
+                            asistenteParaEmail.getNombre(),
+                            festivalParaEmail.getNombre(),
+                            entradasCompradasDTOsParaEmail
+                    );
+                } catch (Exception emailEx) {
+                    log.error("Error al enviar email de confirmación para compra ID {}: {}",
+                            compraPersistidaParaEmail != null ? compraPersistidaParaEmail.getIdCompra() : "desconocida",
+                            emailEx.getMessage(), emailEx);
+                }
+            } else {
+                log.warn("No se pudo enviar email de confirmación para la compra ID {} debido a datos faltantes.",
+                        compraPersistidaParaEmail != null ? compraPersistidaParaEmail.getIdCompra() : "desconocida");
+            }
+
+            return mapCompraToDTO(compraPersistidaParaEmail, entradasGeneradasPersistidas);
 
         } catch (Exception e) {
             handleException(e, tx, "confirmar venta con pago para PI " + paymentIntentId);
-            throw mapException(e);
+            if (e instanceof AsistenteNotFoundException || e instanceof EntradaNotFoundException
+                    || e instanceof FestivalNoPublicadoException || e instanceof StockInsuficienteException
+                    || e instanceof PagoInvalidoException || e instanceof IllegalArgumentException) {
+                throw e;
+            }
+            throw new RuntimeException("Error inesperado durante la confirmación de la venta: " + e.getMessage(), e);
         } finally {
             closeEntityManager(em);
         }
@@ -147,6 +191,9 @@ public class VentaServiceImpl implements VentaService {
 
         } catch (Exception e) {
             log.error("Error en iniciarProcesoPago para entrada ID {}: {}", idEntrada, e.getMessage(), e);
+            if (e instanceof EntradaNotFoundException || e instanceof FestivalNoPublicadoException || e instanceof IllegalArgumentException) {
+                throw e;
+            }
             throw mapException(e);
         } finally {
             closeEntityManager(em);
@@ -154,9 +201,6 @@ public class VentaServiceImpl implements VentaService {
     }
 
     // --- Métodos Privados de Ayuda ---
-    /**
-     * Valida parámetros de entrada para confirmarVentaConPago.
-     */
     private void validarParametrosConfirmacion(Integer idAsistente, Integer idEntrada, int cantidad, String paymentIntentId) {
         if (idAsistente == null || idEntrada == null) {
             throw new IllegalArgumentException("ID asistente y entrada requeridos.");
@@ -169,9 +213,6 @@ public class VentaServiceImpl implements VentaService {
         }
     }
 
-    /**
-     * Verifica el estado y monto del PaymentIntent en Stripe.
-     */
     private PaymentIntent verificarPagoStripe(String paymentIntentId, long totalEsperadoCentimos) throws PagoInvalidoException {
         log.debug("Verificando PaymentIntent de Stripe: {}", paymentIntentId);
         try {
@@ -193,9 +234,6 @@ public class VentaServiceImpl implements VentaService {
         }
     }
 
-    /**
-     * Crea y guarda la entidad Compra.
-     */
     private Compra crearYGuardarCompra(EntityManager em, Asistente asistente, BigDecimal total, PaymentIntent pi) {
         Compra compra = new Compra();
         compra.setAsistente(asistente);
@@ -208,9 +246,6 @@ public class VentaServiceImpl implements VentaService {
         return compraRepository.save(em, compra);
     }
 
-    /**
-     * Crea y guarda la entidad CompraEntrada.
-     */
     private CompraEntrada crearYGuardarCompraEntrada(EntityManager em, Compra compra, Entrada entrada, int cantidad) {
         CompraEntrada compraEntrada = new CompraEntrada();
         compraEntrada.setCompra(compra);
@@ -220,9 +255,6 @@ public class VentaServiceImpl implements VentaService {
         return compraEntradaRepository.save(em, compraEntrada);
     }
 
-    /**
-     * Genera y guarda las entidades EntradaAsignada.
-     */
     private void generarYGuardarEntradasAsignadas(EntityManager em, CompraEntrada ce, int cantidad, List<EntradaAsignada> listaPersistida) {
         for (int i = 0; i < cantidad; i++) {
             EntradaAsignada ea = new EntradaAsignada();
@@ -234,9 +266,6 @@ public class VentaServiceImpl implements VentaService {
         log.debug("Generadas {} entradas asignadas para CompraEntrada ID: {}", cantidad, ce.getIdCompraEntrada());
     }
 
-    /**
-     * Actualiza el stock de la Entrada original.
-     */
     private void actualizarStockEntrada(EntityManager em, Entrada entrada, int cantidad) {
         int nuevoStock = entrada.getStock() - cantidad;
         entrada.setStock(nuevoStock);
@@ -244,9 +273,6 @@ public class VentaServiceImpl implements VentaService {
         log.info("Stock actualizado para Entrada ID {}. Nuevo stock: {}", entrada.getIdEntrada(), nuevoStock);
     }
 
-    /**
-     * Valida si el festival asociado a una entrada permite compras.
-     */
     private void validarFestivalParaCompra(Festival festival) {
         if (festival == null) {
             throw new IllegalStateException("Entrada sin festival asociado.");
@@ -256,9 +282,6 @@ public class VentaServiceImpl implements VentaService {
         }
     }
 
-    /**
-     * Crea un PaymentIntent en Stripe.
-     */
     private PaymentIntent crearPaymentIntentStripe(long totalCentimos) {
         log.debug("Creando PaymentIntent en Stripe por {} céntimos...", totalCentimos);
         try {
@@ -277,17 +300,11 @@ public class VentaServiceImpl implements VentaService {
         }
     }
 
-    /**
-     * Manejador genérico de excepciones.
-     */
     private void handleException(Exception e, EntityTransaction tx, String action) {
         log.error("Error durante la acción '{}': {}", action, e.getMessage(), e);
         rollbackTransaction(tx, action);
     }
 
-    /**
-     * Realiza rollback si la transacción está activa.
-     */
     private void rollbackTransaction(EntityTransaction tx, String action) {
         if (tx != null && tx.isActive()) {
             try {
@@ -299,9 +316,6 @@ public class VentaServiceImpl implements VentaService {
         }
     }
 
-    /**
-     * Cierra el EntityManager.
-     */
     private void closeEntityManager(EntityManager em) {
         if (em != null && em.isOpen()) {
             try {
@@ -312,9 +326,6 @@ public class VentaServiceImpl implements VentaService {
         }
     }
 
-    /**
-     * Mapea excepciones técnicas a de negocio o Runtime.
-     */
     private RuntimeException mapException(Exception e) {
         if (e instanceof AsistenteNotFoundException || e instanceof EntradaNotFoundException || e instanceof FestivalNotFoundException
                 || e instanceof FestivalNoPublicadoException || e instanceof StockInsuficienteException || e instanceof PagoInvalidoException
@@ -325,9 +336,6 @@ public class VentaServiceImpl implements VentaService {
         return new RuntimeException("Error inesperado en la capa de servicio Venta: " + e.getMessage(), e);
     }
 
-    /**
-     * Mapea entidad Compra y sus entradas generadas a CompraDTO.
-     */
     private CompraDTO mapCompraToDTO(Compra compra, List<EntradaAsignada> entradasGeneradas) {
         if (compra == null) {
             return null;
@@ -359,6 +367,8 @@ public class VentaServiceImpl implements VentaService {
                 dto.setResumenEntradas(compra.getDetallesCompra().stream()
                         .map(detalle -> detalle.getCantidad() + " x " + (detalle.getEntrada() != null ? detalle.getEntrada().getTipo() : "?"))
                         .collect(Collectors.toList()));
+            } else { // Asegurar que la lista se inicialice si no hay detalles
+                dto.setResumenEntradas(new ArrayList<>());
             }
         } catch (org.hibernate.LazyInitializationException e) {
             log.warn("LazyInitializationException al acceder a detallesCompra para Compra ID {}. No se incluirá resumen.", compra.getIdCompra());
@@ -367,9 +377,6 @@ public class VentaServiceImpl implements VentaService {
         return dto;
     }
 
-    /**
-     * Mapea entidad EntradaAsignada a DTO.
-     */
     private EntradaAsignadaDTO mapEntradaAsignadaToDTO(EntradaAsignada ea) {
         if (ea == null) {
             return null;
@@ -402,7 +409,7 @@ public class VentaServiceImpl implements VentaService {
             dto.setIdPulseraAsociada(ea.getPulseraAsociada().getIdPulsera());
             dto.setCodigoUidPulsera(ea.getPulseraAsociada().getCodigoUid());
         }
-        // El campo qrCodeImageDataUrl se genera en el frontend o al mapear en el servicio
+
         if (ea.getCodigoQr() != null && !ea.getCodigoQr().isBlank()) {
             String imageDataUrl = QRCodeUtil.generarQrComoBase64(ea.getCodigoQr(), 100, 100);
             if (imageDataUrl != null) {
