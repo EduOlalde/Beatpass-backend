@@ -95,4 +95,17 @@ public interface EntradaAsignadaService {
      */
     Optional<EntradaAsignadaDTO> obtenerEntradaAsignadaPorId(Integer idEntradaAsignada, Integer idPromotor);
 
+    /**
+     * Obtiene los detalles de una entrada asignada por su código QR,
+     * específicamente para ser usada en un contexto público de nominación. Este
+     * método es ideal para validar una entrada antes de mostrar la página de
+     * nominación. No requiere autenticación de promotor, ya que es para un
+     * flujo público.
+     *
+     * @param codigoQr El código QR de la entrada.
+     * @return Optional con EntradaAsignadaDTO si se encuentra y es válida para
+     * nominación, o vacío en caso contrario.
+     */
+    Optional<EntradaAsignadaDTO> obtenerParaNominacionPublicaPorQr(String codigoQr);
+
 }

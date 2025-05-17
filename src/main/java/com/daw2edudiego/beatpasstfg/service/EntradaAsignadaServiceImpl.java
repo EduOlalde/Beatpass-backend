@@ -345,13 +345,43 @@ public class EntradaAsignadaServiceImpl implements EntradaAsignadaService {
         }
     }
 
+    @Override
+    public Optional<EntradaAsignadaDTO> obtenerParaNominacionPublicaPorQr(String codigoQr) {
+        log.debug("Service - obtenerParaNominacionPublicaPorQr: Buscando entrada por QR: {}", codigoQr);
+        if (codigoQr == null || codigoQr.isBlank()) {
+            log.warn("Service - obtenerParaNominacionPublicaPorQr: Código QR nulo o vacío.");
+            return Optional.empty();
+        }
+
+        EntityManager em = null;
+        try {
+            em = JPAUtil.createEntityManager();
+            Optional<EntradaAsignada> entradaOpt = entradaAsignadaRepository.findByCodigoQr(em, codigoQr);
+
+            if (entradaOpt.isEmpty()) {
+                log.warn("Service - obtenerParaNominacionPublicaPorQr: Entrada no encontrada con QR: {}", codigoQr);
+                return Optional.empty();
+            }
+           
+            return entradaOpt.map(this::mapEntityToDto);
+
+        } catch (Exception e) {
+            log.error("Service - obtenerParaNominacionPublicaPorQr: Error al buscar entrada por QR {}: {}", codigoQr, e.getMessage(), e);
+            // No relanzar la excepción aquí, simplemente devolver Optional.empty()
+            // para que el controlador maneje la no existencia.
+            return Optional.empty();
+        } finally {
+            closeEntityManager(em);
+        }
+    }
+
     // --- Métodos Privados de Ayuda ---
     private Festival obtenerFestivalDesdeEntradaAsignada(EntradaAsignada ea) {
         if (ea == null || ea.getCompraEntrada() == null || ea.getCompraEntrada().getEntrada() == null || ea.getCompraEntrada().getEntrada().getFestival() == null) {
             Integer eaId = (ea != null) ? ea.getIdEntradaAsignada() : null;
             String errorMsg = "Inconsistencia de datos para EntradaAsignada ID " + eaId + ": no se pudo obtener el festival asociado.";
             log.error(errorMsg);
-            throw new IllegalStateException(errorMsg); // Podría ser una DataIntegrityException personalizada
+            throw new IllegalStateException(errorMsg); 
         }
         return ea.getCompraEntrada().getEntrada().getFestival();
     }
