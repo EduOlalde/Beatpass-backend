@@ -1,7 +1,7 @@
 package com.daw2edudiego.beatpasstfg.service;
 
 import com.daw2edudiego.beatpasstfg.dto.EntradaAsignadaDTO;
-import com.daw2edudiego.beatpasstfg.util.MailConfig; // Asegúrate que esta clase exista y esté bien configurada
+import com.daw2edudiego.beatpasstfg.util.MailConfig;
 
 import jakarta.activation.DataHandler;
 import jakarta.activation.DataSource;
@@ -10,31 +10,24 @@ import jakarta.mail.internet.InternetAddress;
 import jakarta.mail.internet.MimeBodyPart;
 import jakarta.mail.internet.MimeMessage;
 import jakarta.mail.internet.MimeMultipart;
-import jakarta.mail.util.ByteArrayDataSource; // Para adjuntar desde byte[]
+import jakarta.mail.util.ByteArrayDataSource;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException; // Para PdfService
+import java.io.IOException;
 import java.util.List;
 import java.util.Properties;
 
-/**
- * Implementación de EmailService para enviar correos electrónicos con entradas.
- */
 public class EmailServiceImpl implements EmailService {
 
     private static final Logger log = LoggerFactory.getLogger(EmailServiceImpl.class);
     private final PdfService pdfService;
 
     public EmailServiceImpl() {
-        this.pdfService = new PdfServiceImpl(); // Se instancia el servicio de PDF aquí
+        this.pdfService = new PdfServiceImpl();
     }
 
-    /**
-     * Envía un correo electrónico de confirmación al comprador con las entradas
-     * adjuntas en PDF.
-     */
     @Override
     public void enviarEmailEntradasCompradas(String destinatarioEmail, String nombreComprador, String nombreFestival, List<EntradaAsignadaDTO> entradasCompradas) {
         if (!esValidoParaEnviar(destinatarioEmail, nombreFestival, entradasCompradas, "Compra")) {
@@ -54,17 +47,12 @@ public class EmailServiceImpl implements EmailService {
             }
         } catch (IOException e) {
             log.error("Error al generar PDF para email de compra a {}: {}", destinatarioEmail, e.getMessage(), e);
-            // El email se enviará sin PDF si esto falla
         }
 
         enviarEmailConAdjuntoOpcional(destinatarioEmail, asunto, contenidoHtml, pdfBytes, nombreArchivoPdf);
         log.info("Email de 'entradas compradas' (intento de envío) a {} para festival {}", destinatarioEmail, nombreFestival);
     }
 
-    /**
-     * Envía un correo electrónico al asistente nominado con su entrada
-     * personalizada adjunta en PDF.
-     */
     @Override
     public void enviarEmailEntradaNominada(String destinatarioEmail, String nombreNominado, EntradaAsignadaDTO entradaNominada) {
         if (entradaNominada == null || entradaNominada.getNombreFestival() == null) {
@@ -82,7 +70,6 @@ public class EmailServiceImpl implements EmailService {
 
         try {
             if (pdfService != null) {
-                // Generar PDF para una sola entrada (o adaptar generarPdfMultiplesEntradas)
                 pdfBytes = pdfService.generarPdfMultiplesEntradas(List.of(entradaNominada), entradaNominada.getNombreFestival());
             } else {
                 log.warn("PdfService no está inicializado. No se generará PDF para email a {}", destinatarioEmail);
@@ -95,9 +82,6 @@ public class EmailServiceImpl implements EmailService {
         log.info("Email de 'entrada nominada' (intento de envío) a {} para festival {}", destinatarioEmail, entradaNominada.getNombreFestival());
     }
 
-    /**
-     * Valida si hay información suficiente para intentar enviar un correo.
-     */
     private boolean esValidoParaEnviar(String email, String nombreFestival, List<EntradaAsignadaDTO> entradas, String tipoEmail) {
         if (email == null || email.isBlank()) {
             log.warn("Destinatario email nulo o vacío. No se enviará correo de {}.", tipoEmail);
@@ -107,11 +91,10 @@ public class EmailServiceImpl implements EmailService {
             log.warn("Nombre del festival nulo o vacío para email de {} a {}. No se enviará correo.", tipoEmail, email);
             return false;
         }
-        if (entradas == null || entradas.isEmpty()) { // Para el email de nominación, la lista tendrá un solo elemento
+        if (entradas == null || entradas.isEmpty()) {
             log.warn("Lista de entradas vacía o nula para email de {} a {}. No se enviará correo.", tipoEmail, email);
             return false;
         }
-        // Verifica configuración básica de MailConfig
         String mailHost = MailConfig.getMailProperties().getProperty("mail.smtp.host");
         if (MailConfig.getFromAddress() == null || MailConfig.getFromAddress().isBlank() || mailHost == null || mailHost.isBlank()) {
             log.error("Configuración de correo incompleta (remitente u host SMTP no definidos). No se puede enviar email de {} a {}.", tipoEmail, email);
@@ -120,9 +103,6 @@ public class EmailServiceImpl implements EmailService {
         return true;
     }
 
-    /**
-     * Lógica centralizada para enviar un correo con un adjunto opcional.
-     */
     private void enviarEmailConAdjuntoOpcional(String destinatarioEmail, String asunto, String contenidoHtml, byte[] adjuntoBytes, String nombreArchivoAdjunto) {
         Properties props = MailConfig.getMailProperties();
         Session session = Session.getInstance(props, new Authenticator() {
@@ -135,16 +115,12 @@ public class EmailServiceImpl implements EmailService {
                         return new PasswordAuthentication(smtpUser, smtpPassword);
                     } else {
                         log.warn("Autenticación SMTP (mail.smtp.auth=true) pero credenciales SMTP incompletas en variables de entorno. El envío podría fallar.");
-                        // No devolver null aquí directamente si la autenticación es obligatoria y falla,
-                        // es mejor dejar que JavaMail falle al intentar conectar/autenticar.
                     }
                 }
-                return null; // No se usa autenticación o credenciales no disponibles
+                return null;
             }
         });
 
-        // Configurar debug de JavaMail si la variable de entorno MAIL_SMTP_DEBUG está en true
-        // Esto se hace después de crear la sesión.
         if ("true".equalsIgnoreCase(props.getProperty("mail.debug"))) {
             session.setDebug(true);
         }
@@ -158,7 +134,7 @@ public class EmailServiceImpl implements EmailService {
             MimeBodyPart htmlBodyPart = new MimeBodyPart();
             htmlBodyPart.setContent(contenidoHtml, "text/html; charset=utf-8");
 
-            Multipart multipart = new MimeMultipart("mixed"); // Para HTML y adjuntos
+            Multipart multipart = new MimeMultipart("mixed");
             multipart.addBodyPart(htmlBodyPart);
 
             if (adjuntoBytes != null && adjuntoBytes.length > 0) {
@@ -174,19 +150,25 @@ public class EmailServiceImpl implements EmailService {
 
             message.setContent(multipart);
             Transport.send(message);
-            // El log de éxito se hace en los métodos públicos para más contexto
 
         } catch (MessagingException e_msg) {
             log.error("Error de mensajería al enviar email a {}: Asunto: '{}'. Error: {}", destinatarioEmail, asunto, e_msg.getMessage(), e_msg);
-        } catch (Exception e_gen) { // Captura más genérica
+        } catch (Exception e_gen) {
             log.error("Error inesperado al construir o enviar email a {}: Asunto: '{}'. Error: {}", destinatarioEmail, asunto, e_gen.getMessage(), e_gen);
         }
     }
 
-    // PLANTILLA PARA EL COMPRADOR (ENTRADAS SIN NOMINAR O CON INFO BÁSICA)
     private String construirHtmlEntradasCompradas(String nombreComprador, String nombreFestival, List<EntradaAsignadaDTO> entradas) {
         StringBuilder sb = new StringBuilder();
         String appBaseUrl = MailConfig.getAppBaseUrl();
+
+        // Asegurar que appBaseUrl termine con / si no está vacío
+        if (appBaseUrl != null && !appBaseUrl.isEmpty() && !appBaseUrl.endsWith("/")) {
+            appBaseUrl += "/";
+        } else if (appBaseUrl == null || appBaseUrl.isEmpty()) {
+            log.error("APP_BASE_URL no está configurada. Usando fallback que podría ser incorrecto: http://localhost:8080/BeatpassTFG/");
+            appBaseUrl = "http://localhost:8080/BeatpassTFG/"; // Fallback
+        }
 
         sb.append("<!DOCTYPE html><html lang='es'><head><meta charset='UTF-8'><title>Tus Entradas para ").append(escapeHtml(nombreFestival)).append("</title>");
         appendBasicStyles(sb);
@@ -194,30 +176,27 @@ public class EmailServiceImpl implements EmailService {
         sb.append("<div class='email-body'>");
         sb.append("<h2>¡Hola ").append(escapeHtml(nombreComprador)).append("!</h2>");
         sb.append("<p>Gracias por tu compra. Aquí tienes tus entradas para el festival: <strong>").append(escapeHtml(nombreFestival)).append("</strong>.</p>");
-        sb.append("<p>Hemos adjuntado un archivo PDF con todas tus entradas. Cada entrada contiene un código QR único que necesitarás para nominarla o para el acceso.</p>");
-        sb.append("<p class='highlight'>Información de tus entradas (detalles en el PDF adjunto):</p>");
+        sb.append("<p>Hemos adjuntado un archivo PDF con todas tus entradas. Cada entrada contiene un código QR único.</p>");
+        sb.append("<p class='highlight'>Para nominar cada entrada al asistente correspondiente, utiliza el enlace individual proporcionado para cada una:</p>");
         sb.append("<ul>");
         for (EntradaAsignadaDTO entrada : entradas) {
-            sb.append("<li>Tipo: <span class='ticket-detail'>").append(escapeHtml(entrada.getTipoEntradaOriginal())).append("</span> - Código QR: <code>").append(escapeHtml(entrada.getCodigoQr())).append("</code> (Estado inicial: Sin nominar).</li>");
+            String nominationLink = appBaseUrl + "api/public/venta/nominar-entrada/" + entrada.getCodigoQr();
+
+            sb.append("<li>Tipo: <span class='ticket-detail'>").append(escapeHtml(entrada.getTipoEntradaOriginal())).append("</span>");
+            sb.append(" - Código QR: <code>").append(escapeHtml(entrada.getCodigoQr())).append("</code>");
+            sb.append(" <a href='").append(nominationLink).append("' class='button' style='font-size:0.8em; padding: 5px 10px; margin-left:10px;'>Nominar esta entrada</a></li>");
         }
         sb.append("</ul>");
-        // URL temporal de simulación
-        String urlNominacionGeneral = "https://eduolalde.github.io/DAW2-TFG-Beatpass-FestMock/nominacion.html";
-        sb.append("<p>Puedes nominar cada entrada al asistente correspondiente utilizando su código QR desde nuestra web. Accede a la sección de nominación aquí:</p>");
-        sb.append("<div class='button-container'><a href='").append(urlNominacionGeneral).append("' class='button'>Nominar Entradas</a></div>");
-        sb.append("<p>Una vez nominada, el asistente recibirá un email con su entrada personalizada.</p>");
-        appendFooter(sb); // Método auxiliar para el pie de página
+        sb.append("<p>Una vez nominada, el asistente recibirá un email con su entrada personalizada en PDF.</p>");
+        appendFooter(sb);
         sb.append("</div></div></body></html>");
         return sb.toString();
     }
 
-    // PLANTILLA PARA EL NOMINADO
     private String construirHtmlEntradaNominada(String nombreNominado, EntradaAsignadaDTO entrada) {
         StringBuilder sb = new StringBuilder();
-        String appBaseUrl = MailConfig.getAppBaseUrl();
-
         sb.append("<!DOCTYPE html><html lang='es'><head><meta charset='UTF-8'><title>¡Tienes una Entrada!</title>");
-        appendBasicStyles(sb); // Reutilizar estilos
+        appendBasicStyles(sb);
         sb.append("</head><body><div class='email-wrapper'><div class='email-header'><h1>Beatpass</h1></div>");
         sb.append("<div class='email-body'>");
         sb.append("<h2>¡Hola ").append(escapeHtml(nombreNominado)).append("!</h2>");
@@ -231,23 +210,16 @@ public class EmailServiceImpl implements EmailService {
         sb.append("</ul>");
         sb.append("<p>Por favor, descarga el PDF adjunto. Deberás presentarlo (impreso o en tu dispositivo móvil) para acceder al evento.</p>");
 
-        // URL temporal de simulación
-        String urlWebFestival = "https://daaf292.github.io/MockFestival_beatpass/";
-        /*
-        String urlWebFestival = (!"#".equals(appBaseUrl) && !appBaseUrl.isEmpty() && entrada.getIdFestival() != null)
-                ? appBaseUrl + "/festival-info.html?id=" + entrada.getIdFestival() // Ejemplo de URL
-                : "#";
-        */
+        String urlWebFestival = "https://daaf292.github.io/MockFestival_beatpass/"; // URL del MockFestival (puede ser una constante o configuración)
         if (!"#".equals(urlWebFestival)) {
             sb.append("<p>Para más información sobre el festival, como horarios y cartel, puedes visitar: <a href='").append(urlWebFestival).append("'>Información del Festival</a>.</p>");
         }
 
-        appendFooter(sb); // Método auxiliar para el pie de página
+        appendFooter(sb);
         sb.append("</div></div></body></html>");
         return sb.toString();
     }
 
-    // Métodos auxiliares para estilos y pie de página del HTML
     private void appendBasicStyles(StringBuilder sb) {
         sb.append("<style>");
         sb.append("body{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;margin:0;padding:0;background-color:#f0f2f5;color:#333;font-size:16px;line-height:1.6;}");
@@ -258,11 +230,11 @@ public class EmailServiceImpl implements EmailService {
         sb.append(".email-body h2{color:#7e22ce;font-size:22px;margin-top:0;margin-bottom:15px;}");
         sb.append(".email-body p{margin-bottom:15px;}");
         sb.append(".email-body ul{list-style-type:disc;margin-left:20px;margin-bottom:15px;padding-left:0;}");
-        sb.append(".email-body li{margin-bottom:5px;}");
+        sb.append(".email-body li{margin-bottom:8px; line-height: 1.8;}");
         sb.append(".highlight{font-weight:bold;color:#7e22ce;}");
         sb.append(".ticket-detail{font-weight:bold;}");
         sb.append(".button-container{text-align:center;margin-top:25px;margin-bottom:15px;}");
-        sb.append(".button{display:inline-block;padding:12px 25px;background-color:#F59E0B;color:#ffffff !important;text-decoration:none;border-radius:5px;font-weight:bold;font-size:16px;}");
+        sb.append(".button{display:inline-block;padding:10px 18px;background-color:#F59E0B;color:#ffffff !important;text-decoration:none;border-radius:5px;font-weight:bold;font-size:14px;}");
         sb.append(".button:hover{background-color:#D97706;}");
         sb.append(".email-footer{background-color:#f7f7f7;padding:20px;text-align:center;font-size:12px;color:#777777;border-top:1px solid #e0e0e0;}");
         sb.append("code{background-color:#f0f0f0;padding:2px 4px;border-radius:3px;font-family:monospace;font-size:0.9em;}");

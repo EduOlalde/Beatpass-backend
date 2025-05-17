@@ -2,34 +2,35 @@ package com.daw2edudiego.beatpasstfg.web;
 
 import com.daw2edudiego.beatpasstfg.dto.CompraDTO;
 import com.daw2edudiego.beatpasstfg.dto.EntradaAsignadaDTO;
+import com.daw2edudiego.beatpasstfg.dto.FestivalDTO;
 import com.daw2edudiego.beatpasstfg.dto.IniciarCompraRequestDTO;
 import com.daw2edudiego.beatpasstfg.dto.IniciarCompraResponseDTO;
 import com.daw2edudiego.beatpasstfg.exception.*;
 import com.daw2edudiego.beatpasstfg.model.Asistente;
-// import com.daw2edudiego.beatpasstfg.model.EntradaAsignada; // Ya no se usa directamente aquí
-// import com.daw2edudiego.beatpasstfg.model.EstadoEntradaAsignada; // Ya no se usa directamente aquí
+import com.daw2edudiego.beatpasstfg.model.EstadoEntradaAsignada;
 import com.daw2edudiego.beatpasstfg.service.*;
-// import com.daw2edudiego.beatpasstfg.repository.EntradaAsignadaRepository; // Ya no se usa directamente aquí
-// import com.daw2edudiego.beatpasstfg.repository.EntradaAsignadaRepositoryImpl; // Ya no se usa directamente aquí
-// import com.daw2edudiego.beatpasstfg.util.JPAUtil; // Ya no se usa directamente aquí
+
+import jakarta.servlet.RequestDispatcher;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 
 import jakarta.ws.rs.*;
+import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
-// import jakarta.persistence.EntityManager; // Ya no se usa directamente aquí
-// import jakarta.persistence.EntityTransaction; // Ya no se usa directamente aquí
+import jakarta.ws.rs.core.UriInfo;
 import jakarta.validation.Valid;
+import jakarta.ws.rs.core.UriBuilder;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-// import java.time.LocalDateTime; // Ya no se usa directamente aquí
+import java.io.IOException;
+import java.net.URI;
 import java.util.Map;
+import java.util.Optional;
 
-/**
- * Recurso JAX-RS para endpoints públicos de venta y nominación
- * (/api/public/venta). Incluye inicio de pago y confirmación con Stripe.
- */
 @Path("/public/venta")
 @Produces(MediaType.APPLICATION_JSON)
 public class PublicVentaResource {
@@ -37,24 +38,178 @@ public class PublicVentaResource {
     private static final Logger log = LoggerFactory.getLogger(PublicVentaResource.class);
 
     private final VentaService ventaService;
-    private final AsistenteService asistenteService; // Se mantiene si es necesario para otros endpoints o lógica aquí
-    // private final EntradaAsignadaRepository entradaAsignadaRepository; // Ya no es necesario
-    private final EntradaAsignadaService entradaAsignadaService; // Ahora se usa el servicio
+    private final AsistenteService asistenteService;
+    private final EntradaAsignadaService entradaAsignadaService;
+    private final FestivalService festivalService;
+
+    @Context
+    private UriInfo uriInfo;
+    @Context
+    private HttpServletRequest servletRequest;
+    @Context
+    private HttpServletResponse servletResponse;
 
     public PublicVentaResource() {
         this.ventaService = new VentaServiceImpl();
         this.asistenteService = new AsistenteServiceImpl();
-        // this.entradaAsignadaRepository = new EntradaAsignadaRepositoryImpl(); // Ya no es necesario
-        this.entradaAsignadaService = new EntradaAsignadaServiceImpl(); // Inyectar el servicio
+        this.entradaAsignadaService = new EntradaAsignadaServiceImpl();
+        this.festivalService = new FestivalServiceImpl();
+    }
+
+    @GET
+    @Path("/nominar-entrada/{ticketCode}")
+    @Produces(MediaType.TEXT_HTML)
+    public Response mostrarPaginaNominacionPublica(@PathParam("ticketCode") String ticketCode)
+            throws ServletException, IOException {
+        log.info("GET /public/venta/nominar-entrada/{}", ticketCode);
+
+        String errorMsg = servletRequest.getParameter("error");
+        String successMsg = servletRequest.getParameter("successMessage");
+        String nominatedEmail = servletRequest.getParameter("nominatedEmail");
+
+        String nombreFestival = "el festival";
+        boolean hideForm = false;
+
+        if (successMsg != null) {
+            servletRequest.setAttribute("successMessage", successMsg);
+            servletRequest.setAttribute("nominatedEmail", nominatedEmail);
+            servletRequest.setAttribute("hideForm", true);
+            hideForm = true;
+        }
+        if (errorMsg != null) {
+            servletRequest.setAttribute("error", errorMsg);
+        }
+
+        if (!hideForm && (ticketCode == null || ticketCode.isBlank())) {
+            servletRequest.setAttribute("error", "El código de la entrada no puede estar vacío.");
+            log.warn("El código de la entrada no puede estar vacío.");
+        } else if (!hideForm) {
+            try {
+                Optional<EntradaAsignadaDTO> entradaOpt = entradaAsignadaService.obtenerParaNominacionPublicaPorQr(ticketCode);
+                if (entradaOpt.isEmpty()) {
+                    servletRequest.setAttribute("error", "La entrada con el código proporcionado no fue encontrada o no es válida.");
+                } else {
+                    EntradaAsignadaDTO entrada = entradaOpt.get();
+                    if (entrada.getEstado() != EstadoEntradaAsignada.ACTIVA) {
+                        servletRequest.setAttribute("error", "Esta entrada ya ha sido utilizada (" + entrada.getEstado() + ") o no está activa para nominación.");
+                    } else if (entrada.getIdAsistente() != null) {
+                        servletRequest.setAttribute("error", "Esta entrada ya ha sido nominada a " + (entrada.getEmailAsistente() != null ? entrada.getEmailAsistente() : "un asistente") + ".");
+                    }
+                    if (entrada.getIdFestival() != null) {
+                        Optional<FestivalDTO> festivalOpt = festivalService.obtenerFestivalPorId(entrada.getIdFestival());
+                        if (festivalOpt.isPresent()) {
+                            nombreFestival = festivalOpt.get().getNombre();
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                log.error("Error al validar la entrada para nominación pública (código {}): {}", ticketCode, e.getMessage(), e);
+                servletRequest.setAttribute("error", "Ocurrió un error al verificar la entrada.");
+            }
+        }
+
+        servletRequest.setAttribute("ticketCode", ticketCode);
+        servletRequest.setAttribute("nombreFestival", nombreFestival);
+
+        RequestDispatcher dispatcher = servletRequest.getRequestDispatcher("/WEB-INF/jsp/nominacion_publica.jsp");
+        dispatcher.forward(servletRequest, servletResponse);
+        return Response.ok().build();
+    }
+
+    @POST
+    @Path("/nominar")
+    @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
+    @Produces(MediaType.TEXT_HTML)
+    public Response nominarEntrada(
+            @FormParam("codigoQr") String codigoQr,
+            @FormParam("emailNominado") String emailNominado,
+            @FormParam("confirmEmailNominado") String confirmEmailNominado,
+            @FormParam("nombreNominado") String nombreNominado,
+            @FormParam("telefonoNominado") String telefonoNominado) throws ServletException, IOException {
+
+        String qrLog = (codigoQr != null && codigoQr.length() > 10) ? codigoQr.substring(0, 10) + "..." : codigoQr;
+        log.info("POST /public/venta/nominar - QR: {}, Email Nom: {}", qrLog, emailNominado);
+
+        UriBuilder redirectUriBuilder = uriInfo.getBaseUriBuilder()
+                .path(PublicVentaResource.class)
+                .path(PublicVentaResource.class, "mostrarPaginaNominacionPublica");
+        URI redirectUri;
+
+        if (codigoQr == null || codigoQr.isBlank()
+                || emailNominado == null || emailNominado.isBlank()
+                || confirmEmailNominado == null || confirmEmailNominado.isBlank()
+                || nombreNominado == null || nombreNominado.isBlank()) {
+
+            log.warn("Datos de nominación incompletos o inválidos para QR: {}", qrLog);
+            redirectUri = redirectUriBuilder.resolveTemplate("ticketCode", codigoQr_valid_for_url(codigoQr))
+                    .queryParam("error", "Todos los campos marcados con * son obligatorios (Nombre, Email, Confirmar Email).")
+                    .queryParam("nombreNominado", nombreNominado)
+                    .queryParam("emailNominado", emailNominado)
+                    .queryParam("confirmEmailNominado", confirmEmailNominado)
+                    .queryParam("telefonoNominado", telefonoNominado)
+                    .build();
+            return Response.seeOther(redirectUri).build();
+        }
+
+        if (!emailNominado.equals(confirmEmailNominado)) {
+            log.warn("Los emails no coinciden para la nominación del QR: {}", qrLog);
+            redirectUri = redirectUriBuilder.resolveTemplate("ticketCode", codigoQr_valid_for_url(codigoQr))
+                    .queryParam("error", "Los emails introducidos no coinciden.")
+                    .queryParam("nombreNominado", nombreNominado)
+                    .queryParam("emailNominado", emailNominado)
+                    .queryParam("telefonoNominado", telefonoNominado)
+                    .build();
+            return Response.seeOther(redirectUri).build();
+        }
+
+        try {
+            EntradaAsignadaDTO entradaNominadaDTO = entradaAsignadaService.nominarEntradaPorQr(
+                    codigoQr, emailNominado, nombreNominado, telefonoNominado);
+
+            log.info("Entrada (QR: {}) nominada exitosamente a {} ({})",
+                    qrLog, entradaNominadaDTO.getNombreAsistente(), entradaNominadaDTO.getEmailAsistente());
+
+            redirectUri = redirectUriBuilder.resolveTemplate("ticketCode", codigoQr_valid_for_url(codigoQr))
+                    .queryParam("successMessage", "¡Entrada nominada con éxito a " + entradaNominadaDTO.getNombreAsistente() + "!")
+                    .queryParam("nominatedEmail", entradaNominadaDTO.getEmailAsistente())
+                    .build();
+            return Response.seeOther(redirectUri).build();
+
+        } catch (EntradaAsignadaNotFoundException e) {
+            log.warn("Nominación fallida para QR {}: {}", qrLog, e.getMessage());
+            redirectUri = redirectUriBuilder.resolveTemplate("ticketCode", codigoQr_valid_for_url(codigoQr))
+                    .queryParam("error", e.getMessage())
+                    .build();
+            return Response.seeOther(redirectUri).build();
+        } catch (IllegalStateException | IllegalArgumentException e) {
+            log.warn("Nominación fallida para QR {}: {}", qrLog, e.getMessage());
+            redirectUri = redirectUriBuilder.resolveTemplate("ticketCode", codigoQr_valid_for_url(codigoQr))
+                    .queryParam("error", e.getMessage())
+                    .queryParam("nombreNominado", nombreNominado)
+                    .queryParam("emailNominado", emailNominado)
+                    .queryParam("telefonoNominado", telefonoNominado)
+                    .build();
+            return Response.seeOther(redirectUri).build();
+        } catch (Exception e) {
+            log.error("Error interno al procesar la nominación para QR {}: {}", qrLog, e.getMessage(), e);
+            redirectUri = redirectUriBuilder.resolveTemplate("ticketCode", codigoQr_valid_for_url(codigoQr))
+                    .queryParam("error", "Error interno al procesar la nominación. Inténtalo más tarde.")
+                    .build();
+            return Response.seeOther(redirectUri).build();
+        }
     }
 
     /**
-     * Inicia el proceso de pago con Stripe.
+     * Helper function to ensure the QR code is valid for a URL, especially if
+     * passed as null or blank.
      *
-     * @param requestDTO DTO con idEntrada y cantidad.
-     * @return 200 OK con IniciarCompraResponseDTO (client_secret), o error
-     * 4xx/5xx.
+     * @param codigoQr The QR code.
+     * @return The QR code, or "invalid" if null/blank.
      */
+    private String codigoQr_valid_for_url(String codigoQr) {
+        return (codigoQr == null || codigoQr.isBlank()) ? "invalid" : codigoQr;
+    }
+
     @POST
     @Path("/iniciar-pago")
     @Consumes(MediaType.APPLICATION_JSON)
@@ -81,32 +236,17 @@ public class PublicVentaResource {
         }
     }
 
-    /**
-     * Confirma la compra después de un pago exitoso con Stripe.
-     *
-     * @param idFestival ID del festival (contexto, aunque podría obtenerse de
-     * la entrada).
-     * @param idEntrada ID del tipo de entrada.
-     * @param cantidad Número de entradas.
-     * @param emailAsistente Email del comprador.
-     * @param nombreAsistente Nombre del comprador.
-     * @param telefonoAsistente Teléfono (opcional).
-     * @param paymentIntentId ID del PaymentIntent de Stripe ('pi_...')
-     * 'succeeded'.
-     * @return 200 OK con CompraDTO, o error 4xx/5xx.
-     */
     @POST
     @Path("/confirmar-compra")
     @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
     public Response confirmarCompraConPago(
-            @FormParam("idFestival") Integer idFestival, // Considerar si este ID es realmente necesario si la entrada ya lo tiene
+            @FormParam("idFestival") Integer idFestival,
             @FormParam("idEntrada") Integer idEntrada,
             @FormParam("cantidad") Integer cantidad,
             @FormParam("emailAsistente") String emailAsistente,
             @FormParam("nombreAsistente") String nombreAsistente,
             @FormParam("telefonoAsistente") String telefonoAsistente,
             @FormParam("paymentIntentId") String paymentIntentId) {
-
         log.info("POST /public/venta/confirmar-compra - Entrada: {}, Cant: {}, Email: {}, PI: {}",
                 idEntrada, cantidad, emailAsistente, paymentIntentId);
 
@@ -116,10 +256,7 @@ public class PublicVentaResource {
         }
 
         try {
-            // Obtener o crear el asistente. AsistenteService maneja su propia lógica de persistencia.
             Asistente asistente = asistenteService.obtenerOcrearAsistentePorEmail(emailAsistente, nombreAsistente, telefonoAsistente);
-
-            // Llamar al servicio de venta para confirmar.
             CompraDTO compraConfirmada = ventaService.confirmarVentaConPago(
                     asistente.getIdAsistente(), idEntrada, cantidad, paymentIntentId);
 
@@ -138,67 +275,7 @@ public class PublicVentaResource {
         }
     }
 
-    /**
-     * Nomina una entrada usando su código QR. La lógica de nominación y envío
-     * de email se delega a EntradaAsignadaService.
-     *
-     * @param codigoQr Contenido del QR.
-     * @param emailNominado Email del asistente a nominar.
-     * @param nombreNominado Nombre del asistente a nominar.
-     * @param telefonoNominado Teléfono (opcional).
-     * @return 200 OK con mensaje y EntradaAsignadaDTO, o error 4xx/5xx.
-     */
-    @POST
-    @Path("/nominar")
-    @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
-    public Response nominarEntrada(
-            @FormParam("codigoQr") String codigoQr,
-            @FormParam("emailNominado") String emailNominado,
-            @FormParam("nombreNominado") String nombreNominado,
-            @FormParam("telefonoNominado") String telefonoNominado) {
-
-        String qrLog = (codigoQr != null && codigoQr.length() > 10) ? codigoQr.substring(0, 10) + "..." : codigoQr;
-        log.info("POST /public/venta/nominar - QR: {}, Email Nom: {}", qrLog, emailNominado);
-
-        if (codigoQr == null || codigoQr.isBlank() || emailNominado == null || emailNominado.isBlank()
-                || nombreNominado == null || nombreNominado.isBlank()) {
-            return crearRespuestaError(Response.Status.BAD_REQUEST, "Código QR, email y nombre del nominado son obligatorios.");
-        }
-
-        try {
-            // Llamar al servicio para realizar la nominación y enviar el email
-            EntradaAsignadaDTO entradaNominadaDTO = entradaAsignadaService.nominarEntradaPorQr(
-                    codigoQr, emailNominado, nombreNominado, telefonoNominado);
-
-            log.info("Entrada (QR: {}) nominada exitosamente a {} ({}) a través del servicio.",
-                    qrLog, entradaNominadaDTO.getNombreAsistente(), entradaNominadaDTO.getEmailAsistente());
-
-            // Devolver el DTO de la entrada nominada junto con un mensaje.
-            // El cliente puede usar el DTO para mostrar detalles si es necesario.
-            Map<String, Object> successResponse = Map.of(
-                    "mensaje", "Entrada nominada correctamente a " + entradaNominadaDTO.getEmailAsistente(),
-                    "entrada", entradaNominadaDTO
-            );
-            return Response.ok(successResponse).build();
-
-        } catch (EntradaAsignadaNotFoundException e) {
-            log.warn("Nominación fallida para QR {}: {}", qrLog, e.getMessage());
-            return crearRespuestaError(Response.Status.NOT_FOUND, e.getMessage());
-        } catch (IllegalStateException | IllegalArgumentException e) {
-            log.warn("Nominación fallida para QR {}: {}", qrLog, e.getMessage());
-            return crearRespuestaError(Response.Status.BAD_REQUEST, e.getMessage());
-        } catch (Exception e) { // Captura cualquier otra excepción del servicio
-            log.error("Error interno al procesar la nominación para QR {}: {}", qrLog, e.getMessage(), e);
-            return crearRespuestaError(Response.Status.INTERNAL_SERVER_ERROR, "Error interno al procesar la nominación.");
-        }
-        // Ya no se maneja EntityManager ni Transaction directamente aquí.
-    }
-
-    // --- Métodos Auxiliares ---
     private Response crearRespuestaError(Response.Status status, String mensaje) {
         return Response.status(status).entity(Map.of("error", mensaje)).build();
     }
-
-    // Los métodos rollbackTransaction, handleException, y closeEntityManager ya no son necesarios aquí
-    // si toda la lógica de persistencia está en la capa de servicio.
 }
