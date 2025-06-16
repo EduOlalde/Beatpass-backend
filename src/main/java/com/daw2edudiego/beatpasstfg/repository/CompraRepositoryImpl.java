@@ -22,11 +22,11 @@ public class CompraRepositoryImpl implements CompraRepository {
         if (compra == null) {
             throw new IllegalArgumentException("La entidad Compra no puede ser nula.");
         }
-        if (compra.getAsistente() == null || compra.getAsistente().getIdAsistente() == null) {
-            throw new IllegalArgumentException("El Asistente asociado a la Compra no puede ser nulo y debe tener ID.");
+        if (compra.getComprador() == null || compra.getComprador().getIdComprador() == null) {
+            throw new IllegalArgumentException("El Comprador asociado a la Compra no puede ser nulo y debe tener ID.");
         }
 
-        log.debug("Intentando persistir nueva Compra para Asistente ID: {}", compra.getAsistente().getIdAsistente());
+        log.debug("Intentando persistir nueva Compra para Comprador ID: {}", compra.getComprador().getIdComprador());
         try {
             em.persist(compra);
             log.info("Nueva Compra persistida con ID: {}", compra.getIdCompra());
@@ -60,22 +60,22 @@ public class CompraRepositoryImpl implements CompraRepository {
     }
 
     @Override
-    public List<Compra> findByAsistenteId(EntityManager em, Integer idAsistente) {
-        log.debug("Buscando Compras para Asistente ID: {}", idAsistente);
-        if (idAsistente == null) {
-            log.warn("Intento de buscar compras para un ID de asistente nulo.");
+    public List<Compra> findByCompradorId(EntityManager em, Integer idComprador) {
+        log.debug("Buscando Compras para Comprador ID: {}", idComprador);
+        if (idComprador == null) {
+            log.warn("Intento de buscar compras para un ID de comprador nulo.");
             return Collections.emptyList();
         }
         try {
             TypedQuery<Compra> query = em.createQuery(
-                    "SELECT c FROM Compra c WHERE c.asistente.idAsistente = :asistenteId ORDER BY c.fechaCompra DESC",
+                    "SELECT c FROM Compra c WHERE c.comprador.idComprador = :compradorId ORDER BY c.fechaCompra DESC",
                     Compra.class);
-            query.setParameter("asistenteId", idAsistente);
+            query.setParameter("compradorId", idComprador);
             List<Compra> compras = query.getResultList();
-            log.debug("Encontradas {} compras para Asistente ID: {}", compras.size(), idAsistente);
+            log.debug("Encontradas {} compras para Comprador ID: {}", compras.size(), idComprador);
             return compras;
         } catch (Exception e) {
-            log.error("Error buscando Compras para Asistente ID {}: {}", idAsistente, e.getMessage(), e);
+            log.error("Error buscando Compras para Comprador ID {}: {}", idComprador, e.getMessage(), e);
             return Collections.emptyList();
         }
     }

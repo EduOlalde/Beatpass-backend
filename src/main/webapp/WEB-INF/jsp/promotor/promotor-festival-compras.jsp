@@ -62,8 +62,8 @@
                                     <fmt:formatDate value="${parsedDateTime}" pattern="dd/MM/yyyy HH:mm" />
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                    ${compra.nombreAsistente}<br>
-                                    <span class="text-xs text-gray-500">${compra.emailAsistente}</span>
+                                    ${compra.nombreComprador}<br>
+                                    <span class="text-xs text-gray-500">${compra.emailComprador}</span>
                                 </td>
                                 <td class="px-6 py-4 text-sm text-gray-500">
                                     <c:forEach var="resumen" items="${compra.resumenEntradas}" varStatus="loop">

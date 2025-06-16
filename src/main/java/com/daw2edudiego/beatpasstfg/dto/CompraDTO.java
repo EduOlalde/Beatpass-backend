@@ -16,10 +16,10 @@ public class CompraDTO {
     private LocalDateTime fechaCompra;
     private BigDecimal total;
 
-    // Información del Asistente/Comprador
-    private Integer idAsistente;
-    private String nombreAsistente;
-    private String emailAsistente;
+    // Información del Comprador
+    private Integer idComprador;
+    private String nombreComprador;
+    private String emailComprador;
 
     // Información resumida de las entradas compradas
     private List<String> resumenEntradas; // Ej: ["2 x General", "1 x VIP"]
@@ -63,28 +63,28 @@ public class CompraDTO {
         this.total = total;
     }
 
-    public Integer getIdAsistente() {
-        return idAsistente;
+    public Integer getIdComprador() {
+        return idComprador;
     }
 
-    public void setIdAsistente(Integer idAsistente) {
-        this.idAsistente = idAsistente;
+    public void setIdComprador(Integer idComprador) {
+        this.idComprador = idComprador;
     }
 
-    public String getNombreAsistente() {
-        return nombreAsistente;
+    public String getNombreComprador() {
+        return nombreComprador;
     }
 
-    public void setNombreAsistente(String nombreAsistente) {
-        this.nombreAsistente = nombreAsistente;
+    public void setNombreComprador(String nombreComprador) {
+        this.nombreComprador = nombreComprador;
     }
 
-    public String getEmailAsistente() {
-        return emailAsistente;
+    public String getEmailComprador() {
+        return emailComprador;
     }
 
-    public void setEmailAsistente(String emailAsistente) {
-        this.emailAsistente = emailAsistente;
+    public void setEmailComprador(String emailComprador) {
+        this.emailComprador = emailComprador;
     }
 
     public List<String> getResumenEntradas() {
@@ -151,9 +151,9 @@ public class CompraDTO {
                 + "idCompra=" + idCompra
                 + ", fechaCompra=" + fechaCompra
                 + ", total=" + total
-                + ", idAsistente=" + idAsistente
-                + ", nombreAsistente='" + nombreAsistente + '\''
-                + ", emailAsistente='" + emailAsistente + '\''
+                + ", idComprador=" + idComprador
+                + ", nombreComprador='" + nombreComprador + '\''
+                + ", emailComprador='" + emailComprador + '\''
                 + ", resumenEntradas=" + resumenEntradas
                 + ", entradasGeneradasCount=" + (entradasGeneradas != null ? entradasGeneradas.size() : 0)
                 + ", stripePaymentIntentId='" + stripePaymentIntentId + '\''

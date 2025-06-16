@@ -11,8 +11,8 @@ import java.util.Objects;
 import java.util.Set;
 
 /**
- * Entidad JPA que representa un asistente o cliente que compra entradas. Mapea
- * la tabla 'asistentes'.
+ * Entidad JPA que representa un asistente final de un festival. Mapea la tabla
+ * 'asistentes'.
  */
 @Entity
 @Table(name = "asistentes", uniqueConstraints = {
@@ -47,14 +47,6 @@ public class Asistente implements Serializable {
 
     @Column(name = "fecha_modificacion", columnDefinition = "DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP", insertable = false, updatable = false)
     private LocalDateTime fechaModificacion;
-
-    /**
-     * Conjunto de compras realizadas por este asistente. Relación uno a muchos
-     * (inversa de Compra.asistente). Cascade ALL, Fetch LAZY, orphanRemoval
-     * true.
-     */
-    @OneToMany(mappedBy = "asistente", cascade = CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = true)
-    private Set<Compra> compras = new HashSet<>();
 
     /**
      * Conjunto de entradas asignadas (nominadas) a este asistente. Relación uno
@@ -106,14 +98,6 @@ public class Asistente implements Serializable {
 
     public LocalDateTime getFechaModificacion() {
         return fechaModificacion;
-    }
-
-    public Set<Compra> getCompras() {
-        return compras;
-    }
-
-    public void setCompras(Set<Compra> compras) {
-        this.compras = compras;
     }
 
     public Set<EntradaAsignada> getEntradasAsignadas() {

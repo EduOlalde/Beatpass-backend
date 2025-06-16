@@ -36,7 +36,7 @@ public class VentaServiceImpl implements VentaService {
 
     private static final Logger log = LoggerFactory.getLogger(VentaServiceImpl.class);
 
-    private final AsistenteRepository asistenteRepository;
+    private final CompradorService compradorService;
     private final EntradaRepository entradaRepository;
     private final CompraRepository compraRepository;
     private final CompraEntradaRepository compraEntradaRepository;
@@ -46,7 +46,7 @@ public class VentaServiceImpl implements VentaService {
     private static final String EXPECTED_CURRENCY = "eur";
 
     public VentaServiceImpl() {
-        this.asistenteRepository = new AsistenteRepositoryImpl();
+        this.compradorService = new CompradorServiceImpl();
         this.entradaRepository = new EntradaRepositoryImpl();
         this.compraRepository = new CompraRepositoryImpl();
         this.compraEntradaRepository = new CompraEntradaRepositoryImpl();
@@ -55,32 +55,28 @@ public class VentaServiceImpl implements VentaService {
     }
 
     @Override
-    public CompraDTO confirmarVentaConPago(Integer idAsistente, Integer idEntrada, int cantidad, String paymentIntentId)
-            throws AsistenteNotFoundException, EntradaNotFoundException, FestivalNoPublicadoException,
+    public CompraDTO confirmarVentaConPago(String emailComprador, String nombreComprador, String telefonoComprador, Integer idEntrada, int cantidad, String paymentIntentId)
+            throws EntradaNotFoundException, FestivalNoPublicadoException,
             StockInsuficienteException, PagoInvalidoException, IllegalArgumentException {
 
-        log.info("Service: Iniciando confirmación de venta con pago - Asistente ID: {}, Entrada ID: {}, Cant: {}, PI: {}",
-                idAsistente, idEntrada, cantidad, paymentIntentId);
+        log.info("Service: Iniciando confirmación de venta - Comprador Email: {}, Entrada ID: {}, Cant: {}, PI: {}",
+                emailComprador, idEntrada, cantidad, paymentIntentId);
 
-        validarParametrosConfirmacion(idAsistente, idEntrada, cantidad, paymentIntentId);
+        validarParametrosConfirmacion(emailComprador, nombreComprador, idEntrada, cantidad, paymentIntentId);
 
         EntityManager em = null;
         EntityTransaction tx = null;
 
-        // Variables para el email, se obtienen antes o dentro de la TX principal
-        Asistente asistenteParaEmail = null;
-        Festival festivalParaEmail = null;
-        Compra compraPersistidaParaEmail = null; // Para el ID de compra en logs de email
-
+        Comprador compradorParaEmail;
+        Festival festivalParaEmail;
+        Compra compraPersistidaParaEmail = null;
         List<EntradaAsignadaDTO> entradasCompradasDTOsParaEmail = new ArrayList<>();
 
         try {
-            // 1. Validaciones previas y cálculo del total esperado (sin TX activa aquí)
+            // 1. Validaciones previas y obtención/creación de comprador
+            compradorParaEmail = compradorService.obtenerOcrearCompradorPorEmail(emailComprador, nombreComprador, telefonoComprador);
+
             em = JPAUtil.createEntityManager();
-
-            asistenteParaEmail = asistenteRepository.findById(em, idAsistente)
-                    .orElseThrow(() -> new AsistenteNotFoundException("Asistente no encontrado con ID: " + idAsistente));
-
             Entrada entradaValidada = entradaRepository.findById(em, idEntrada)
                     .orElseThrow(() -> new EntradaNotFoundException("Tipo de entrada no encontrado con ID: " + idEntrada));
 
@@ -104,8 +100,7 @@ public class VentaServiceImpl implements VentaService {
             tx = em.getTransaction();
             tx.begin();
 
-            Asistente asistenteEnTx = asistenteRepository.findById(em, idAsistente)
-                    .orElseThrow(() -> new AsistenteNotFoundException("Asistente no encontrado con ID: " + idAsistente + " dentro de TX."));
+            Comprador compradorEnTx = em.find(Comprador.class, compradorParaEmail.getIdComprador());
 
             Entrada entradaEnTx = em.find(Entrada.class, idEntrada, LockModeType.PESSIMISTIC_WRITE);
             if (entradaEnTx == null) {
@@ -115,48 +110,31 @@ public class VentaServiceImpl implements VentaService {
                 throw new StockInsuficienteException("Stock (" + entradaEnTx.getStock() + ") insuficiente para entrada '" + entradaEnTx.getTipo() + "'.");
             }
 
-            compraPersistidaParaEmail = crearYGuardarCompra(em, asistenteEnTx, totalEsperadoDecimal, paymentIntent);
+            compraPersistidaParaEmail = crearYGuardarCompra(em, compradorEnTx, totalEsperadoDecimal, paymentIntent);
             CompraEntrada compraEntrada = crearYGuardarCompraEntrada(em, compraPersistidaParaEmail, entradaEnTx, cantidad);
 
             List<EntradaAsignada> entradasGeneradasPersistidas = new ArrayList<>();
             generarYGuardarEntradasAsignadas(em, compraEntrada, cantidad, entradasGeneradasPersistidas);
             actualizarStockEntrada(em, entradaEnTx, cantidad);
 
-            // Poblar DTOs para email DENTRO de la transacción para asegurar acceso a datos lazy si es necesario
             for (EntradaAsignada ea : entradasGeneradasPersistidas) {
                 entradasCompradasDTOsParaEmail.add(mapEntradaAsignadaToDTO(ea));
             }
-
             tx.commit();
-            log.info("Venta confirmada con pago y TX completada. Compra ID: {}, PI: {}", compraPersistidaParaEmail.getIdCompra(), paymentIntentId);
+            log.info("Venta confirmada y TX completada. Compra ID: {}, PI: {}", compraPersistidaParaEmail.getIdCompra(), paymentIntentId);
 
             // --- Envío de Email ---
-            if (asistenteParaEmail != null && festivalParaEmail != null && !entradasCompradasDTOsParaEmail.isEmpty()) {
-                try {
-                    log.debug("Intentando enviar email de confirmación a {} para festival {}", asistenteParaEmail.getEmail(), festivalParaEmail.getNombre());
-                    emailService.enviarEmailEntradasCompradas(
-                            asistenteParaEmail.getEmail(),
-                            asistenteParaEmail.getNombre(),
-                            festivalParaEmail.getNombre(),
-                            entradasCompradasDTOsParaEmail
-                    );
-                } catch (Exception emailEx) {
-                    log.error("Error al enviar email de confirmación para compra ID {}: {}",
-                            compraPersistidaParaEmail != null ? compraPersistidaParaEmail.getIdCompra() : "desconocida",
-                            emailEx.getMessage(), emailEx);
-                }
-            } else {
-                log.warn("No se pudo enviar email de confirmación para la compra ID {} debido a datos faltantes.",
-                        compraPersistidaParaEmail != null ? compraPersistidaParaEmail.getIdCompra() : "desconocida");
-            }
+            emailService.enviarEmailEntradasCompradas(
+                    compradorParaEmail.getEmail(),
+                    compradorParaEmail.getNombre(),
+                    festivalParaEmail.getNombre(),
+                    entradasCompradasDTOsParaEmail
+            );
 
             return mapCompraToDTO(compraPersistidaParaEmail, entradasGeneradasPersistidas);
-
         } catch (Exception e) {
             handleException(e, tx, "confirmar venta con pago para PI " + paymentIntentId);
-            if (e instanceof AsistenteNotFoundException || e instanceof EntradaNotFoundException
-                    || e instanceof FestivalNoPublicadoException || e instanceof StockInsuficienteException
-                    || e instanceof PagoInvalidoException || e instanceof IllegalArgumentException) {
+            if (e instanceof EntradaNotFoundException || e instanceof FestivalNoPublicadoException || e instanceof StockInsuficienteException || e instanceof PagoInvalidoException || e instanceof IllegalArgumentException) {
                 throw e;
             }
             throw new RuntimeException("Error inesperado durante la confirmación de la venta: " + e.getMessage(), e);
@@ -201,9 +179,9 @@ public class VentaServiceImpl implements VentaService {
     }
 
     // --- Métodos Privados de Ayuda ---
-    private void validarParametrosConfirmacion(Integer idAsistente, Integer idEntrada, int cantidad, String paymentIntentId) {
-        if (idAsistente == null || idEntrada == null) {
-            throw new IllegalArgumentException("ID asistente y entrada requeridos.");
+    private void validarParametrosConfirmacion(String email, String nombre, Integer idEntrada, int cantidad, String paymentIntentId) {
+        if (email == null || email.isBlank() || nombre == null || nombre.isBlank() || idEntrada == null) {
+            throw new IllegalArgumentException("Email, nombre, idEntrada son requeridos.");
         }
         if (cantidad <= 0) {
             throw new IllegalArgumentException("Cantidad debe ser > 0.");
@@ -234,9 +212,9 @@ public class VentaServiceImpl implements VentaService {
         }
     }
 
-    private Compra crearYGuardarCompra(EntityManager em, Asistente asistente, BigDecimal total, PaymentIntent pi) {
+    private Compra crearYGuardarCompra(EntityManager em, Comprador comprador, BigDecimal total, PaymentIntent pi) {
         Compra compra = new Compra();
-        compra.setAsistente(asistente);
+        compra.setComprador(comprador);
         compra.setTotal(total);
         compra.setStripePaymentIntentId(pi.getId());
         compra.setEstadoPago("PAGADO");
@@ -348,10 +326,10 @@ public class VentaServiceImpl implements VentaService {
         dto.setEstadoPago(compra.getEstadoPago());
         dto.setFechaPagoConfirmado(compra.getFechaPagoConfirmado());
 
-        if (compra.getAsistente() != null) {
-            dto.setIdAsistente(compra.getAsistente().getIdAsistente());
-            dto.setEmailAsistente(compra.getAsistente().getEmail());
-            dto.setNombreAsistente(compra.getAsistente().getNombre());
+        if (compra.getComprador() != null) {
+            dto.setIdComprador(compra.getComprador().getIdComprador());
+            dto.setEmailComprador(compra.getComprador().getEmail());
+            dto.setNombreComprador(compra.getComprador().getNombre());
         }
 
         if (entradasGeneradas != null && !entradasGeneradas.isEmpty()) {

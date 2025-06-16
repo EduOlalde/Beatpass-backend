@@ -6,6 +6,7 @@ import com.daw2edudiego.beatpasstfg.exception.UsuarioNotFoundException;
 import com.daw2edudiego.beatpasstfg.model.Asistente;
 import com.daw2edudiego.beatpasstfg.model.Compra;
 import com.daw2edudiego.beatpasstfg.model.CompraEntrada;
+import com.daw2edudiego.beatpasstfg.model.Comprador;
 import com.daw2edudiego.beatpasstfg.model.Festival;
 import com.daw2edudiego.beatpasstfg.model.Usuario;
 import com.daw2edudiego.beatpasstfg.repository.*;
@@ -89,11 +90,11 @@ public class CompraServiceImpl implements CompraService {
         dto.setEstadoPago(compra.getEstadoPago());
         dto.setFechaPagoConfirmado(compra.getFechaPagoConfirmado());
 
-        Asistente asistente = compra.getAsistente();
-        if (asistente != null) {
-            dto.setIdAsistente(asistente.getIdAsistente());
-            dto.setNombreAsistente(asistente.getNombre());
-            dto.setEmailAsistente(asistente.getEmail());
+        Comprador comprador = compra.getComprador();
+        if (comprador != null) {
+            dto.setIdComprador(comprador.getIdComprador());
+            dto.setNombreComprador(comprador.getNombre());
+            dto.setEmailComprador(comprador.getEmail());
         }
 
         List<String> resumen = new ArrayList<>();

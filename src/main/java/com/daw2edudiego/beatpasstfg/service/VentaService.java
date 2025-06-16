@@ -11,22 +11,23 @@ import com.daw2edudiego.beatpasstfg.exception.*;
 public interface VentaService {
 
     /**
-     * Confirma una venta después de verificar un pago exitoso con Stripe.
-     * Realiza validaciones, crea la compra, genera entradas y actualiza stock.
-     * Es transaccional.
+     * Confirma una venta después de verificar un pago exitoso con Stripe. Crea
+     * o recupera al comprador, crea la compra, genera entradas y actualiza
+     * stock. Es transaccional.
      *
-     * @param idAsistente ID del comprador.
+     * @param emailComprador Email del comprador (obligatorio).
+     * @param nombreComprador Nombre del comprador (obligatorio).
+     * @param telefonoComprador Teléfono del comprador (opcional).
      * @param idEntrada ID del tipo de entrada.
      * @param cantidad Número de entradas (> 0).
-     * @param paymentIntentId ID del PaymentIntent de Stripe ('pi_...') que debe
-     * estar 'succeeded'.
+     * @param paymentIntentId ID del PaymentIntent de Stripe ('pi_...').
      * @return DTO de la Compra creada.
-     * @throws AsistenteNotFoundException, EntradaNotFoundException,
-     * FestivalNoPublicadoException, StockInsuficienteException,
-     * PagoInvalidoException, IllegalArgumentException.
+     * @throws EntradaNotFoundException, FestivalNoPublicadoException,
+     * StockInsuficienteException, PagoInvalidoException,
+     * IllegalArgumentException.
      */
-    CompraDTO confirmarVentaConPago(Integer idAsistente, Integer idEntrada, int cantidad, String paymentIntentId)
-            throws AsistenteNotFoundException, EntradaNotFoundException, FestivalNoPublicadoException,
+    CompraDTO confirmarVentaConPago(String emailComprador, String nombreComprador, String telefonoComprador, Integer idEntrada, int cantidad, String paymentIntentId)
+            throws EntradaNotFoundException, FestivalNoPublicadoException,
             StockInsuficienteException, PagoInvalidoException, IllegalArgumentException;
 
     /**

@@ -34,13 +34,13 @@ public class Compra implements Serializable {
     private BigDecimal total;
 
     /**
-     * El asistente que realizó la compra. Relación muchos a uno. FK
-     * 'id_asistente' no nula. Fetch LAZY.
+     * El comprador que realizó la compra. Relación muchos a uno. FK
+     * 'id_comprador' no nula. Fetch LAZY.
      */
-    @NotNull(message = "La compra debe estar asociada a un asistente.")
+    @NotNull(message = "La compra debe estar asociada a un comprador.")
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "id_asistente", nullable = false)
-    private Asistente asistente;
+    @JoinColumn(name = "id_comprador", nullable = false)
+    private Comprador comprador;
 
     /**
      * Detalles de esta compra (qué entradas y cuántas). Relación uno a muchos.
@@ -95,12 +95,12 @@ public class Compra implements Serializable {
         this.total = total;
     }
 
-    public Asistente getAsistente() {
-        return asistente;
+    public Comprador getComprador() {
+        return comprador;
     }
 
-    public void setAsistente(Asistente asistente) {
-        this.asistente = asistente;
+    public void setComprador(Comprador comprador) {
+        this.comprador = comprador;
     }
 
     public Set<CompraEntrada> getDetallesCompra() {
@@ -159,7 +159,7 @@ public class Compra implements Serializable {
                 + "idCompra=" + idCompra
                 + ", fechaCompra=" + fechaCompra
                 + ", total=" + total
-                + ", asistenteId=" + (asistente != null ? asistente.getIdAsistente() : "null")
+                + ", compradorId=" + (comprador != null ? comprador.getIdComprador() : "null")
                 + ", stripePaymentIntentId='" + stripePaymentIntentId + '\''
                 + ", estadoPago='" + estadoPago + '\''
                 + '}';

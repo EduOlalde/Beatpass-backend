@@ -38,7 +38,6 @@ public class PublicVentaResource {
     private static final Logger log = LoggerFactory.getLogger(PublicVentaResource.class);
 
     private final VentaService ventaService;
-    private final AsistenteService asistenteService;
     private final EntradaAsignadaService entradaAsignadaService;
     private final FestivalService festivalService;
 
@@ -51,7 +50,6 @@ public class PublicVentaResource {
 
     public PublicVentaResource() {
         this.ventaService = new VentaServiceImpl();
-        this.asistenteService = new AsistenteServiceImpl();
         this.entradaAsignadaService = new EntradaAsignadaServiceImpl();
         this.festivalService = new FestivalServiceImpl();
     }
@@ -240,30 +238,29 @@ public class PublicVentaResource {
     @Path("/confirmar-compra")
     @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
     public Response confirmarCompraConPago(
-            @FormParam("idFestival") Integer idFestival,
             @FormParam("idEntrada") Integer idEntrada,
             @FormParam("cantidad") Integer cantidad,
-            @FormParam("emailAsistente") String emailAsistente,
-            @FormParam("nombreAsistente") String nombreAsistente,
-            @FormParam("telefonoAsistente") String telefonoAsistente,
+            @FormParam("emailComprador") String emailComprador,
+            @FormParam("nombreComprador") String nombreComprador,
+            @FormParam("telefonoComprador") String telefonoComprador,
             @FormParam("paymentIntentId") String paymentIntentId) {
-        log.info("POST /public/venta/confirmar-compra - Entrada: {}, Cant: {}, Email: {}, PI: {}",
-                idEntrada, cantidad, emailAsistente, paymentIntentId);
 
-        if (idEntrada == null || cantidad == null || cantidad <= 0 || emailAsistente == null || emailAsistente.isBlank()
-                || nombreAsistente == null || nombreAsistente.isBlank() || paymentIntentId == null || paymentIntentId.isBlank()) {
+        log.info("POST /public/venta/confirmar-compra - Entrada: {}, Cant: {}, Email Comprador: {}, PI: {}",
+                idEntrada, cantidad, emailComprador, paymentIntentId);
+
+        if (idEntrada == null || cantidad == null || cantidad <= 0 || emailComprador == null || emailComprador.isBlank()
+                || nombreComprador == null || nombreComprador.isBlank() || paymentIntentId == null || paymentIntentId.isBlank()) {
             return crearRespuestaError(Response.Status.BAD_REQUEST, "Faltan datos obligatorios (entrada, cantidad>0, email, nombre, paymentIntentId).");
         }
 
         try {
-            Asistente asistente = asistenteService.obtenerOcrearAsistentePorEmail(emailAsistente, nombreAsistente, telefonoAsistente);
             CompraDTO compraConfirmada = ventaService.confirmarVentaConPago(
-                    asistente.getIdAsistente(), idEntrada, cantidad, paymentIntentId);
+                    emailComprador, nombreComprador, telefonoComprador, idEntrada, cantidad, paymentIntentId);
 
             log.info("Compra confirmada. Compra ID: {}, PI: {}", compraConfirmada.getIdCompra(), paymentIntentId);
             return Response.ok(compraConfirmada).build();
 
-        } catch (AsistenteNotFoundException | EntradaNotFoundException | FestivalNotFoundException e) {
+        } catch (EntradaNotFoundException | FestivalNotFoundException e) {
             log.warn("Recurso no encontrado al confirmar compra PI {}: {}", paymentIntentId, e.getMessage());
             return crearRespuestaError(Response.Status.NOT_FOUND, e.getMessage());
         } catch (FestivalNoPublicadoException | StockInsuficienteException | IllegalArgumentException | PagoInvalidoException e) {

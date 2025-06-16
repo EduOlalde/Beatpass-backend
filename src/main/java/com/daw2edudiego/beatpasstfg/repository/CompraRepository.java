@@ -33,10 +33,10 @@ public interface CompraRepository {
      * Busca todas las compras realizadas por un Asistente específico.
      *
      * @param em El EntityManager activo.
-     * @param idAsistente El ID del Asistente.
+     * @param idComprador El ID del Asistente.
      * @return Una lista (posiblemente vacía) de Compras.
      */
-    List<Compra> findByAsistenteId(EntityManager em, Integer idAsistente);
+    List<Compra> findByCompradorId(EntityManager em, Integer idComprador);
 
     /**
      * Busca todas las compras asociadas a un Festival específico.
