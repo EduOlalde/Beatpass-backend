@@ -11,21 +11,12 @@ import com.daw2edudiego.beatpasstfg.repository.AsistenteRepositoryImpl;
 import com.daw2edudiego.beatpasstfg.repository.FestivalRepository;
 import com.daw2edudiego.beatpasstfg.repository.FestivalRepositoryImpl;
 import com.daw2edudiego.beatpasstfg.util.JPAUtil;
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.EntityTransaction;
-import jakarta.persistence.NoResultException;
-import jakarta.persistence.PersistenceException;
-import jakarta.persistence.Tuple;
-import jakarta.persistence.TypedQuery;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.stream.Collectors;
+import jakarta.persistence.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * Implementación de AsistenteService.
@@ -50,7 +41,8 @@ public class AsistenteServiceImpl implements AsistenteService {
             em = JPAUtil.createEntityManager();
             List<Asistente> asistentes = asistenteRepository.findAll(em);
             log.info("Encontrados {} asistentes en total.", asistentes.size());
-            EntityManager finalEm = em;
+            // CORRECCIÓN: Usar una variable final para el EntityManager en la lambda.
+            final EntityManager finalEm = em;
             return asistentes.stream()
                     .map(a -> mapEntityToDto(a, finalEm))
                     .collect(Collectors.toList());
@@ -71,7 +63,8 @@ public class AsistenteServiceImpl implements AsistenteService {
         EntityManager em = null;
         try {
             em = JPAUtil.createEntityManager();
-            EntityManager finalEm = em;
+            // CORRECCIÓN: Usar una variable final para el EntityManager en la lambda.
+            final EntityManager finalEm = em;
             return asistenteRepository.findById(em, idAsistente)
                     .map(a -> mapEntityToDto(a, finalEm));
         } catch (Exception e) {
@@ -135,7 +128,8 @@ public class AsistenteServiceImpl implements AsistenteService {
             query.setParameter("term", "%" + searchTerm.toLowerCase() + "%");
             List<Asistente> asistentes = query.getResultList();
             log.info("Encontrados {} asistentes para el término '{}'", asistentes.size(), searchTerm);
-            EntityManager finalEm = em;
+            // CORRECCIÓN: Usar una variable final para el EntityManager en la lambda.
+            final EntityManager finalEm = em;
             return asistentes.stream()
                     .map(a -> mapEntityToDto(a, finalEm))
                     .collect(Collectors.toList());
@@ -218,10 +212,9 @@ public class AsistenteServiceImpl implements AsistenteService {
                 dto.setTelefono(asistente.getTelefono());
                 dto.setFechaCreacion(asistente.getFechaCreacion());
 
-                // Buscar UID de pulsera asociada para este asistente DENTRO de este festival
                 String jpqlPulsera = "SELECT p.codigoUid FROM PulseraNFC p JOIN p.entradaAsignada ea "
                         + "WHERE ea.asistente = :asistente AND ea.compraEntrada.entrada.festival = :festival "
-                        + "ORDER BY p.idPulsera DESC"; // Tomar la más reciente si hay varias (raro)
+                        + "ORDER BY p.idPulsera DESC";
 
                 TypedQuery<String> queryPulsera = em.createQuery(jpqlPulsera, String.class);
                 queryPulsera.setParameter("asistente", asistente);
@@ -232,13 +225,7 @@ public class AsistenteServiceImpl implements AsistenteService {
                 try {
                     String codigoUid = queryPulsera.getSingleResult();
                     festivalPulseraMap.put(festival.getNombre(), codigoUid);
-                    log.trace("Pulsera UID {} encontrada para asistente ID {} en festival ID {}", codigoUid, asistente.getIdAsistente(), idFestival);
                 } catch (NoResultException e) {
-                    log.trace("No se encontró pulsera asociada para asistente ID {} en festival ID {}", asistente.getIdAsistente(), idFestival);
-                    festivalPulseraMap.put(festival.getNombre(), null);
-                } catch (Exception eQuery) {
-                    log.error("Error buscando pulsera para asistente ID {} en festival ID {}: {}",
-                            asistente.getIdAsistente(), idFestival, eQuery.getMessage());
                     festivalPulseraMap.put(festival.getNombre(), null);
                 }
                 dto.setFestivalPulseraInfo(festivalPulseraMap);
@@ -256,11 +243,37 @@ public class AsistenteServiceImpl implements AsistenteService {
         }
     }
 
+    @Override
+    public List<AsistenteDTO> obtenerTodosLosAsistentesConFiltro(String searchTerm) {
+        log.debug("Service: Obteniendo todos los asistentes con filtro: '{}'", searchTerm);
+        EntityManager em = null;
+        try {
+            em = JPAUtil.createEntityManager();
+            List<Asistente> asistentes;
+            if (searchTerm == null || searchTerm.isBlank()) {
+                asistentes = asistenteRepository.findAll(em);
+            } else {
+                TypedQuery<Asistente> query = em.createQuery(
+                        "SELECT a FROM Asistente a WHERE lower(a.nombre) LIKE :term OR lower(a.email) LIKE :term ORDER BY a.nombre", Asistente.class);
+                query.setParameter("term", "%" + searchTerm.toLowerCase() + "%");
+                asistentes = query.getResultList();
+            }
+
+            log.info("Encontrados {} asistentes para el término '{}'", asistentes.size(), searchTerm);
+            // CORRECCIÓN: Usar una variable final para el EntityManager en la lambda.
+            final EntityManager finalEm = em;
+            return asistentes.stream()
+                    .map(a -> mapEntityToDto(a, finalEm))
+                    .collect(Collectors.toList());
+        } catch (Exception e) {
+            log.error("Error buscando asistentes con término '{}': {}", searchTerm, e.getMessage(), e);
+            return Collections.emptyList();
+        } finally {
+            closeEntityManager(em);
+        }
+    }
+
     // --- Métodos Privados de Ayuda ---
-    /**
-     * Mapea entidad Asistente a DTO, incluyendo consulta para mapa
-     * festival-pulsera.
-     */
     private AsistenteDTO mapEntityToDto(Asistente a, EntityManager em) {
         if (a == null) {
             return null;
@@ -286,30 +299,20 @@ public class AsistenteServiceImpl implements AsistenteService {
                 for (Tuple tuple : results) {
                     festivalPulseraMap.put(tuple.get(0, String.class), tuple.get(1, String.class));
                 }
-                log.trace("Mapa Festival-Pulsera obtenido para asistente ID {}: {}", a.getIdAsistente(), festivalPulseraMap);
             } catch (Exception e) {
                 log.error("Error al obtener mapa festival-pulsera para asistente ID {}: {}", a.getIdAsistente(), e.getMessage());
-                festivalPulseraMap = Collections.emptyMap();
             }
-        } else {
-            festivalPulseraMap = Collections.emptyMap();
         }
         dto.setFestivalPulseraInfo(festivalPulseraMap);
         return dto;
     }
 
-    /**
-     * Cierra el EntityManager si está abierto.
-     */
     private void closeEntityManager(EntityManager em) {
         if (em != null && em.isOpen()) {
             em.close();
         }
     }
 
-    /**
-     * Realiza rollback de una transacción si está activa.
-     */
     private void rollbackTransaction(EntityTransaction tx, String action) {
         if (tx != null && tx.isActive()) {
             try {
@@ -321,44 +324,23 @@ public class AsistenteServiceImpl implements AsistenteService {
         }
     }
 
-    /**
-     * Manejador genérico de excepciones.
-     */
     private void handleException(Exception e, EntityTransaction tx, String action) {
         log.error("Error durante la acción '{}': {}", action, e.getMessage(), e);
         rollbackTransaction(tx, action);
     }
 
-    /**
-     * Mapea excepciones técnicas a de negocio o Runtime.
-     */
     private RuntimeException mapException(Exception e) {
-        if (e instanceof AsistenteNotFoundException || e instanceof FestivalNotFoundException
-                || e instanceof IllegalArgumentException || e instanceof SecurityException
-                || e instanceof IllegalStateException || e instanceof PersistenceException
-                || e instanceof RuntimeException) {
+        if (e instanceof RuntimeException) {
             return (RuntimeException) e;
         }
         return new RuntimeException("Error inesperado en la capa de servicio: " + e.getMessage(), e);
     }
 
-    /**
-     * Verifica que el promotor sea propietario del festival.
-     */
     private void verificarPropiedadFestival(Festival festival, Integer idPromotor) {
-        if (festival == null) {
-            throw new IllegalArgumentException("El festival no puede ser nulo para verificar propiedad.");
+        if (festival == null || idPromotor == null) {
+            throw new IllegalArgumentException("Festival e ID Promotor no pueden ser nulos.");
         }
-        if (idPromotor == null) {
-            throw new IllegalArgumentException("El ID del promotor no puede ser nulo para verificar propiedad.");
-        }
-        if (festival.getPromotor() == null || festival.getPromotor().getIdUsuario() == null) {
-            log.error("Inconsistencia de datos: Festival ID {} no tiene un promotor asociado.", festival.getIdFestival());
-            throw new IllegalStateException("El festival no tiene un promotor asociado.");
-        }
-        if (!festival.getPromotor().getIdUsuario().equals(idPromotor)) {
-            log.warn("Intento de acceso no autorizado por promotor ID {} al festival ID {} (propiedad de promotor ID {})",
-                    idPromotor, festival.getIdFestival(), festival.getPromotor().getIdUsuario());
+        if (festival.getPromotor() == null || !festival.getPromotor().getIdUsuario().equals(idPromotor)) {
             throw new SecurityException("El usuario no tiene permiso para acceder a los recursos de este festival.");
         }
     }
