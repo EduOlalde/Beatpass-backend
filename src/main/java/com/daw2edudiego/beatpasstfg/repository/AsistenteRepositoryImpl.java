@@ -97,9 +97,9 @@ public class AsistenteRepositoryImpl implements AsistenteRepository {
         }
         try {
             String jpql = "SELECT DISTINCT a FROM Asistente a "
-                    + "JOIN a.entradasAsignadas ea "
+                    + "JOIN a.entradas ea "
                     + "JOIN ea.compraEntrada ce "
-                    + "JOIN ce.entrada e "
+                    + "JOIN ce.tipoEntrada e "
                     + "WHERE e.festival.idFestival = :festivalId "
                     + "ORDER BY a.nombre";
 

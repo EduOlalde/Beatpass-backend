@@ -1,7 +1,7 @@
 package com.daw2edudiego.beatpasstfg.service;
 
 import com.daw2edudiego.beatpasstfg.dto.CompraDTO;
-import com.daw2edudiego.beatpasstfg.dto.EntradaAsignadaDTO;
+import com.daw2edudiego.beatpasstfg.dto.EntradaDTO;
 import com.daw2edudiego.beatpasstfg.dto.IniciarCompraResponseDTO;
 import com.daw2edudiego.beatpasstfg.exception.*;
 import com.daw2edudiego.beatpasstfg.model.*;
@@ -26,6 +26,7 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -37,32 +38,32 @@ public class VentaServiceImpl implements VentaService {
     private static final Logger log = LoggerFactory.getLogger(VentaServiceImpl.class);
 
     private final CompradorService compradorService;
-    private final EntradaRepository entradaRepository;
+    private final TipoEntradaRepository tipoEntradaRepository;
     private final CompraRepository compraRepository;
     private final CompraEntradaRepository compraEntradaRepository;
-    private final EntradaAsignadaRepository entradaAsignadaRepository;
+    private final EntradaRepository entradaRepository;
     private final EmailService emailService;
 
     private static final String EXPECTED_CURRENCY = "eur";
 
     public VentaServiceImpl() {
         this.compradorService = new CompradorServiceImpl();
-        this.entradaRepository = new EntradaRepositoryImpl();
+        this.tipoEntradaRepository = new TipoEntradaRepositoryImpl();
         this.compraRepository = new CompraRepositoryImpl();
         this.compraEntradaRepository = new CompraEntradaRepositoryImpl();
-        this.entradaAsignadaRepository = new EntradaAsignadaRepositoryImpl();
+        this.entradaRepository = new EntradaRepositoryImpl();
         this.emailService = new EmailServiceImpl();
     }
 
     @Override
-    public CompraDTO confirmarVentaConPago(String emailComprador, String nombreComprador, String telefonoComprador, Integer idEntrada, int cantidad, String paymentIntentId)
-            throws EntradaNotFoundException, FestivalNoPublicadoException,
+    public CompraDTO confirmarVentaConPago(String emailComprador, String nombreComprador, String telefonoComprador, Integer idTipoEntrada, int cantidad, String paymentIntentId)
+            throws TipoEntradaNotFoundException, FestivalNoPublicadoException,
             StockInsuficienteException, PagoInvalidoException, IllegalArgumentException {
 
         log.info("Service: Iniciando confirmación de venta - Comprador Email: {}, Entrada ID: {}, Cant: {}, PI: {}",
-                emailComprador, idEntrada, cantidad, paymentIntentId);
+                emailComprador, idTipoEntrada, cantidad, paymentIntentId);
 
-        validarParametrosConfirmacion(emailComprador, nombreComprador, idEntrada, cantidad, paymentIntentId);
+        validarParametrosConfirmacion(emailComprador, nombreComprador, idTipoEntrada, cantidad, paymentIntentId);
 
         EntityManager em = null;
         EntityTransaction tx = null;
@@ -70,25 +71,25 @@ public class VentaServiceImpl implements VentaService {
         Comprador compradorParaEmail;
         Festival festivalParaEmail;
         Compra compraPersistidaParaEmail = null;
-        List<EntradaAsignadaDTO> entradasCompradasDTOsParaEmail = new ArrayList<>();
+        List<EntradaDTO> entradasCompradasDTOsParaEmail = new ArrayList<>();
 
         try {
             // 1. Validaciones previas y obtención/creación de comprador
             compradorParaEmail = compradorService.obtenerOcrearCompradorPorEmail(emailComprador, nombreComprador, telefonoComprador);
 
             em = JPAUtil.createEntityManager();
-            Entrada entradaValidada = entradaRepository.findById(em, idEntrada)
-                    .orElseThrow(() -> new EntradaNotFoundException("Tipo de entrada no encontrado con ID: " + idEntrada));
+            TipoEntrada tipoEntradaValidada = tipoEntradaRepository.findById(em, idTipoEntrada)
+                    .orElseThrow(() -> new TipoEntradaNotFoundException("Tipo de entrada no encontrado con ID: " + idTipoEntrada));
 
-            festivalParaEmail = entradaValidada.getFestival();
+            festivalParaEmail = tipoEntradaValidada.getFestival();
             if (festivalParaEmail == null) {
-                throw new IllegalStateException("Entrada ID " + idEntrada + " sin festival asociado.");
+                throw new IllegalStateException("Entrada ID " + idTipoEntrada + " sin festival asociado.");
             }
             if (festivalParaEmail.getEstado() != EstadoFestival.PUBLICADO) {
                 throw new FestivalNoPublicadoException("Festival '" + festivalParaEmail.getNombre() + "' no está publicado.");
             }
 
-            BigDecimal totalEsperadoDecimal = entradaValidada.getPrecio().multiply(new BigDecimal(cantidad));
+            BigDecimal totalEsperadoDecimal = tipoEntradaValidada.getPrecio().multiply(new BigDecimal(cantidad));
             long totalEsperadoCentimos = totalEsperadoDecimal.multiply(new BigDecimal(100)).longValueExact();
             closeEntityManager(em);
 
@@ -102,23 +103,23 @@ public class VentaServiceImpl implements VentaService {
 
             Comprador compradorEnTx = em.find(Comprador.class, compradorParaEmail.getIdComprador());
 
-            Entrada entradaEnTx = em.find(Entrada.class, idEntrada, LockModeType.PESSIMISTIC_WRITE);
-            if (entradaEnTx == null) {
-                throw new EntradaNotFoundException("Tipo de entrada no encontrado con ID: " + idEntrada + " dentro de TX.");
+            TipoEntrada tipoEntradaEnTx = em.find(TipoEntrada.class, idTipoEntrada, LockModeType.PESSIMISTIC_WRITE);
+            if (tipoEntradaEnTx == null) {
+                throw new TipoEntradaNotFoundException("Tipo de entrada no encontrado con ID: " + idTipoEntrada + " dentro de TX.");
             }
-            if (entradaEnTx.getStock() == null || entradaEnTx.getStock() < cantidad) {
-                throw new StockInsuficienteException("Stock (" + entradaEnTx.getStock() + ") insuficiente para entrada '" + entradaEnTx.getTipo() + "'.");
+            if (tipoEntradaEnTx.getStock() == null || tipoEntradaEnTx.getStock() < cantidad) {
+                throw new StockInsuficienteException("Stock (" + tipoEntradaEnTx.getStock() + ") insuficiente para entrada '" + tipoEntradaEnTx.getTipo() + "'.");
             }
 
             compraPersistidaParaEmail = crearYGuardarCompra(em, compradorEnTx, totalEsperadoDecimal, paymentIntent);
-            CompraEntrada compraEntrada = crearYGuardarCompraEntrada(em, compraPersistidaParaEmail, entradaEnTx, cantidad);
+            CompraEntrada compraEntrada = crearYGuardarCompraEntrada(em, compraPersistidaParaEmail, tipoEntradaEnTx, cantidad);
 
-            List<EntradaAsignada> entradasGeneradasPersistidas = new ArrayList<>();
+            List<Entrada> entradasGeneradasPersistidas = new ArrayList<>();
             generarYGuardarEntradasAsignadas(em, compraEntrada, cantidad, entradasGeneradasPersistidas);
-            actualizarStockEntrada(em, entradaEnTx, cantidad);
+            actualizarStockEntrada(em, tipoEntradaEnTx, cantidad);
 
-            for (EntradaAsignada ea : entradasGeneradasPersistidas) {
-                entradasCompradasDTOsParaEmail.add(mapEntradaAsignadaToDTO(ea));
+            for (Entrada ea : entradasGeneradasPersistidas) {
+                entradasCompradasDTOsParaEmail.add(mapEntradaToDTO(ea));
             }
             tx.commit();
             log.info("Venta confirmada y TX completada. Compra ID: {}, PI: {}", compraPersistidaParaEmail.getIdCompra(), paymentIntentId);
@@ -134,7 +135,7 @@ public class VentaServiceImpl implements VentaService {
             return mapCompraToDTO(compraPersistidaParaEmail, entradasGeneradasPersistidas);
         } catch (Exception e) {
             handleException(e, tx, "confirmar venta con pago para PI " + paymentIntentId);
-            if (e instanceof EntradaNotFoundException || e instanceof FestivalNoPublicadoException || e instanceof StockInsuficienteException || e instanceof PagoInvalidoException || e instanceof IllegalArgumentException) {
+            if (e instanceof TipoEntradaNotFoundException || e instanceof FestivalNoPublicadoException || e instanceof StockInsuficienteException || e instanceof PagoInvalidoException || e instanceof IllegalArgumentException) {
                 throw e;
             }
             throw new RuntimeException("Error inesperado durante la confirmación de la venta: " + e.getMessage(), e);
@@ -144,32 +145,32 @@ public class VentaServiceImpl implements VentaService {
     }
 
     @Override
-    public IniciarCompraResponseDTO iniciarProcesoPago(Integer idEntrada, int cantidad)
-            throws EntradaNotFoundException, FestivalNoPublicadoException, IllegalArgumentException {
+    public IniciarCompraResponseDTO iniciarProcesoPago(Integer idTipoEntrada, int cantidad)
+            throws TipoEntradaNotFoundException, FestivalNoPublicadoException, IllegalArgumentException {
 
-        log.info("Service: Iniciando proceso de pago - Entrada ID: {}, Cantidad: {}", idEntrada, cantidad);
-        if (idEntrada == null || cantidad <= 0) {
+        log.info("Service: Iniciando proceso de pago - Entrada ID: {}, Cantidad: {}", idTipoEntrada, cantidad);
+        if (idTipoEntrada == null || cantidad <= 0) {
             throw new IllegalArgumentException("ID entrada y cantidad > 0 son requeridos.");
         }
 
         EntityManager em = null;
         try {
             em = JPAUtil.createEntityManager();
-            Entrada entrada = entradaRepository.findById(em, idEntrada)
-                    .orElseThrow(() -> new EntradaNotFoundException("Tipo de entrada no encontrado con ID: " + idEntrada));
-            validarFestivalParaCompra(entrada.getFestival());
+            TipoEntrada tipoEntrada = tipoEntradaRepository.findById(em, idTipoEntrada)
+                    .orElseThrow(() -> new TipoEntradaNotFoundException("Tipo de entrada no encontrado con ID: " + idTipoEntrada));
+            validarFestivalParaCompra(tipoEntrada.getFestival());
 
-            BigDecimal totalDecimal = entrada.getPrecio().multiply(new BigDecimal(cantidad));
+            BigDecimal totalDecimal = tipoEntrada.getPrecio().multiply(new BigDecimal(cantidad));
             long totalCentimos = totalDecimal.multiply(new BigDecimal(100)).longValueExact();
             log.debug("Total calculado para {} entradas tipo '{}': {} {} ({} céntimos)",
-                    cantidad, entrada.getTipo(), totalDecimal, EXPECTED_CURRENCY.toUpperCase(), totalCentimos);
+                    cantidad, tipoEntrada.getTipo(), totalDecimal, EXPECTED_CURRENCY.toUpperCase(), totalCentimos);
 
             PaymentIntent paymentIntent = crearPaymentIntentStripe(totalCentimos);
             return new IniciarCompraResponseDTO(paymentIntent.getClientSecret());
 
         } catch (Exception e) {
-            log.error("Error en iniciarProcesoPago para entrada ID {}: {}", idEntrada, e.getMessage(), e);
-            if (e instanceof EntradaNotFoundException || e instanceof FestivalNoPublicadoException || e instanceof IllegalArgumentException) {
+            log.error("Error en iniciarProcesoPago para entrada ID {}: {}", idTipoEntrada, e.getMessage(), e);
+            if (e instanceof TipoEntradaNotFoundException || e instanceof FestivalNoPublicadoException || e instanceof IllegalArgumentException) {
                 throw e;
             }
             throw mapException(e);
@@ -179,9 +180,9 @@ public class VentaServiceImpl implements VentaService {
     }
 
     // --- Métodos Privados de Ayuda ---
-    private void validarParametrosConfirmacion(String email, String nombre, Integer idEntrada, int cantidad, String paymentIntentId) {
-        if (email == null || email.isBlank() || nombre == null || nombre.isBlank() || idEntrada == null) {
-            throw new IllegalArgumentException("Email, nombre, idEntrada son requeridos.");
+    private void validarParametrosConfirmacion(String email, String nombre, Integer idTipoEntrada, int cantidad, String paymentIntentId) {
+        if (email == null || email.isBlank() || nombre == null || nombre.isBlank() || idTipoEntrada == null) {
+            throw new IllegalArgumentException("Email, nombre, idTipoEntrada son requeridos.");
         }
         if (cantidad <= 0) {
             throw new IllegalArgumentException("Cantidad debe ser > 0.");
@@ -224,31 +225,31 @@ public class VentaServiceImpl implements VentaService {
         return compraRepository.save(em, compra);
     }
 
-    private CompraEntrada crearYGuardarCompraEntrada(EntityManager em, Compra compra, Entrada entrada, int cantidad) {
+    private CompraEntrada crearYGuardarCompraEntrada(EntityManager em, Compra compra, TipoEntrada tipoEntrada, int cantidad) {
         CompraEntrada compraEntrada = new CompraEntrada();
         compraEntrada.setCompra(compra);
-        compraEntrada.setEntrada(entrada);
+        compraEntrada.setTipoEntrada(tipoEntrada);
         compraEntrada.setCantidad(cantidad);
-        compraEntrada.setPrecioUnitario(entrada.getPrecio());
+        compraEntrada.setPrecioUnitario(tipoEntrada.getPrecio());
         return compraEntradaRepository.save(em, compraEntrada);
     }
 
-    private void generarYGuardarEntradasAsignadas(EntityManager em, CompraEntrada ce, int cantidad, List<EntradaAsignada> listaPersistida) {
+    private void generarYGuardarEntradasAsignadas(EntityManager em, CompraEntrada ce, int cantidad, List<Entrada> listaPersistida) {
         for (int i = 0; i < cantidad; i++) {
-            EntradaAsignada ea = new EntradaAsignada();
+            Entrada ea = new Entrada();
             ea.setCompraEntrada(ce);
-            ea.setEstado(EstadoEntradaAsignada.ACTIVA);
+            ea.setEstado(EstadoEntrada.ACTIVA);
             ea.setCodigoQr(QRCodeUtil.generarContenidoQrUnico());
-            listaPersistida.add(entradaAsignadaRepository.save(em, ea));
+            listaPersistida.add(entradaRepository.save(em, ea));
         }
-        log.debug("Generadas {} entradas asignadas para CompraEntrada ID: {}", cantidad, ce.getIdCompraEntrada());
+        log.debug("Generadas {} entradas para CompraEntrada ID: {}", cantidad, ce.getIdCompraEntrada());
     }
 
-    private void actualizarStockEntrada(EntityManager em, Entrada entrada, int cantidad) {
-        int nuevoStock = entrada.getStock() - cantidad;
-        entrada.setStock(nuevoStock);
-        entradaRepository.save(em, entrada);
-        log.info("Stock actualizado para Entrada ID {}. Nuevo stock: {}", entrada.getIdEntrada(), nuevoStock);
+    private void actualizarStockEntrada(EntityManager em, TipoEntrada tipoEntrada, int cantidad) {
+        int nuevoStock = tipoEntrada.getStock() - cantidad;
+        tipoEntrada.setStock(nuevoStock);
+        tipoEntradaRepository.save(em, tipoEntrada);
+        log.info("Stock actualizado para Entrada ID {}. Nuevo stock: {}", tipoEntrada.getIdTipoEntrada(), nuevoStock);
     }
 
     private void validarFestivalParaCompra(Festival festival) {
@@ -305,7 +306,7 @@ public class VentaServiceImpl implements VentaService {
     }
 
     private RuntimeException mapException(Exception e) {
-        if (e instanceof AsistenteNotFoundException || e instanceof EntradaNotFoundException || e instanceof FestivalNotFoundException
+        if (e instanceof AsistenteNotFoundException || e instanceof TipoEntradaNotFoundException || e instanceof FestivalNotFoundException
                 || e instanceof FestivalNoPublicadoException || e instanceof StockInsuficienteException || e instanceof PagoInvalidoException
                 || e instanceof IllegalArgumentException || e instanceof SecurityException || e instanceof IllegalStateException
                 || e instanceof PersistenceException || e instanceof RuntimeException) {
@@ -314,7 +315,7 @@ public class VentaServiceImpl implements VentaService {
         return new RuntimeException("Error inesperado en la capa de servicio Venta: " + e.getMessage(), e);
     }
 
-    private CompraDTO mapCompraToDTO(Compra compra, List<EntradaAsignada> entradasGeneradas) {
+    private CompraDTO mapCompraToDTO(Compra compra, List<Entrada> entradasGeneradas) {
         if (compra == null) {
             return null;
         }
@@ -334,7 +335,7 @@ public class VentaServiceImpl implements VentaService {
 
         if (entradasGeneradas != null && !entradasGeneradas.isEmpty()) {
             dto.setEntradasGeneradas(entradasGeneradas.stream()
-                    .map(this::mapEntradaAsignadaToDTO)
+                    .map(this::mapEntradaToDTO)
                     .collect(Collectors.toList()));
         } else {
             dto.setEntradasGeneradas(new ArrayList<>());
@@ -343,7 +344,7 @@ public class VentaServiceImpl implements VentaService {
         try {
             if (compra.getDetallesCompra() != null && !compra.getDetallesCompra().isEmpty()) {
                 dto.setResumenEntradas(compra.getDetallesCompra().stream()
-                        .map(detalle -> detalle.getCantidad() + " x " + (detalle.getEntrada() != null ? detalle.getEntrada().getTipo() : "?"))
+                        .map(detalle -> detalle.getCantidad() + " x " + (detalle.getTipoEntrada() != null ? detalle.getTipoEntrada().getTipo() : "?"))
                         .collect(Collectors.toList()));
             } else { // Asegurar que la lista se inicialice si no hay detalles
                 dto.setResumenEntradas(new ArrayList<>());
@@ -355,26 +356,30 @@ public class VentaServiceImpl implements VentaService {
         return dto;
     }
 
-    private EntradaAsignadaDTO mapEntradaAsignadaToDTO(EntradaAsignada ea) {
+    private EntradaDTO mapEntradaToDTO(Entrada ea) {
         if (ea == null) {
             return null;
         }
-        EntradaAsignadaDTO dto = new EntradaAsignadaDTO();
-        dto.setIdEntradaAsignada(ea.getIdEntradaAsignada());
+        EntradaDTO dto = new EntradaDTO();
+        dto.setIdEntrada(ea.getIdEntrada());
         dto.setCodigoQr(ea.getCodigoQr());
         dto.setEstado(ea.getEstado());
-        dto.setFechaAsignacion(ea.getFechaAsignacion());
-        dto.setFechaUso(ea.getFechaUso());
+        if (ea.getFechaAsignacion() != null) {
+            dto.setFechaAsignacion(Date.from(ea.getFechaAsignacion().atZone(ZoneId.systemDefault()).toInstant()));
+        }
+        if (ea.getFechaUso() != null) {
+            dto.setFechaUso(Date.from(ea.getFechaUso().atZone(ZoneId.systemDefault()).toInstant()));
+        }
 
         if (ea.getCompraEntrada() != null) {
             dto.setIdCompraEntrada(ea.getCompraEntrada().getIdCompraEntrada());
-            if (ea.getCompraEntrada().getEntrada() != null) {
-                Entrada entradaOriginal = ea.getCompraEntrada().getEntrada();
-                dto.setIdEntradaOriginal(entradaOriginal.getIdEntrada());
-                dto.setTipoEntradaOriginal(entradaOriginal.getTipo());
-                if (entradaOriginal.getFestival() != null) {
-                    dto.setIdFestival(entradaOriginal.getFestival().getIdFestival());
-                    dto.setNombreFestival(entradaOriginal.getFestival().getNombre());
+            if (ea.getCompraEntrada().getTipoEntrada() != null) {
+                TipoEntrada tipoEntradaOriginal = ea.getCompraEntrada().getTipoEntrada();
+                dto.setIdEntradaOriginal(tipoEntradaOriginal.getIdTipoEntrada());
+                dto.setTipoEntradaOriginal(tipoEntradaOriginal.getTipo());
+                if (tipoEntradaOriginal.getFestival() != null) {
+                    dto.setIdFestival(tipoEntradaOriginal.getFestival().getIdFestival());
+                    dto.setNombreFestival(tipoEntradaOriginal.getFestival().getNombre());
                 }
             }
         }
@@ -393,7 +398,7 @@ public class VentaServiceImpl implements VentaService {
             if (imageDataUrl != null) {
                 dto.setQrCodeImageDataUrl(imageDataUrl);
             } else {
-                log.warn("No se pudo generar imagen QR para entrada {}", ea.getIdEntradaAsignada());
+                log.warn("No se pudo generar imagen QR para entrada {}", ea.getIdEntrada());
             }
         }
         return dto;

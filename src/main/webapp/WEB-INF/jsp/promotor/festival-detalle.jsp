@@ -118,15 +118,15 @@
                                 <tr><td colspan="5" class="px-4 py-3 text-center text-sm text-gray-500 italic">Aún no hay tipos de entrada definidos para este festival.</td></tr>
                             </c:when>
                             <c:otherwise>
-                                <c:forEach var="entrada" items="${tiposEntrada}">
+                                <c:forEach var="tipoEntrada" items="${tiposEntrada}">
                                     <tr>
-                                        <td class="px-4 py-2 whitespace-nowrap text-sm font-medium text-gray-900">${entrada.tipo}</td>
-                                        <td class="px-4 py-2 text-sm text-gray-600">${entrada.descripcion}</td>
-                                        <td class="px-4 py-2 whitespace-nowrap text-sm text-gray-600 text-right"><fmt:formatNumber value="${entrada.precio}" type="currency" currencySymbol="€" minFractionDigits="2" maxFractionDigits="2"/></td>
-                                        <td class="px-4 py-2 whitespace-nowrap text-sm text-gray-600 text-right">${entrada.stock}</td>
+                                        <td class="px-4 py-2 whitespace-nowrap text-sm font-medium text-gray-900">${tipoEntrada.tipo}</td>
+                                        <td class="px-4 py-2 text-sm text-gray-600">${tipoEntrada.descripcion}</td>
+                                        <td class="px-4 py-2 whitespace-nowrap text-sm text-gray-600 text-right"><fmt:formatNumber value="${tipoEntrada.precio}" type="currency" currencySymbol="€" minFractionDigits="2" maxFractionDigits="2"/></td>
+                                        <td class="px-4 py-2 whitespace-nowrap text-sm text-gray-600 text-right">${tipoEntrada.stock}</td>
                                         <td class="px-4 py-2 whitespace-nowrap text-center text-sm space-x-2">
-                                            <a href="${pageContext.request.contextPath}/api/promotor/entradas/${entrada.idEntrada}/editar" class="action-link action-link-edit">Editar</a>
-                                            <form action="${pageContext.request.contextPath}/api/promotor/entradas/${entrada.idEntrada}/eliminar" method="post" class="inline" onsubmit="return confirm('¿Eliminar tipo entrada \'${fn:escapeXml(entrada.tipo)}\'?');">
+                                            <a href="${pageContext.request.contextPath}/api/promotor/tiposEntrada/${tipoEntrada.idTipoEntrada}/editar" class="action-link-edit">Editar</a>
+                                            <form action="${pageContext.request.contextPath}/api/promotor/tiposEntrada/${tipoEntrada.idTipoEntrada}/eliminar" method="POST" style="display:inline;">
                                                 <button type="submit" class="action-button action-button-danger">Eliminar</button>
                                             </form>
                                         </td>
@@ -146,7 +146,7 @@
         <div class="bg-white p-6 rounded-lg shadow-md grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <div>
                 <p class="text-gray-600 mb-2 text-sm">Ver/gestionar entradas individuales y nominarlas.</p>
-                <a href="${pageContext.request.contextPath}/api/promotor/festivales/${festival.idFestival}/entradas-asignadas"
+                <a href="${pageContext.request.contextPath}/api/promotor/festivales/${festival.idFestival}/entradas"
                    class="btn btn-info w-full">
                     Gestionar Entradas
                 </a>

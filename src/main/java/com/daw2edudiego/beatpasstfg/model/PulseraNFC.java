@@ -19,7 +19,7 @@ import java.util.Set;
 @Entity
 @Table(name = "pulseras_nfc", uniqueConstraints = {
     @UniqueConstraint(columnNames = "codigo_uid", name = "uq_pulseranfc_codigouid"),
-    @UniqueConstraint(columnNames = "id_entrada_asignada", name = "uq_pulseranfc_entradaasignada")
+    @UniqueConstraint(columnNames = "id_entrada", name = "uq_pulseranfc_entradaasignada")
 })
 public class PulseraNFC implements Serializable {
 
@@ -59,12 +59,12 @@ public class PulseraNFC implements Serializable {
 
     /**
      * Entrada a la que está asociada esta pulsera. Relación 1:1 (lado
-     * propietario). FK 'id_entrada_asignada' única. Cascade limitado, Fetch
+     * propietario). FK 'id_entrada' única. Cascade limitado, Fetch
      * LAZY.
      */
     @OneToOne(fetch = FetchType.LAZY, cascade = {CascadeType.PERSIST, CascadeType.MERGE, CascadeType.REFRESH})
-    @JoinColumn(name = "id_entrada_asignada", unique = true)
-    private EntradaAsignada entradaAsignada;
+    @JoinColumn(name = "id_entrada", unique = true)
+    private Entrada entrada;
 
     /**
      * El festival al que pertenece esta pulsera. Relación muchos a uno. FK
@@ -141,12 +141,12 @@ public class PulseraNFC implements Serializable {
         this.fechaAsociacion = fechaAsociacion;
     }
 
-    public EntradaAsignada getEntradaAsignada() {
-        return entradaAsignada;
+    public Entrada getEntrada() {
+        return entrada;
     }
 
-    public void setEntradaAsignada(EntradaAsignada entradaAsignada) {
-        this.entradaAsignada = entradaAsignada;
+    public void setEntrada(Entrada entrada) {
+        this.entrada = entrada;
     }
 
     public Festival getFestival() {
@@ -206,7 +206,7 @@ public class PulseraNFC implements Serializable {
                 + ", codigoUid='" + codigoUid + '\''
                 + ", saldo=" + saldo
                 + ", activa=" + activa
-                + ", idEntradaAsignada=" + (entradaAsignada != null ? entradaAsignada.getIdEntradaAsignada() : "null")
+                + ", idEntrada=" + (entrada != null ? entrada.getIdEntrada() : "null")
                 + ", idFestival=" + (festival != null ? festival.getIdFestival() : "null")
                 + ", fechaAsociacion=" + fechaAsociacion
                 + // <-- Añadido al toString

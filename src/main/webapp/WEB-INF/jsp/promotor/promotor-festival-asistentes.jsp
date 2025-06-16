@@ -49,7 +49,7 @@
                     <c:when test="${empty asistentes}">
                         <tr>
                             <td colspan="5" class="px-6 py-4 text-center text-sm text-gray-500 italic">
-                                No hay asistentes registrados para este festival (o con entradas asignadas).
+                                No hay asistentes registrados para este festival (o con entradas).
                             </td>
                         </tr>
                     </c:when>

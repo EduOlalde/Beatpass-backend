@@ -45,7 +45,7 @@ public class AuthenticationFilter implements ContainerRequestFilter {
     );
 
     private static final Pattern PUBLIC_GET_FESTIVAL_DETAIL_PATTERN = Pattern.compile("^festivales/\\d+$");
-    private static final Pattern PUBLIC_GET_FESTIVAL_TICKETS_PATTERN = Pattern.compile("^festivales/\\d+/entradas$");
+    private static final Pattern PUBLIC_GET_FESTIVAL_TICKETS_PATTERN = Pattern.compile("^festivales/\\d+/tipos-entrada$");
 
     @Override
     public void filter(ContainerRequestContext requestContext) throws IOException {

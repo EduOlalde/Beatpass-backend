@@ -39,13 +39,13 @@ public interface PulseraNFCRepository {
     Optional<PulseraNFC> findByCodigoUid(EntityManager em, String codigoUid);
 
     /**
-     * Busca la PulseraNFC asociada a una EntradaAsignada específica.
+     * Busca la PulseraNFC asociada a una Entrada específica.
      *
      * @param em El EntityManager activo.
-     * @param idEntradaAsignada El ID de la EntradaAsignada.
+     * @param idEntrada El ID de la Entrada.
      * @return Un Optional con la PulseraNFC si se encuentra, o vacío.
      */
-    Optional<PulseraNFC> findByEntradaAsignadaId(EntityManager em, Integer idEntradaAsignada);
+    Optional<PulseraNFC> findByEntradaId(EntityManager em, Integer idEntrada);
 
     /**
      * Busca todas las pulseras asociadas a un Festival específico.

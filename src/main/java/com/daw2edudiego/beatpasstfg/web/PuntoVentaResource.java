@@ -284,7 +284,7 @@ public class PuntoVentaResource {
         Response.Status status;
         String mensaje;
 
-        if (e instanceof NotFoundException || e instanceof PulseraNFCNotFoundException || e instanceof EntradaAsignadaNotFoundException
+        if (e instanceof NotFoundException || e instanceof PulseraNFCNotFoundException || e instanceof EntradaNotFoundException
                 || e instanceof AsistenteNotFoundException || e instanceof FestivalNotFoundException || e instanceof UsuarioNotFoundException) {
             status = Response.Status.NOT_FOUND; // 404
             mensaje = e.getMessage();
@@ -298,7 +298,7 @@ public class PuntoVentaResource {
             mensaje = e.getMessage();
             log.warn("Error 401 durante '{}': {}", operacion, mensaje);
         } else if (e instanceof IllegalArgumentException || e instanceof BadRequestException
-                || e instanceof EntradaAsignadaNoNominadaException || e instanceof IllegalStateException) {
+                || e instanceof EntradaNoNominadaException || e instanceof IllegalStateException) {
             // PulseraYaAsociadaException también podría ser CONFLICT (409) pero el servicio podría decidir.
             status = Response.Status.BAD_REQUEST; // 400
             mensaje = e.getMessage();

@@ -1,33 +1,39 @@
 package com.daw2edudiego.beatpasstfg.dto;
 
-import jakarta.validation.constraints.*;
-import java.math.BigDecimal;
+import com.daw2edudiego.beatpasstfg.model.EstadoEntrada;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import java.util.Date;
 import java.util.Objects;
 
 /**
- * DTO para representar un tipo de entrada de un Festival.
+ * DTO para representar una Entrada individual. Incluye información de
+ * la entrada, asistente, festival y la imagen QR.
  */
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class EntradaDTO {
 
     private Integer idEntrada;
+    private String codigoQr;
+    private EstadoEntrada estado;
+    private Date fechaAsignacion;
+    private Date fechaUso;
 
-    @NotNull(message = "El ID del festival es obligatorio.")
+    // Información relacionada
+    private Integer idCompraEntrada;
+    private Integer idAsistente;
+    private String nombreAsistente;
+    private String emailAsistente;
+    private Integer idEntradaOriginal;
+    private String tipoEntradaOriginal;
     private Integer idFestival;
+    private String nombreFestival;
+    private Integer idPulseraAsociada;
+    private String codigoUidPulsera;
 
-    @NotBlank(message = "El tipo de entrada no puede estar vacío.")
-    @Size(max = 50, message = "El tipo de entrada no puede exceder los 50 caracteres.")
-    private String tipo;
-
-    private String descripcion;
-
-    @NotNull(message = "El precio no puede ser nulo.")
-    @DecimalMin(value = "0.0", inclusive = true, message = "El precio no puede ser negativo.")
-    @Digits(integer = 6, fraction = 2, message = "Formato de precio inválido (máx 999999.99).")
-    private BigDecimal precio;
-
-    @NotNull(message = "El stock no puede ser nulo.")
-    @Min(value = 0, message = "El stock no puede ser negativo.")
-    private Integer stock;
+    /**
+     * URL de datos (Base64) de la imagen del código QR generada.
+     */
+    private String qrCodeImageDataUrl;
 
     public EntradaDTO() {
     }
@@ -41,6 +47,86 @@ public class EntradaDTO {
         this.idEntrada = idEntrada;
     }
 
+    public String getCodigoQr() {
+        return codigoQr;
+    }
+
+    public void setCodigoQr(String codigoQr) {
+        this.codigoQr = codigoQr;
+    }
+
+    public EstadoEntrada getEstado() {
+        return estado;
+    }
+
+    public void setEstado(EstadoEntrada estado) {
+        this.estado = estado;
+    }
+
+    public Date getFechaAsignacion() {
+        return fechaAsignacion;
+    }
+
+    public void setFechaAsignacion(Date fechaAsignacion) {
+        this.fechaAsignacion = fechaAsignacion;
+    }
+
+    public Date getFechaUso() {
+        return fechaUso;
+    }
+
+    public void setFechaUso(Date fechaUso) {
+        this.fechaUso = fechaUso;
+    }
+
+    public Integer getIdCompraEntrada() {
+        return idCompraEntrada;
+    }
+
+    public void setIdCompraEntrada(Integer idCompraEntrada) {
+        this.idCompraEntrada = idCompraEntrada;
+    }
+
+    public Integer getIdAsistente() {
+        return idAsistente;
+    }
+
+    public void setIdAsistente(Integer idAsistente) {
+        this.idAsistente = idAsistente;
+    }
+
+    public String getNombreAsistente() {
+        return nombreAsistente;
+    }
+
+    public void setNombreAsistente(String nombreAsistente) {
+        this.nombreAsistente = nombreAsistente;
+    }
+
+    public String getEmailAsistente() {
+        return emailAsistente;
+    }
+
+    public void setEmailAsistente(String emailAsistente) {
+        this.emailAsistente = emailAsistente;
+    }
+
+    public Integer getIdEntradaOriginal() {
+        return idEntradaOriginal;
+    }
+
+    public void setIdEntradaOriginal(Integer idEntradaOriginal) {
+        this.idEntradaOriginal = idEntradaOriginal;
+    }
+
+    public String getTipoEntradaOriginal() {
+        return tipoEntradaOriginal;
+    }
+
+    public void setTipoEntradaOriginal(String tipoEntradaOriginal) {
+        this.tipoEntradaOriginal = tipoEntradaOriginal;
+    }
+
     public Integer getIdFestival() {
         return idFestival;
     }
@@ -49,48 +135,36 @@ public class EntradaDTO {
         this.idFestival = idFestival;
     }
 
-    public String getTipo() {
-        return tipo;
+    public String getNombreFestival() {
+        return nombreFestival;
     }
 
-    public void setTipo(String tipo) {
-        this.tipo = tipo;
+    public void setNombreFestival(String nombreFestival) {
+        this.nombreFestival = nombreFestival;
     }
 
-    public String getDescripcion() {
-        return descripcion;
+    public Integer getIdPulseraAsociada() {
+        return idPulseraAsociada;
     }
 
-    public void setDescripcion(String descripcion) {
-        this.descripcion = descripcion;
+    public void setIdPulseraAsociada(Integer idPulseraAsociada) {
+        this.idPulseraAsociada = idPulseraAsociada;
     }
 
-    public BigDecimal getPrecio() {
-        return precio;
+    public String getCodigoUidPulsera() {
+        return codigoUidPulsera;
     }
 
-    public void setPrecio(BigDecimal precio) {
-        this.precio = precio;
+    public void setCodigoUidPulsera(String codigoUidPulsera) {
+        this.codigoUidPulsera = codigoUidPulsera;
     }
 
-    public Integer getStock() {
-        return stock;
+    public String getQrCodeImageDataUrl() {
+        return qrCodeImageDataUrl;
     }
 
-    public void setStock(Integer stock) {
-        this.stock = stock;
-    }
-
-    // --- toString ---
-    @Override
-    public String toString() {
-        return "EntradaDTO{"
-                + "idEntrada=" + idEntrada
-                + ", idFestival=" + idFestival
-                + ", tipo='" + tipo + '\''
-                + ", precio=" + precio
-                + ", stock=" + stock
-                + '}';
+    public void setQrCodeImageDataUrl(String qrCodeImageDataUrl) {
+        this.qrCodeImageDataUrl = qrCodeImageDataUrl;
     }
 
     // --- equals y hashCode ---
@@ -109,5 +183,19 @@ public class EntradaDTO {
     @Override
     public int hashCode() {
         return Objects.hash(idEntrada);
+    }
+
+    // --- toString ---
+    @Override
+    public String toString() {
+        return "EntradaDTO{"
+                + "idEntrada=" + idEntrada
+                + ", codigoQr='" + (codigoQr != null ? codigoQr.substring(0, Math.min(codigoQr.length(), 15)) + "..." : "null") + '\''
+                + ", estado=" + estado
+                + ", idAsistente=" + idAsistente
+                + ", tipoEntradaOriginal='" + tipoEntradaOriginal + '\''
+                + ", idFestival=" + idFestival
+                + ", qrCodeImageDataUrl='" + (qrCodeImageDataUrl != null ? qrCodeImageDataUrl.substring(0, Math.min(50, qrCodeImageDataUrl.length())) + "..." : "null") + '\''
+                + '}';
     }
 }

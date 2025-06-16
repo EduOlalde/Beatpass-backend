@@ -93,29 +93,29 @@ public class PulseraNFCRepositoryImpl implements PulseraNFCRepository {
     }
 
     @Override
-    public Optional<PulseraNFC> findByEntradaAsignadaId(EntityManager em, Integer idEntradaAsignada) {
-        log.debug("Buscando PulseraNFC por EntradaAsignada ID: {}", idEntradaAsignada);
-        if (idEntradaAsignada == null) {
-            log.warn("Intento de buscar PulseraNFC por ID de EntradaAsignada nulo.");
+    public Optional<PulseraNFC> findByEntradaId(EntityManager em, Integer idEntrada) {
+        log.debug("Buscando PulseraNFC por Entrada ID: {}", idEntrada);
+        if (idEntrada == null) {
+            log.warn("Intento de buscar PulseraNFC por ID de Entrada nulo.");
             return Optional.empty();
         }
         try {
             TypedQuery<PulseraNFC> query = em.createQuery(
-                    "SELECT p FROM PulseraNFC p WHERE p.entradaAsignada.idEntradaAsignada = :eaId", PulseraNFC.class);
-            query.setParameter("eaId", idEntradaAsignada);
+                    "SELECT p FROM PulseraNFC p WHERE p.entrada.idEntrada = :eaId", PulseraNFC.class);
+            query.setParameter("eaId", idEntrada);
             List<PulseraNFC> results = query.getResultList();
             if (results.isEmpty()) {
-                log.trace("No se encontró PulseraNFC para EntradaAsignada ID: {}", idEntradaAsignada);
+                log.trace("No se encontró PulseraNFC para Entrada ID: {}", idEntrada);
                 return Optional.empty();
             } else {
                 if (results.size() > 1) {
-                    log.warn("¡Inconsistencia! Múltiples PulserasNFC ({}) para EntradaAsignada ID: {}. Devolviendo la primera.", results.size(), idEntradaAsignada);
+                    log.warn("¡Inconsistencia! Múltiples PulserasNFC ({}) para Entrada ID: {}. Devolviendo la primera.", results.size(), idEntrada);
                 }
-                log.trace("Encontrada PulseraNFC ID {} para EntradaAsignada ID: {}", results.get(0).getIdPulsera(), idEntradaAsignada);
+                log.trace("Encontrada PulseraNFC ID {} para Entrada ID: {}", results.get(0).getIdPulsera(), idEntrada);
                 return Optional.of(results.get(0));
             }
         } catch (Exception e) {
-            log.error("Error buscando PulseraNFC por EntradaAsignada ID {}: {}", idEntradaAsignada, e.getMessage(), e);
+            log.error("Error buscando PulseraNFC por Entrada ID {}: {}", idEntrada, e.getMessage(), e);
             return Optional.empty();
         }
     }

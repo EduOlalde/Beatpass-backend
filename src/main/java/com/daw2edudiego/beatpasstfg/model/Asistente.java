@@ -49,12 +49,12 @@ public class Asistente implements Serializable {
     private LocalDateTime fechaModificacion;
 
     /**
-     * Conjunto de entradas asignadas (nominadas) a este asistente. Relación uno
-     * a muchos (inversa de EntradaAsignada.asistente). Fetch LAZY. No se usa
+     * Conjunto de entradas (nominadas) a este asistente. Relación uno
+     * a muchos (inversa de Entrada.asistente). Fetch LAZY. No se usa
      * Cascade para evitar borrar entradas al borrar asistente.
      */
     @OneToMany(mappedBy = "asistente", fetch = FetchType.LAZY)
-    private Set<EntradaAsignada> entradasAsignadas = new HashSet<>();
+    private Set<Entrada> entradas = new HashSet<>();
 
     public Asistente() {
     }
@@ -100,12 +100,12 @@ public class Asistente implements Serializable {
         return fechaModificacion;
     }
 
-    public Set<EntradaAsignada> getEntradasAsignadas() {
-        return entradasAsignadas;
+    public Set<Entrada> getEntradas() {
+        return entradas;
     }
 
-    public void setEntradasAsignadas(Set<EntradaAsignada> entradasAsignadas) {
-        this.entradasAsignadas = entradasAsignadas;
+    public void setEntradas(Set<Entrada> entradas) {
+        this.entradas = entradas;
     }
 
     // --- equals, hashCode y toString ---

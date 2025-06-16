@@ -64,7 +64,7 @@
                                         <td class="px-4 py-4 whitespace-nowrap text-center">
                                             <span class="badge ${p.activa ? 'badge-activa' : 'badge-inactiva'}"> ${p.activa ? 'Activa' : 'Inactiva'} </span>
                                         </td>
-                                        <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-500">${not empty p.idEntradaAsignada ? p.idEntradaAsignada : '-'}</td>
+                                        <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-500">${not empty p.idEntrada ? p.idEntrada : '-'}</td>
                                         <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-700">
                                             <c:if test="${not empty p.idAsistente}">
                                                 ${p.nombreAsistente} <br> <span class="text-xs text-gray-500">${p.emailAsistente}</span>

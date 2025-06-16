@@ -1,6 +1,6 @@
 package com.daw2edudiego.beatpasstfg.service;
 
-import com.daw2edudiego.beatpasstfg.dto.EntradaAsignadaDTO;
+import com.daw2edudiego.beatpasstfg.dto.EntradaDTO;
 import com.daw2edudiego.beatpasstfg.util.MailConfig;
 
 import jakarta.activation.DataHandler;
@@ -29,7 +29,7 @@ public class EmailServiceImpl implements EmailService {
     }
 
     @Override
-    public void enviarEmailEntradasCompradas(String destinatarioEmail, String nombreComprador, String nombreFestival, List<EntradaAsignadaDTO> entradasCompradas) {
+    public void enviarEmailEntradasCompradas(String destinatarioEmail, String nombreComprador, String nombreFestival, List<EntradaDTO> entradasCompradas) {
         if (!esValidoParaEnviar(destinatarioEmail, nombreFestival, entradasCompradas, "Compra")) {
             return;
         }
@@ -54,7 +54,7 @@ public class EmailServiceImpl implements EmailService {
     }
 
     @Override
-    public void enviarEmailEntradaNominada(String destinatarioEmail, String nombreNominado, EntradaAsignadaDTO entradaNominada) {
+    public void enviarEmailEntradaNominada(String destinatarioEmail, String nombreNominado, EntradaDTO entradaNominada) {
         if (entradaNominada == null || entradaNominada.getNombreFestival() == null) {
             log.warn("Datos de entrada nominada incompletos para enviar email a {}.", destinatarioEmail);
             return;
@@ -82,7 +82,7 @@ public class EmailServiceImpl implements EmailService {
         log.info("Email de 'entrada nominada' (intento de envío) a {} para festival {}", destinatarioEmail, entradaNominada.getNombreFestival());
     }
 
-    private boolean esValidoParaEnviar(String email, String nombreFestival, List<EntradaAsignadaDTO> entradas, String tipoEmail) {
+    private boolean esValidoParaEnviar(String email, String nombreFestival, List<EntradaDTO> entradas, String tipoEmail) {
         if (email == null || email.isBlank()) {
             log.warn("Destinatario email nulo o vacío. No se enviará correo de {}.", tipoEmail);
             return false;
@@ -158,7 +158,7 @@ public class EmailServiceImpl implements EmailService {
         }
     }
 
-    private String construirHtmlEntradasCompradas(String nombreComprador, String nombreFestival, List<EntradaAsignadaDTO> entradas) {
+    private String construirHtmlEntradasCompradas(String nombreComprador, String nombreFestival, List<EntradaDTO> entradas) {
         StringBuilder sb = new StringBuilder();
         String appBaseUrl = MailConfig.getAppBaseUrl();
 
@@ -179,7 +179,7 @@ public class EmailServiceImpl implements EmailService {
         sb.append("<p>Hemos adjuntado un archivo PDF con todas tus entradas. Cada entrada contiene un código QR único.</p>");
         sb.append("<p class='highlight'>Para nominar cada entrada al asistente correspondiente, utiliza el enlace individual proporcionado para cada una:</p>");
         sb.append("<ul>");
-        for (EntradaAsignadaDTO entrada : entradas) {
+        for (EntradaDTO entrada : entradas) {
             String nominationLink = appBaseUrl + "api/public/venta/nominar-entrada/" + entrada.getCodigoQr();
 
             sb.append("<li>Tipo: <span class='ticket-detail'>").append(escapeHtml(entrada.getTipoEntradaOriginal())).append("</span>");
@@ -193,7 +193,7 @@ public class EmailServiceImpl implements EmailService {
         return sb.toString();
     }
 
-    private String construirHtmlEntradaNominada(String nombreNominado, EntradaAsignadaDTO entrada) {
+    private String construirHtmlEntradaNominada(String nombreNominado, EntradaDTO entrada) {
         StringBuilder sb = new StringBuilder();
         sb.append("<!DOCTYPE html><html lang='es'><head><meta charset='UTF-8'><title>¡Tienes una Entrada!</title>");
         appendBasicStyles(sb);

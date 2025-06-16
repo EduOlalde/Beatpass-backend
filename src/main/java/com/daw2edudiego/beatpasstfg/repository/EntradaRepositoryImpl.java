@@ -2,6 +2,7 @@ package com.daw2edudiego.beatpasstfg.repository;
 
 import com.daw2edudiego.beatpasstfg.model.Entrada;
 import jakarta.persistence.EntityManager;
+import jakarta.persistence.NoResultException;
 import jakarta.persistence.PersistenceException;
 import jakarta.persistence.TypedQuery;
 import java.util.Collections;
@@ -22,12 +23,15 @@ public class EntradaRepositoryImpl implements EntradaRepository {
         if (entrada == null) {
             throw new IllegalArgumentException("La entidad Entrada no puede ser nula.");
         }
-        if (entrada.getFestival() == null || entrada.getFestival().getIdFestival() == null) {
-            throw new IllegalArgumentException("El Festival asociado a la Entrada no puede ser nulo y debe tener ID.");
+        if (entrada.getCompraEntrada() == null || entrada.getCompraEntrada().getIdCompraEntrada() == null) {
+            throw new IllegalArgumentException("La CompraEntrada asociada a Entrada no puede ser nula y debe tener ID.");
+        }
+        if (entrada.getCodigoQr() == null || entrada.getCodigoQr().isBlank()) {
+            throw new IllegalArgumentException("El código QR de Entrada no puede ser nulo ni vacío.");
         }
 
-        String festivalIdStr = String.valueOf(entrada.getFestival().getIdFestival());
-        log.debug("Intentando guardar Entrada con ID: {} para Festival ID: {}", entrada.getIdEntrada(), festivalIdStr);
+        String qrLog = entrada.getCodigoQr().substring(0, Math.min(20, entrada.getCodigoQr().length())) + "...";
+        log.debug("Intentando guardar Entrada con ID: {} y QR: {}", entrada.getIdEntrada(), qrLog);
         try {
             if (entrada.getIdEntrada() == null) {
                 log.trace("Persistiendo nueva Entrada...");
@@ -36,15 +40,17 @@ public class EntradaRepositoryImpl implements EntradaRepository {
                 return entrada;
             } else {
                 log.trace("Actualizando Entrada con ID: {}", entrada.getIdEntrada());
-                Entrada mergedEntrada = em.merge(entrada);
-                log.info("Entrada actualizada con ID: {}", mergedEntrada.getIdEntrada());
-                return mergedEntrada;
+                Entrada merged = em.merge(entrada);
+                log.info("Entrada actualizada con ID: {}", merged.getIdEntrada());
+                return merged;
             }
         } catch (PersistenceException e) {
-            log.error("Error de persistencia al guardar Entrada (ID: {}): {}", entrada.getIdEntrada(), e.getMessage(), e);
+            log.error("Error de persistencia al guardar Entrada (ID: {}, QR: {}): {}",
+                    entrada.getIdEntrada(), qrLog, e.getMessage(), e);
             throw e;
         } catch (Exception e) {
-            log.error("Error inesperado al guardar Entrada (ID: {}): {}", entrada.getIdEntrada(), e.getMessage(), e);
+            log.error("Error inesperado al guardar Entrada (ID: {}, QR: {}): {}",
+                    entrada.getIdEntrada(), qrLog, e.getMessage(), e);
             throw new PersistenceException("Error inesperado al guardar Entrada", e);
         }
     }
@@ -69,6 +75,47 @@ public class EntradaRepositoryImpl implements EntradaRepository {
     }
 
     @Override
+    public Optional<Entrada> findByCodigoQr(EntityManager em, String codigoQr) {
+        String qrLog = (codigoQr != null) ? codigoQr.substring(0, Math.min(20, codigoQr.length())) + "..." : "null";
+        log.debug("Buscando Entrada con QR: {}", qrLog);
+        if (codigoQr == null || codigoQr.isBlank()) {
+            log.warn("Intento de buscar Entrada con código QR nulo o vacío.");
+            return Optional.empty();
+        }
+        try {
+            TypedQuery<Entrada> query = em.createQuery("SELECT ea FROM Entrada ea WHERE ea.codigoQr = :qr", Entrada.class);
+            query.setParameter("qr", codigoQr);
+            Entrada entrada = query.getSingleResult();
+            return Optional.of(entrada);
+        } catch (NoResultException e) {
+            log.trace("Entrada no encontrada con QR: {}", qrLog);
+            return Optional.empty();
+        } catch (Exception e) {
+            log.error("Error buscando Entrada por QR ({}): {}", qrLog, e.getMessage(), e);
+            return Optional.empty();
+        }
+    }
+
+    @Override
+    public List<Entrada> findByCompraEntradaId(EntityManager em, Integer idCompraEntrada) {
+        log.debug("Buscando Entradas para CompraEntrada ID: {}", idCompraEntrada);
+        if (idCompraEntrada == null) {
+            log.warn("Intento de buscar entradas para un ID de CompraEntrada nulo.");
+            return Collections.emptyList();
+        }
+        try {
+            TypedQuery<Entrada> query = em.createQuery("SELECT ea FROM Entrada ea WHERE ea.compraEntrada.idCompraEntrada = :ceId ORDER BY ea.idEntrada", Entrada.class);
+            query.setParameter("ceId", idCompraEntrada);
+            List<Entrada> entradas = query.getResultList();
+            log.debug("Encontradas {} Entradas para CompraEntrada ID: {}", entradas.size(), idCompraEntrada);
+            return entradas;
+        } catch (Exception e) {
+            log.error("Error buscando Entradas para CompraEntrada ID {}: {}", idCompraEntrada, e.getMessage(), e);
+            return Collections.emptyList();
+        }
+    }
+
+    @Override
     public List<Entrada> findByFestivalId(EntityManager em, Integer idFestival) {
         log.debug("Buscando Entradas para Festival ID: {}", idFestival);
         if (idFestival == null) {
@@ -76,9 +123,13 @@ public class EntradaRepositoryImpl implements EntradaRepository {
             return Collections.emptyList();
         }
         try {
-            TypedQuery<Entrada> query = em.createQuery(
-                    "SELECT e FROM Entrada e WHERE e.festival.idFestival = :festivalId ORDER BY e.tipo",
-                    Entrada.class);
+            String jpql = "SELECT ea FROM Entrada ea "
+                    + "JOIN ea.compraEntrada ce "
+                    + "JOIN ce.tipoEntrada te "
+                    + "WHERE te.festival.idFestival = :festivalId "
+                    + "ORDER BY ea.idEntrada";
+
+            TypedQuery<Entrada> query = em.createQuery(jpql, Entrada.class);
             query.setParameter("festivalId", idFestival);
             List<Entrada> entradas = query.getResultList();
             log.debug("Encontradas {} Entradas para Festival ID: {}", entradas.size(), idFestival);
@@ -86,33 +137,6 @@ public class EntradaRepositoryImpl implements EntradaRepository {
         } catch (Exception e) {
             log.error("Error buscando Entradas para Festival ID {}: {}", idFestival, e.getMessage(), e);
             return Collections.emptyList();
-        }
-    }
-
-    @Override
-    public boolean deleteById(EntityManager em, Integer id) {
-        log.debug("Intentando eliminar Entrada con ID: {}", id);
-        if (id == null) {
-            log.warn("Intento de eliminar Entrada con ID nulo.");
-            return false;
-        }
-        Optional<Entrada> entradaOpt = findById(em, id);
-        if (entradaOpt.isPresent()) {
-            try {
-                em.remove(entradaOpt.get());
-                log.info("Entrada ID: {} marcada para eliminación.", id);
-                return true;
-            } catch (PersistenceException e) {
-                log.error("Error de persistencia al eliminar Entrada ID {}: {}. Causa probable: existen detalles de compra asociados.",
-                        id, e.getMessage());
-                throw e;
-            } catch (Exception e) {
-                log.error("Error inesperado al eliminar Entrada ID {}: {}", id, e.getMessage(), e);
-                throw new PersistenceException("Error inesperado al eliminar Entrada", e);
-            }
-        } else {
-            log.warn("No se pudo eliminar. Entrada no encontrada con ID: {}", id);
-            return false;
         }
     }
 }

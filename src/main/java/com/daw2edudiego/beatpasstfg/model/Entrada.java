@@ -1,24 +1,21 @@
 package com.daw2edudiego.beatpasstfg.model;
 
 import jakarta.persistence.*;
-import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.PositiveOrZero;
 import jakarta.validation.constraints.Size;
 import java.io.Serializable;
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.HashSet;
 import java.util.Objects;
-import java.util.Set;
 
 /**
- * Entidad JPA que representa un tipo de entrada disponible para un festival.
- * Mapea la tabla 'entradas'.
+ * Entidad JPA que representa una entrada individual generada a partir de una
+ * compra. Mapea la tabla 'entradas'.
  */
 @Entity
-@Table(name = "entradas")
+@Table(name = "entradas", uniqueConstraints = {
+    @UniqueConstraint(columnNames = "codigo_qr", name = "uq_entradaasignada_codigoqr")
+})
 public class Entrada implements Serializable {
 
     private static final long serialVersionUID = 1L;
@@ -28,23 +25,21 @@ public class Entrada implements Serializable {
     @Column(name = "id_entrada")
     private Integer idEntrada;
 
-    @NotBlank(message = "El tipo de entrada no puede estar vacío.")
-    @Size(max = 50, message = "El tipo de entrada no puede exceder los 50 caracteres.")
-    @Column(name = "tipo", nullable = false, length = 50)
-    private String tipo;
+    @NotBlank(message = "El código QR no puede estar vacío.")
+    @Size(max = 255, message = "El código QR no puede exceder los 255 caracteres.")
+    @Column(name = "codigo_qr", nullable = false, unique = true, length = 255)
+    private String codigoQr;
 
-    @Column(name = "descripcion", columnDefinition = "TEXT")
-    private String descripcion;
+    @NotNull(message = "El estado de la entrada no puede ser nulo.")
+    @Enumerated(EnumType.STRING)
+    @Column(name = "estado", nullable = false, columnDefinition = "ENUM('ACTIVA', 'USADA', 'CANCELADA') DEFAULT 'ACTIVA'")
+    private EstadoEntrada estado = EstadoEntrada.ACTIVA;
 
-    @NotNull(message = "El precio de la entrada no puede ser nulo.")
-    @PositiveOrZero(message = "El precio de la entrada debe ser positivo o cero.")
-    @Column(name = "precio", nullable = false, precision = 8, scale = 2)
-    private BigDecimal precio;
+    @Column(name = "fecha_asignacion")
+    private LocalDateTime fechaAsignacion; // Opcional
 
-    @NotNull(message = "El stock no puede ser nulo.")
-    @Min(value = 0, message = "El stock no puede ser negativo.")
-    @Column(name = "stock", nullable = false)
-    private Integer stock;
+    @Column(name = "fecha_uso")
+    private LocalDateTime fechaUso; // Opcional
 
     @Column(name = "fecha_creacion", columnDefinition = "DATETIME DEFAULT CURRENT_TIMESTAMP", insertable = false, updatable = false)
     private LocalDateTime fechaCreacion;
@@ -53,21 +48,29 @@ public class Entrada implements Serializable {
     private LocalDateTime fechaModificacion;
 
     /**
-     * El festival al que pertenece este tipo de entrada. Relación muchos a uno.
-     * FK 'id_festival' no nula. Fetch LAZY.
+     * Detalle de compra del que se generó esta entrada. Relación muchos a uno.
+     * FK 'id_compra_entrada' no nula. Fetch LAZY.
      */
-    @NotNull(message = "El tipo de entrada debe estar asociado a un festival.")
+    @NotNull(message = "La entrada debe provenir de un detalle de compra.")
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "id_festival", nullable = false)
-    private Festival festival;
+    @JoinColumn(name = "id_compra_entrada", nullable = false)
+    private CompraEntrada compraEntrada;
 
     /**
-     * Detalles de compra donde aparece este tipo de entrada. Relación uno a
-     * muchos. Cascade ALL, Fetch LAZY, orphanRemoval true. ¡Precaución con
-     * Cascade ALL!
+     * Asistente al que está nominada esta entrada. Opcional (null si no
+     * nominada). Relación muchos a uno. FK 'id_asistente' permite nulos. Fetch
+     * LAZY.
      */
-    @OneToMany(mappedBy = "entrada", cascade = CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = true)
-    private Set<CompraEntrada> comprasDondeAparece = new HashSet<>();
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "id_asistente")
+    private Asistente asistente;
+
+    /**
+     * Pulsera NFC asociada a esta entrada. Relación uno a uno (lado inverso).
+     * Fetch LAZY, Cascade limitado, optional=true.
+     */
+    @OneToOne(mappedBy = "entrada", cascade = {CascadeType.PERSIST, CascadeType.MERGE, CascadeType.REFRESH}, fetch = FetchType.LAZY, optional = true)
+    private PulseraNFC pulseraAsociada;
 
     public Entrada() {
     }
@@ -81,36 +84,36 @@ public class Entrada implements Serializable {
         this.idEntrada = idEntrada;
     }
 
-    public String getTipo() {
-        return tipo;
+    public String getCodigoQr() {
+        return codigoQr;
     }
 
-    public void setTipo(String tipo) {
-        this.tipo = tipo;
+    public void setCodigoQr(String codigoQr) {
+        this.codigoQr = codigoQr;
     }
 
-    public String getDescripcion() {
-        return descripcion;
+    public EstadoEntrada getEstado() {
+        return estado;
     }
 
-    public void setDescripcion(String descripcion) {
-        this.descripcion = descripcion;
+    public void setEstado(EstadoEntrada estado) {
+        this.estado = estado;
     }
 
-    public BigDecimal getPrecio() {
-        return precio;
+    public LocalDateTime getFechaAsignacion() {
+        return fechaAsignacion;
     }
 
-    public void setPrecio(BigDecimal precio) {
-        this.precio = precio;
+    public void setFechaAsignacion(LocalDateTime fechaAsignacion) {
+        this.fechaAsignacion = fechaAsignacion;
     }
 
-    public Integer getStock() {
-        return stock;
+    public LocalDateTime getFechaUso() {
+        return fechaUso;
     }
 
-    public void setStock(Integer stock) {
-        this.stock = stock;
+    public void setFechaUso(LocalDateTime fechaUso) {
+        this.fechaUso = fechaUso;
     }
 
     public LocalDateTime getFechaCreacion() {
@@ -121,20 +124,28 @@ public class Entrada implements Serializable {
         return fechaModificacion;
     }
 
-    public Festival getFestival() {
-        return festival;
+    public CompraEntrada getCompraEntrada() {
+        return compraEntrada;
     }
 
-    public void setFestival(Festival festival) {
-        this.festival = festival;
+    public void setCompraEntrada(CompraEntrada compraEntrada) {
+        this.compraEntrada = compraEntrada;
     }
 
-    public Set<CompraEntrada> getComprasDondeAparece() {
-        return comprasDondeAparece;
+    public Asistente getAsistente() {
+        return asistente;
     }
 
-    public void setComprasDondeAparece(Set<CompraEntrada> comprasDondeAparece) {
-        this.comprasDondeAparece = comprasDondeAparece;
+    public void setAsistente(Asistente asistente) {
+        this.asistente = asistente;
+    }
+
+    public PulseraNFC getPulseraAsociada() {
+        return pulseraAsociada;
+    }
+
+    public void setPulseraAsociada(PulseraNFC pulseraAsociada) {
+        this.pulseraAsociada = pulseraAsociada;
     }
 
     // --- equals, hashCode y toString ---
@@ -146,8 +157,8 @@ public class Entrada implements Serializable {
         if (o == null || getClass() != o.getClass()) {
             return false;
         }
-        Entrada entrada = (Entrada) o;
-        return idEntrada != null && Objects.equals(idEntrada, entrada.idEntrada);
+        Entrada that = (Entrada) o;
+        return idEntrada != null && Objects.equals(idEntrada, that.idEntrada);
     }
 
     @Override
@@ -159,10 +170,10 @@ public class Entrada implements Serializable {
     public String toString() {
         return "Entrada{"
                 + "idEntrada=" + idEntrada
-                + ", tipo='" + tipo + '\''
-                + ", precio=" + precio
-                + ", stock=" + stock
-                + ", festivalId=" + (festival != null ? festival.getIdFestival() : "null")
+                + ", codigoQr='" + codigoQr + '\''
+                + ", estado=" + estado
+                + ", asistenteId=" + (asistente != null ? asistente.getIdAsistente() : "null")
+                + ", pulseraId=" + (pulseraAsociada != null ? pulseraAsociada.getIdPulsera() : "null")
                 + '}';
     }
 }

@@ -4,7 +4,7 @@ import com.daw2edudiego.beatpasstfg.dto.AsistenteDTO;
 import com.daw2edudiego.beatpasstfg.exception.AsistenteNotFoundException;
 import com.daw2edudiego.beatpasstfg.exception.FestivalNotFoundException;
 import com.daw2edudiego.beatpasstfg.model.Asistente;
-import com.daw2edudiego.beatpasstfg.model.EstadoEntradaAsignada;
+import com.daw2edudiego.beatpasstfg.model.EstadoEntrada;
 import com.daw2edudiego.beatpasstfg.model.Festival;
 import com.daw2edudiego.beatpasstfg.repository.AsistenteRepository;
 import com.daw2edudiego.beatpasstfg.repository.AsistenteRepositoryImpl;
@@ -212,8 +212,8 @@ public class AsistenteServiceImpl implements AsistenteService {
                 dto.setTelefono(asistente.getTelefono());
                 dto.setFechaCreacion(asistente.getFechaCreacion());
 
-                String jpqlPulsera = "SELECT p.codigoUid FROM PulseraNFC p JOIN p.entradaAsignada ea "
-                        + "WHERE ea.asistente = :asistente AND ea.compraEntrada.entrada.festival = :festival "
+                String jpqlPulsera = "SELECT p.codigoUid FROM PulseraNFC p JOIN p.entrada ea "
+                        + "WHERE ea.asistente = :asistente AND ea.compraEntrada.tipoEntrada.festival = :festival "
                         + "ORDER BY p.idPulsera DESC";
 
                 TypedQuery<String> queryPulsera = em.createQuery(jpqlPulsera, String.class);
@@ -289,12 +289,12 @@ public class AsistenteServiceImpl implements AsistenteService {
         if (em != null && a.getIdAsistente() != null) {
             try {
                 String jpql = "SELECT e.festival.nombre, p.codigoUid "
-                        + "FROM EntradaAsignada ea JOIN ea.compraEntrada ce JOIN ce.entrada e LEFT JOIN ea.pulseraAsociada p "
+                        + "FROM Entrada ea JOIN ea.compraEntrada ce JOIN ce.tipoEntrada e LEFT JOIN ea.pulseraAsociada p "
                         + "WHERE ea.asistente = :asistente AND ea.estado = :estadoActiva "
                         + "ORDER BY e.festival.nombre";
                 TypedQuery<Tuple> query = em.createQuery(jpql, Tuple.class);
                 query.setParameter("asistente", a);
-                query.setParameter("estadoActiva", EstadoEntradaAsignada.ACTIVA);
+                query.setParameter("estadoActiva", EstadoEntrada.ACTIVA);
                 List<Tuple> results = query.getResultList();
                 for (Tuple tuple : results) {
                     festivalPulseraMap.put(tuple.get(0, String.class), tuple.get(1, String.class));

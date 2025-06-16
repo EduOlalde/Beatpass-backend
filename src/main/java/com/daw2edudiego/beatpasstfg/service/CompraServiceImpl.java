@@ -100,7 +100,7 @@ public class CompraServiceImpl implements CompraService {
         List<String> resumen = new ArrayList<>();
         if (compra.getDetallesCompra() != null) {
             for (CompraEntrada detalle : compra.getDetallesCompra()) {
-                String tipo = (detalle.getEntrada() != null) ? detalle.getEntrada().getTipo() : "Desconocido";
+                String tipo = (detalle.getTipoEntrada() != null) ? detalle.getTipoEntrada().getTipo() : "Desconocido";
                 resumen.add(detalle.getCantidad() + " x " + tipo);
             }
         }

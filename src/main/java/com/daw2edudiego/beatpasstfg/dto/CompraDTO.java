@@ -28,7 +28,7 @@ public class CompraDTO {
      * Lista de DTOs de las entradas individuales generadas para esta compra. Se
      * poblará solo en la respuesta de confirmación.
      */
-    private List<EntradaAsignadaDTO> entradasGeneradas;
+    private List<EntradaDTO> entradasGeneradas;
 
     // --- Campos de Pago (Stripe) ---
     private String stripePaymentIntentId;
@@ -95,11 +95,11 @@ public class CompraDTO {
         this.resumenEntradas = resumenEntradas;
     }
 
-    public List<EntradaAsignadaDTO> getEntradasGeneradas() {
+    public List<EntradaDTO> getEntradasGeneradas() {
         return entradasGeneradas;
     }
 
-    public void setEntradasGeneradas(List<EntradaAsignadaDTO> entradasGeneradas) {
+    public void setEntradasGeneradas(List<EntradaDTO> entradasGeneradas) {
         this.entradasGeneradas = entradasGeneradas;
     }
 
