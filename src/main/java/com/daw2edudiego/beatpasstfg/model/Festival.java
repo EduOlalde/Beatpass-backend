@@ -79,7 +79,7 @@ public class Festival implements Serializable {
      * Cascade ALL, Fetch LAZY, orphanRemoval true.
      */
     @OneToMany(mappedBy = "festival", cascade = CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = true)
-    private Set<Entrada> tiposEntrada = new HashSet<>();
+    private Set<TipoEntrada> tiposEntrada = new HashSet<>();
 
     /**
      * Consumos realizados dentro de este festival. Relación uno a muchos.
@@ -188,11 +188,11 @@ public class Festival implements Serializable {
         this.promotor = promotor;
     }
 
-    public Set<Entrada> getTiposEntrada() {
+    public Set<TipoEntrada> getTiposEntrada() {
         return tiposEntrada;
     }
 
-    public void setTiposEntrada(Set<Entrada> tiposEntrada) {
+    public void setTiposEntrada(Set<TipoEntrada> tiposEntrada) {
         this.tiposEntrada = tiposEntrada;
     }
 

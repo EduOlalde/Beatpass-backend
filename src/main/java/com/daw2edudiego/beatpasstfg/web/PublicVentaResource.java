@@ -1,13 +1,13 @@
 package com.daw2edudiego.beatpasstfg.web;
 
 import com.daw2edudiego.beatpasstfg.dto.CompraDTO;
-import com.daw2edudiego.beatpasstfg.dto.EntradaAsignadaDTO;
+import com.daw2edudiego.beatpasstfg.dto.EntradaDTO;
 import com.daw2edudiego.beatpasstfg.dto.FestivalDTO;
 import com.daw2edudiego.beatpasstfg.dto.IniciarCompraRequestDTO;
 import com.daw2edudiego.beatpasstfg.dto.IniciarCompraResponseDTO;
 import com.daw2edudiego.beatpasstfg.exception.*;
 import com.daw2edudiego.beatpasstfg.model.Asistente;
-import com.daw2edudiego.beatpasstfg.model.EstadoEntradaAsignada;
+import com.daw2edudiego.beatpasstfg.model.EstadoEntrada;
 import com.daw2edudiego.beatpasstfg.service.*;
 
 import jakarta.servlet.RequestDispatcher;
@@ -38,7 +38,7 @@ public class PublicVentaResource {
     private static final Logger log = LoggerFactory.getLogger(PublicVentaResource.class);
 
     private final VentaService ventaService;
-    private final EntradaAsignadaService entradaAsignadaService;
+    private final EntradaService entradaService;
     private final FestivalService festivalService;
 
     @Context
@@ -50,7 +50,7 @@ public class PublicVentaResource {
 
     public PublicVentaResource() {
         this.ventaService = new VentaServiceImpl();
-        this.entradaAsignadaService = new EntradaAsignadaServiceImpl();
+        this.entradaService = new EntradaServiceImpl();
         this.festivalService = new FestivalServiceImpl();
     }
 
@@ -83,12 +83,12 @@ public class PublicVentaResource {
             log.warn("El código de la entrada no puede estar vacío.");
         } else if (!hideForm) {
             try {
-                Optional<EntradaAsignadaDTO> entradaOpt = entradaAsignadaService.obtenerParaNominacionPublicaPorQr(ticketCode);
+                Optional<EntradaDTO> entradaOpt = entradaService.obtenerParaNominacionPublicaPorQr(ticketCode);
                 if (entradaOpt.isEmpty()) {
                     servletRequest.setAttribute("error", "La entrada con el código proporcionado no fue encontrada o no es válida.");
                 } else {
-                    EntradaAsignadaDTO entrada = entradaOpt.get();
-                    if (entrada.getEstado() != EstadoEntradaAsignada.ACTIVA) {
+                    EntradaDTO entrada = entradaOpt.get();
+                    if (entrada.getEstado() != EstadoEntrada.ACTIVA) {
                         servletRequest.setAttribute("error", "Esta entrada ya ha sido utilizada (" + entrada.getEstado() + ") o no está activa para nominación.");
                     } else if (entrada.getIdAsistente() != null) {
                         servletRequest.setAttribute("error", "Esta entrada ya ha sido nominada a " + (entrada.getEmailAsistente() != null ? entrada.getEmailAsistente() : "un asistente") + ".");
@@ -161,7 +161,7 @@ public class PublicVentaResource {
         }
 
         try {
-            EntradaAsignadaDTO entradaNominadaDTO = entradaAsignadaService.nominarEntradaPorQr(
+            EntradaDTO entradaNominadaDTO = entradaService.nominarEntradaPorQr(
                     codigoQr, emailNominado, nombreNominado, telefonoNominado);
 
             log.info("Entrada (QR: {}) nominada exitosamente a {} ({})",
@@ -173,7 +173,7 @@ public class PublicVentaResource {
                     .build();
             return Response.seeOther(redirectUri).build();
 
-        } catch (EntradaAsignadaNotFoundException e) {
+        } catch (EntradaNotFoundException e) {
             log.warn("Nominación fallida para QR {}: {}", qrLog, e.getMessage());
             redirectUri = redirectUriBuilder.resolveTemplate("ticketCode", codigoQr_valid_for_url(codigoQr))
                     .queryParam("error", e.getMessage())
@@ -197,13 +197,6 @@ public class PublicVentaResource {
         }
     }
 
-    /**
-     * Helper function to ensure the QR code is valid for a URL, especially if
-     * passed as null or blank.
-     *
-     * @param codigoQr The QR code.
-     * @return The QR code, or "invalid" if null/blank.
-     */
     private String codigoQr_valid_for_url(String codigoQr) {
         return (codigoQr == null || codigoQr.isBlank()) ? "invalid" : codigoQr;
     }
@@ -225,7 +218,7 @@ public class PublicVentaResource {
                     requestDTO.getIdEntrada(), requestDTO.getCantidad());
             log.info("Proceso de pago iniciado. Devolviendo client_secret.");
             return Response.ok(responseDTO).build();
-        } catch (EntradaNotFoundException | FestivalNoPublicadoException | IllegalArgumentException e) {
+        } catch (TipoEntradaNotFoundException | FestivalNoPublicadoException | IllegalArgumentException e) {
             log.warn("Error de validación o negocio en POST /iniciar-pago: {}", e.getMessage());
             return crearRespuestaError(Response.Status.BAD_REQUEST, e.getMessage());
         } catch (Exception e) {
@@ -260,7 +253,7 @@ public class PublicVentaResource {
             log.info("Compra confirmada. Compra ID: {}, PI: {}", compraConfirmada.getIdCompra(), paymentIntentId);
             return Response.ok(compraConfirmada).build();
 
-        } catch (EntradaNotFoundException | FestivalNotFoundException e) {
+        } catch (TipoEntradaNotFoundException | FestivalNotFoundException e) {
             log.warn("Recurso no encontrado al confirmar compra PI {}: {}", paymentIntentId, e.getMessage());
             return crearRespuestaError(Response.Status.NOT_FOUND, e.getMessage());
         } catch (FestivalNoPublicadoException | StockInsuficienteException | IllegalArgumentException | PagoInvalidoException e) {

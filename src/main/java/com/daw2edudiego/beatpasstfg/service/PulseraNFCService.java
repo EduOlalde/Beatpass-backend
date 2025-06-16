@@ -13,12 +13,12 @@ import java.util.Optional;
 public interface PulseraNFCService {
 
     /**
-     * Asocia una pulsera NFC a una entrada asignada. Crea la pulsera si no
+     * Asocia una pulsera NFC a una entrada. Crea la pulsera si no
      * existe. Vincula la pulsera al festival de la entrada. Verifica permisos y
      * estados. Es transaccional.
      *
      * @param codigoUid UID de la pulsera (obligatorio).
-     * @param idEntradaAsignada ID de la entrada a asociar (obligatorio, debe
+     * @param idEntrada ID de la entrada a asociar (obligatorio, debe
      * estar ACTIVA y nominada).
      * @param idActor ID del usuario (ADMIN/PROMOTOR/CAJERO) que realiza la
      * acción.
@@ -26,7 +26,7 @@ public interface PulseraNFCService {
      * @throws UsuarioNotFoundException, EntradaAsignadaNotFoundException,
      * PulseraYaAsociadaException, etc.
      */
-    PulseraNFCDTO asociarPulseraEntrada(String codigoUid, Integer idEntradaAsignada, Integer idActor);
+    PulseraNFCDTO asociarPulseraEntrada(String codigoUid, Integer idEntrada, Integer idActor);
 
     /**
      * Obtiene los detalles de una pulsera por su ID. Verifica permisos del
@@ -105,7 +105,7 @@ public interface PulseraNFCService {
     PulseraNFCDTO registrarConsumo(String codigoUid, BigDecimal monto, String descripcion, Integer idFestival, Integer idPuntoVenta, Integer idActor);
 
     /**
-     * Asocia una pulsera NFC a una entrada asignada identificada por su código
+     * Asocia una pulsera NFC a una entrada identificada por su código
      * QR. Este método está pensado para ser usado por un endpoint público en
      * los puntos de acceso.
      *
@@ -114,13 +114,13 @@ public interface PulseraNFCService {
      * @param idFestivalContexto (Opcional) El ID del festival para validación
      * adicional.
      * @return El PulseraNFCDTO de la pulsera asociada/creada y vinculada.
-     * @throws EntradaAsignadaNotFoundException si la entrada no se encuentra o
+     * @throws EntradaNotFoundException si la entrada no se encuentra o
      * no es válida.
      * @throws PulseraNFCNotFoundException si la pulsera existe pero hay un
      * problema (raro en este flujo si se crea).
      * @throws PulseraYaAsociadaException si la pulsera ya está asociada de
      * forma conflictiva.
-     * @throws EntradaAsignadaNoNominadaException si la entrada no está
+     * @throws EntradaNoNominadaException si la entrada no está
      * nominada.
      * @throws IllegalStateException si la entrada o pulsera no está en un
      * estado válido para la asociación.
@@ -130,8 +130,8 @@ public interface PulseraNFCService {
      * de operación no permitida.
      */
     PulseraNFCDTO asociarPulseraViaQrEntrada(String codigoQrEntrada, String codigoUidPulsera, Integer idFestivalContexto)
-            throws EntradaAsignadaNotFoundException, PulseraNFCNotFoundException,
-            PulseraYaAsociadaException, EntradaAsignadaNoNominadaException,
+            throws EntradaNotFoundException, PulseraNFCNotFoundException,
+            PulseraYaAsociadaException, EntradaNoNominadaException,
             IllegalStateException, FestivalNotFoundException, SecurityException;
 
 }

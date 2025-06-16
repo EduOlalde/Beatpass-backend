@@ -6,22 +6,22 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Interfaz DAO para la entidad Entrada (tipo de entrada).
+ * Interfaz DAO para la entidad Entrada (entrada individual).
  */
 public interface EntradaRepository {
 
     /**
-     * Guarda (crea o actualiza) una Entrada. Debe ejecutarse dentro de una
-     * transacción activa.
+     * Guarda (crea o actualiza) una Entrada. Debe ejecutarse dentro de
+     * una transacción activa.
      *
      * @param em El EntityManager activo y transaccional.
-     * @param entrada La entidad Entrada a guardar.
-     * @return La entidad Entrada guardada o actualizada.
+     * @param entrada La entidad a guardar.
+     * @return La entidad guardada o actualizada.
      */
     Entrada save(EntityManager em, Entrada entrada);
 
     /**
-     * Busca un tipo de entrada por su ID.
+     * Busca una Entrada por su ID.
      *
      * @param em El EntityManager activo.
      * @param id El ID a buscar.
@@ -30,23 +30,32 @@ public interface EntradaRepository {
     Optional<Entrada> findById(EntityManager em, Integer id);
 
     /**
-     * Busca todos los tipos de entrada asociados a un Festival específico.
+     * Busca una Entrada por su código QR (único).
+     *
+     * @param em El EntityManager activo.
+     * @param codigoQr El código QR a buscar.
+     * @return Un Optional con la Entrada si se encuentra, o vacío.
+     */
+    Optional<Entrada> findByCodigoQr(EntityManager em, String codigoQr);
+
+    /**
+     * Busca todas las entradas generadas desde un CompraEntrada
+     * específico.
+     *
+     * @param em El EntityManager activo.
+     * @param idCompraEntrada El ID del CompraEntrada origen.
+     * @return Una lista (posiblemente vacía) de Entrada.
+     */
+    List<Entrada> findByCompraEntradaId(EntityManager em, Integer idCompraEntrada);
+
+    /**
+     * Busca todas las entradas que pertenecen a un Festival
+     * específico.
      *
      * @param em El EntityManager activo.
      * @param idFestival El ID del Festival.
-     * @return Una lista (posiblemente vacía) de Entradas.
+     * @return Una lista (posiblemente vacía) de Entrada.
      */
     List<Entrada> findByFestivalId(EntityManager em, Integer idFestival);
-
-    /**
-     * Elimina un tipo de entrada por su ID. Debe ejecutarse dentro de una
-     * transacción activa. ¡Precaución con FKs!
-     *
-     * @param em El EntityManager activo y transaccional.
-     * @param id El ID a eliminar.
-     * @return true si se encontró y marcó para eliminar, false si no se
-     * encontró.
-     */
-    boolean deleteById(EntityManager em, Integer id);
 
 }

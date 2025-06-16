@@ -125,8 +125,8 @@
                                         <td class="px-4 py-2 whitespace-nowrap text-sm text-gray-600 text-right"><fmt:formatNumber value="${entrada.precio}" type="currency" currencySymbol="€" minFractionDigits="2" maxFractionDigits="2"/></td>
                                         <td class="px-4 py-2 whitespace-nowrap text-sm text-gray-600 text-right">${entrada.stock}</td>
                                         <td class="px-4 py-2 whitespace-nowrap text-center text-sm space-x-2">
-                                            <a href="${pageContext.request.contextPath}/api/promotor/entradas/${entrada.idEntrada}/editar" class="action-link action-link-edit">Editar</a>
-                                            <form action="${pageContext.request.contextPath}/api/promotor/entradas/${entrada.idEntrada}/eliminar" method="post" class="inline" onsubmit="return confirm('¿Eliminar tipo entrada \'${fn:escapeXml(entrada.tipo)}\'?');">
+                                            <a href="${pageContext.request.contextPath}/api/promotor/tiposEntrada/${entrada.idEntrada}/editar" class="action-link action-link-edit">Editar</a>
+                                            <form action="${pageContext.request.contextPath}/api/promotor/tiposEntrada/${entrada.idEntrada}/eliminar" method="post" class="inline" onsubmit="return confirm('¿Eliminar tipo entrada \'${fn:escapeXml(entrada.tipo)}\'?');">
                                                 <button type="submit" class="action-button action-button-danger">Eliminar</button>
                                             </form>
                                         </td>
@@ -146,7 +146,7 @@
         <div class="bg-white p-6 rounded-lg shadow-md grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <div>
                 <p class="text-gray-600 mb-2 text-sm">Ver/gestionar entradas individuales y nominarlas.</p>
-                <a href="${pageContext.request.contextPath}/api/promotor/festivales/${festival.idFestival}/entradas-asignadas"
+                <a href="${pageContext.request.contextPath}/api/promotor/festivales/${festival.idFestival}/entradas"
                    class="btn btn-info w-full">
                     Gestionar Entradas
                 </a>

@@ -1,13 +1,12 @@
 package com.daw2edudiego.beatpasstfg.web;
 
-import com.daw2edudiego.beatpasstfg.dto.EntradaDTO;
+import com.daw2edudiego.beatpasstfg.dto.TipoEntradaDTO;
 import com.daw2edudiego.beatpasstfg.dto.FestivalDTO;
 import com.daw2edudiego.beatpasstfg.exception.FestivalNoPublicadoException;
 import com.daw2edudiego.beatpasstfg.exception.FestivalNotFoundException;
 import com.daw2edudiego.beatpasstfg.model.EstadoFestival;
 import com.daw2edudiego.beatpasstfg.model.RolUsuario;
-import com.daw2edudiego.beatpasstfg.service.EntradaService;
-import com.daw2edudiego.beatpasstfg.service.EntradaServiceImpl;
+import com.daw2edudiego.beatpasstfg.service.TipoEntradaServiceImpl;
 import com.daw2edudiego.beatpasstfg.service.FestivalService;
 import com.daw2edudiego.beatpasstfg.service.FestivalServiceImpl;
 
@@ -26,6 +25,7 @@ import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.Optional;
+import com.daw2edudiego.beatpasstfg.service.TipoEntradaService;
 
 /**
  * Recurso JAX-RS para la gestión de Festivales (/api/festivales). Expone
@@ -39,7 +39,7 @@ public class FestivalResource {
     private static final Logger log = LoggerFactory.getLogger(FestivalResource.class);
 
     private final FestivalService festivalService;
-    private final EntradaService entradaService;
+    private final TipoEntradaService tipoEntradaService;
 
     @Context
     private UriInfo uriInfo;
@@ -48,7 +48,7 @@ public class FestivalResource {
 
     public FestivalResource() {
         this.festivalService = new FestivalServiceImpl();
-        this.entradaService = new EntradaServiceImpl();
+        this.tipoEntradaService = new TipoEntradaServiceImpl();
     }
 
     /**
@@ -56,8 +56,8 @@ public class FestivalResource {
      * si está PUBLICADO).
      *
      * @param id ID del festival.
-     * @return 200 OK con lista de EntradaDTO, 400 Bad Request, 404 Not Found,
-     * 500 Error.
+     * @return 200 OK con lista de TipoEntradaDTO, 400 Bad Request, 404 Not Found,
+ 500 Error.
      */
     @GET
     @Path("/{id}/entradas")
@@ -67,11 +67,11 @@ public class FestivalResource {
             return Response.status(Response.Status.BAD_REQUEST).entity("{\"error\": \"ID de festival inválido.\"}").build();
         }
         try {
-            List<EntradaDTO> entradas = entradaService.obtenerEntradasPublicasPorFestival(id);
-            log.info("Devolviendo {} tipos de entrada para festival público ID {}", entradas.size(), id);
-            return Response.ok(entradas).build();
+            List<TipoEntradaDTO> tiposEntrada = tipoEntradaService.obtenerTiposEntradaPublicasPorFestival(id);
+            log.info("Devolviendo {} tipos de entrada para festival público ID {}", tiposEntrada.size(), id);
+            return Response.ok(tiposEntrada).build();
         } catch (FestivalNotFoundException | FestivalNoPublicadoException e) {
-            log.warn("No se pueden obtener entradas públicas para festival ID {}: {}", id, e.getMessage());
+            log.warn("No se pueden obtener tipos de entrada públicas para festival ID {}: {}", id, e.getMessage());
             return Response.status(Response.Status.NOT_FOUND).entity("{\"error\": \"" + e.getMessage() + "\"}").build();
         } catch (IllegalArgumentException e) {
             return Response.status(Response.Status.BAD_REQUEST).entity("{\"error\": \"" + e.getMessage() + "\"}").build();

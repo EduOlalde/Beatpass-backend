@@ -46,19 +46,19 @@ public class CompraEntrada implements Serializable {
 
     /**
      * El tipo de entrada que se compró en este detalle. Relación muchos a uno.
-     * FK 'id_entrada' no nula. Fetch LAZY.
+     * FK 'id_tipo_entrada' no nula. Fetch LAZY.
      */
     @NotNull(message = "El detalle de compra debe estar asociado a un tipo de entrada.")
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "id_entrada", nullable = false)
-    private Entrada entrada;
+    @JoinColumn(name = "id_tipo_entrada", nullable = false)
+    private TipoEntrada tipoEntrada;
 
     /**
      * Entradas individuales generadas a partir de este detalle. Relación uno a
      * muchos. Cascade ALL, Fetch LAZY, orphanRemoval true.
      */
     @OneToMany(mappedBy = "compraEntrada", cascade = CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = true)
-    private Set<EntradaAsignada> entradasAsignadasGeneradas = new HashSet<>();
+    private Set<Entrada> entradasGeneradas = new HashSet<>();
 
     public CompraEntrada() {
     }
@@ -96,20 +96,20 @@ public class CompraEntrada implements Serializable {
         this.compra = compra;
     }
 
-    public Entrada getEntrada() {
-        return entrada;
+    public TipoEntrada getEntrada() {
+        return tipoEntrada;
     }
 
-    public void setEntrada(Entrada entrada) {
-        this.entrada = entrada;
+    public void setEntrada(TipoEntrada tipoEntrada) {
+        this.tipoEntrada = tipoEntrada;
     }
 
-    public Set<EntradaAsignada> getEntradasAsignadasGeneradas() {
-        return entradasAsignadasGeneradas;
+    public Set<Entrada> getEntradasAsignadasGeneradas() {
+        return entradasGeneradas;
     }
 
-    public void setEntradasAsignadasGeneradas(Set<EntradaAsignada> entradasAsignadasGeneradas) {
-        this.entradasAsignadasGeneradas = entradasAsignadasGeneradas;
+    public void setEntradasAsignadasGeneradas(Set<Entrada> entradasGeneradas) {
+        this.entradasGeneradas = entradasGeneradas;
     }
 
     // --- equals, hashCode y toString ---
@@ -137,7 +137,7 @@ public class CompraEntrada implements Serializable {
                 + ", cantidad=" + cantidad
                 + ", precioUnitario=" + precioUnitario
                 + ", compraId=" + (compra != null ? compra.getIdCompra() : "null")
-                + ", entradaId=" + (entrada != null ? entrada.getIdEntrada() : "null")
+                + ", entradaId=" + (tipoEntrada != null ? tipoEntrada.getIdTipoEntrada() : "null")
                 + '}';
     }
 }

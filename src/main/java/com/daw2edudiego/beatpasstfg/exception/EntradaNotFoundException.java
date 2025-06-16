@@ -1,23 +1,20 @@
 package com.daw2edudiego.beatpasstfg.exception;
 
 /**
- * Excepción unchecked (RuntimeException) que se lanza cuando no se encuentra un
- * tipo de entrada específico
- * ({@link com.daw2edudiego.beatpasstfg.model.Entrada}) en la base de datos,
- * generalmente al buscar por su ID.
+ * Excepción unchecked (RuntimeException) que se lanza cuando no se encuentra
+ * una entidad {@link com.daw2edudiego.beatpasstfg.model.EntradaAsignada}
+ * específica en la base de datos, generalmente al buscar por su ID o código QR.
  *
- * @see com.daw2edudiego.beatpasstfg.model.Entrada
- * @see com.daw2edudiego.beatpasstfg.service.EntradaService
- * @see com.daw2edudiego.beatpasstfg.service.VentaService
- * @author Eduardo Olalde
+ * @see com.daw2edudiego.beatpasstfg.model.EntradaAsignada
+ * @see com.daw2edudiego.beatpasstfg.service.EntradaAsignadaService
  */
 public class EntradaNotFoundException extends RuntimeException {
 
     /**
      * Constructor que acepta un mensaje descriptivo del error.
      *
-     * @param message Mensaje detallando la causa (ej: "Tipo de entrada con ID X
-     * no encontrado.").
+     * @param message Mensaje detallando la causa (ej: "Entrada asignada con ID
+     * X no encontrada.").
      */
     public EntradaNotFoundException(String message) {
         super(message);

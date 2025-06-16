@@ -54,7 +54,7 @@ public class Asistente implements Serializable {
      * Cascade para evitar borrar entradas al borrar asistente.
      */
     @OneToMany(mappedBy = "asistente", fetch = FetchType.LAZY)
-    private Set<EntradaAsignada> entradasAsignadas = new HashSet<>();
+    private Set<Entrada> entradasAsignadas = new HashSet<>();
 
     public Asistente() {
     }
@@ -100,11 +100,11 @@ public class Asistente implements Serializable {
         return fechaModificacion;
     }
 
-    public Set<EntradaAsignada> getEntradasAsignadas() {
+    public Set<Entrada> getEntradasAsignadas() {
         return entradasAsignadas;
     }
 
-    public void setEntradasAsignadas(Set<EntradaAsignada> entradasAsignadas) {
+    public void setEntradasAsignadas(Set<Entrada> entradasAsignadas) {
         this.entradasAsignadas = entradasAsignadas;
     }
 

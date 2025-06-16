@@ -90,7 +90,7 @@ public class CompraRepositoryImpl implements CompraRepository {
         try {
             String jpql = "SELECT DISTINCT c FROM Compra c "
                     + "JOIN c.detallesCompra ce "
-                    + "JOIN ce.entrada e "
+                    + "JOIN ce.tipoEntrada e "
                     + "WHERE e.festival.idFestival = :festivalId "
                     + "ORDER BY c.fechaCompra DESC";
 

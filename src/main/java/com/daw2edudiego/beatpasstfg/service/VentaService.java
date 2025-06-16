@@ -18,7 +18,7 @@ public interface VentaService {
      * @param emailComprador Email del comprador (obligatorio).
      * @param nombreComprador Nombre del comprador (obligatorio).
      * @param telefonoComprador Teléfono del comprador (opcional).
-     * @param idEntrada ID del tipo de entrada.
+     * @param idTipoEntrada ID del tipo de entrada.
      * @param cantidad Número de entradas (> 0).
      * @param paymentIntentId ID del PaymentIntent de Stripe ('pi_...').
      * @return DTO de la Compra creada.
@@ -26,23 +26,23 @@ public interface VentaService {
      * StockInsuficienteException, PagoInvalidoException,
      * IllegalArgumentException.
      */
-    CompraDTO confirmarVentaConPago(String emailComprador, String nombreComprador, String telefonoComprador, Integer idEntrada, int cantidad, String paymentIntentId)
-            throws EntradaNotFoundException, FestivalNoPublicadoException,
+    CompraDTO confirmarVentaConPago(String emailComprador, String nombreComprador, String telefonoComprador, Integer idTipoEntrada, int cantidad, String paymentIntentId)
+            throws TipoEntradaNotFoundException, FestivalNoPublicadoException,
             StockInsuficienteException, PagoInvalidoException, IllegalArgumentException;
 
     /**
      * Inicia el proceso de pago creando un PaymentIntent en Stripe. Calcula el
      * total y devuelve el client_secret para el frontend. No modifica la BD.
      *
-     * @param idEntrada ID del tipo de entrada deseado.
+     * @param idTipoEntrada ID del tipo de entrada deseado.
      * @param cantidad Número de entradas deseadas (> 0).
      * @return DTO con el client_secret de Stripe.
-     * @throws EntradaNotFoundException si la entrada no existe.
+     * @throws TipoEntradaNotFoundException si la entrada no existe.
      * @throws FestivalNoPublicadoException si el festival no está publicado.
      * @throws IllegalArgumentException si los datos son inválidos.
      * @throws RuntimeException si ocurre un error con Stripe.
      */
-    IniciarCompraResponseDTO iniciarProcesoPago(Integer idEntrada, int cantidad)
-            throws EntradaNotFoundException, FestivalNoPublicadoException, IllegalArgumentException;
+    IniciarCompraResponseDTO iniciarProcesoPago(Integer idTipoEntrada, int cantidad)
+            throws TipoEntradaNotFoundException, FestivalNoPublicadoException, IllegalArgumentException;
 
 }

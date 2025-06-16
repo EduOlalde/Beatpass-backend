@@ -1,6 +1,6 @@
 package com.daw2edudiego.beatpasstfg.service;
 
-import com.daw2edudiego.beatpasstfg.dto.EntradaAsignadaDTO; // Ya deberías tener este DTO
+import com.daw2edudiego.beatpasstfg.dto.EntradaDTO; 
 import java.util.List;
 
 /**
@@ -16,10 +16,10 @@ public interface EmailService {
      * @param destinatarioEmail Email del comprador.
      * @param nombreComprador Nombre del comprador.
      * @param nombreFestival Nombre del festival.
-     * @param entradasCompradas Lista de DTOs de las entradas asignadas (aún sin
+     * @param entradasCompradas Lista de DTOs de las entradas (aún sin
      * nominar o con datos básicos).
      */
-    void enviarEmailEntradasCompradas(String destinatarioEmail, String nombreComprador, String nombreFestival, List<EntradaAsignadaDTO> entradasCompradas);
+    void enviarEmailEntradasCompradas(String destinatarioEmail, String nombreComprador, String nombreFestival, List<EntradaDTO> entradasCompradas);
 
     /**
      * Envía un correo electrónico al asistente nominado con los detalles de su
@@ -27,7 +27,7 @@ public interface EmailService {
      *
      * @param destinatarioEmail Email del asistente nominado.
      * @param nombreNominado Nombre del asistente nominado.
-     * @param entradaNominada DTO de la entrada asignada ya nominada.
+     * @param entradaNominada DTO de la entrada ya nominada.
      */
-    void enviarEmailEntradaNominada(String destinatarioEmail, String nombreNominado, EntradaAsignadaDTO entradaNominada);
+    void enviarEmailEntradaNominada(String destinatarioEmail, String nombreNominado, EntradaDTO entradaNominada);
 }

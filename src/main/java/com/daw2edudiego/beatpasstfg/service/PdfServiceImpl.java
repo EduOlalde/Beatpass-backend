@@ -1,6 +1,6 @@
 package com.daw2edudiego.beatpasstfg.service;
 
-import com.daw2edudiego.beatpasstfg.dto.EntradaAsignadaDTO;
+import com.daw2edudiego.beatpasstfg.dto.EntradaDTO;
 // QRCodeUtil no es necesario si el DTO ya tiene la imagen base64
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
@@ -23,7 +23,7 @@ public class PdfServiceImpl implements PdfService {
 
     // Implementación de generar un PDF con múltiples entradas, una por página.
     @Override
-    public byte[] generarPdfMultiplesEntradas(List<EntradaAsignadaDTO> entradas, String nombreFestival) throws IOException {
+    public byte[] generarPdfMultiplesEntradas(List<EntradaDTO> entradas, String nombreFestival) throws IOException {
         if (entradas == null || entradas.isEmpty()) {
             log.warn("No se pueden generar entradas en PDF: la lista de entradas está vacía o es nula.");
             return new byte[0]; // Devuelve un array vacío si no hay entradas
@@ -35,7 +35,7 @@ public class PdfServiceImpl implements PdfService {
             float lineHeight = 15f; // Espacio entre líneas de texto
             float margin = 40f;   // Margen de la página
 
-            for (EntradaAsignadaDTO entrada : entradas) {
+            for (EntradaDTO entrada : entradas) {
                 PDPage page = new PDPage(PDRectangle.A4);
                 document.addPage(page);
                 try (PDPageContentStream contentStream = new PDPageContentStream(document, page)) {
@@ -103,7 +103,7 @@ public class PdfServiceImpl implements PdfService {
                         try {
                             String base64Image = entrada.getQrCodeImageDataUrl().substring("data:image/png;base64,".length());
                             byte[] imageBytes = Base64.getDecoder().decode(base64Image);
-                            PDImageXObject pdImage = PDImageXObject.createFromByteArray(document, imageBytes, "qr-" + entrada.getIdEntradaAsignada());
+                            PDImageXObject pdImage = PDImageXObject.createFromByteArray(document, imageBytes, "qr-" + entrada.getIdEntrada());
 
                             float qrSize = 140f; // Tamaño del QR en el PDF
                             float qrX = (page.getMediaBox().getWidth() - qrSize) / 2; // Centrar QR horizontalmente
@@ -111,9 +111,9 @@ public class PdfServiceImpl implements PdfService {
 
                             contentStream.drawImage(pdImage, qrX, qrY, qrSize, qrSize);
                             currentY = qrY - (lineHeight * 1.5f); // Actualizar Y después del QR
-                            log.debug("Imagen QR añadida al PDF para la entrada ID {}", entrada.getIdEntradaAsignada());
+                            log.debug("Imagen QR añadida al PDF para la entrada ID {}", entrada.getIdEntrada());
                         } catch (IllegalArgumentException | IOException e_qr) {
-                            log.error("Error al decodificar o añadir la imagen QR Base64 al PDF para entrada ID {}: {}", entrada.getIdEntradaAsignada(), e_qr.getMessage());
+                            log.error("Error al decodificar o añadir la imagen QR Base64 al PDF para entrada ID {}: {}", entrada.getIdEntrada(), e_qr.getMessage());
                             contentStream.beginText();
                             contentStream.setFont(fontRegular, 10);
                             contentStream.newLineAtOffset(margin, currentY - lineHeight);
@@ -122,7 +122,7 @@ public class PdfServiceImpl implements PdfService {
                             currentY -= (lineHeight * 2);
                         }
                     } else {
-                        log.warn("No se encontró URL de imagen QR válida para la entrada ID {}", entrada.getIdEntradaAsignada());
+                        log.warn("No se encontró URL de imagen QR válida para la entrada ID {}", entrada.getIdEntrada());
                         contentStream.beginText();
                         contentStream.setFont(fontRegular, 10);
                         contentStream.newLineAtOffset(margin, currentY - lineHeight);
