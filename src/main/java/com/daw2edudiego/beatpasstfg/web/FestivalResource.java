@@ -60,9 +60,9 @@ public class FestivalResource {
  500 Error.
      */
     @GET
-    @Path("/{id}/entradas")
+    @Path("/{id}/tipos-entrada")
     public Response obtenerTiposEntradaPublico(@PathParam("id") Integer id) {
-        log.info("GET /festivales/{}/entradas (Público)", id);
+        log.info("GET /festivales/{}/tipos-entrada (Público)", id);
         if (id == null) {
             return Response.status(Response.Status.BAD_REQUEST).entity("{\"error\": \"ID de festival inválido.\"}").build();
         }

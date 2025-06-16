@@ -508,12 +508,12 @@ public class PulseraNFCServiceImpl implements PulseraNFCService {
     }
 
     private Festival obtenerFestivalDesdeEntradaAsignada(Entrada ea) {
-        if (ea == null || ea.getCompraEntrada() == null || ea.getCompraEntrada().getEntrada() == null || ea.getCompraEntrada().getEntrada().getFestival() == null) {
+        if (ea == null || ea.getCompraEntrada() == null || ea.getCompraEntrada().getTipoEntrada() == null || ea.getCompraEntrada().getTipoEntrada().getFestival() == null) {
             Integer eaId = (ea != null) ? ea.getIdEntrada() : null;
             log.error("Inconsistencia de datos para EntradaAsignada ID {}: no se pudo obtener el festival asociado.", eaId);
             throw new IllegalStateException("Error interno: no se pudo determinar el festival de la entrada ID " + eaId);
         }
-        return ea.getCompraEntrada().getEntrada().getFestival();
+        return ea.getCompraEntrada().getTipoEntrada().getFestival();
     }
 
     private void verificarPropiedadFestival(Festival festival, Integer idPromotor) {
@@ -614,7 +614,7 @@ public class PulseraNFCServiceImpl implements PulseraNFCService {
         }
         if (p.getEntrada() != null) {
             Entrada ea = p.getEntrada();
-            dto.setIdEntradaAsignada(ea.getIdEntrada());
+            dto.setIdEntrada(ea.getIdEntrada());
             if (ea.getAsistente() != null) {
                 Asistente as = ea.getAsistente();
                 dto.setIdAsistente(as.getIdAsistente());

@@ -13,9 +13,9 @@
 <div class="container mx-auto p-4 md:p-8 max-w-7xl">
 
     <div class="flex flex-col sm:flex-row justify-between items-center mb-6 pb-4 border-b border-gray-300">
-         <h1 class="text-2xl md:text-3xl font-bold text-gray-800 mb-4 sm:mb-0">Gestionar Entradas: <span class="text-indigo-700">${festival.nombre}</span></h1>
+        <h1 class="text-2xl md:text-3xl font-bold text-gray-800 mb-4 sm:mb-0">Gestionar Entradas: <span class="text-indigo-700">${festival.nombre}</span></h1>
     </div>
-    
+
     <div class="mb-6">
         <a href="${pageContext.request.contextPath}/api/promotor/festivales/ver/${festival.idFestival}" class="text-indigo-600 hover:text-indigo-800 text-sm mb-2 inline-block">&larr; Volver a Detalles de ${festival.nombre}</a>
     </div>
@@ -90,8 +90,7 @@
                                 </td>
                                 <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
                                     <c:if test="${not empty ea.fechaAsignacion}">
-                                        <fmt:parseDate value="${ea.fechaAsignacion}" pattern="yyyy-MM-dd'T'HH:mm:ss" var="parsedDateTime" type="both" />
-                                        <fmt:formatDate value="${parsedDateTime}" pattern="dd/MM/yyyy HH:mm" />
+                                        <fmt:formatDate value="${ea.fechaAsignacion}" pattern="dd/MM/yyyy HH:mm" />
                                     </c:if>
                                 </td>
                                 <td class="px-4 py-4 whitespace-nowrap text-center text-sm">

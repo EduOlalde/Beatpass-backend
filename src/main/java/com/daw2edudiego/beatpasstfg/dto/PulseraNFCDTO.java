@@ -19,8 +19,8 @@ public class PulseraNFCDTO {
     private LocalDateTime ultimaModificacion;
 
     // Información Asociada
-    private Integer idEntradaAsignada;
-    private String qrEntradaAsignada; // Considerar necesidad
+    private Integer idEntrada;
+    private String qrEntrada; 
     private Integer idAsistente;
     private String nombreAsistente;
     private String emailAsistente;
@@ -79,20 +79,20 @@ public class PulseraNFCDTO {
         this.ultimaModificacion = ultimaModificacion;
     }
 
-    public Integer getIdEntradaAsignada() {
-        return idEntradaAsignada;
+    public Integer getIdEntrada() {
+        return idEntrada;
     }
 
-    public void setIdEntradaAsignada(Integer idEntradaAsignada) {
-        this.idEntradaAsignada = idEntradaAsignada;
+    public void setIdEntrada(Integer idEntrada) {
+        this.idEntrada = idEntrada;
     }
 
-    public String getQrEntradaAsignada() {
-        return qrEntradaAsignada;
+    public String getQrEntrada() {
+        return qrEntrada;
     }
 
-    public void setQrEntradaAsignada(String qrEntradaAsignada) {
-        this.qrEntradaAsignada = qrEntradaAsignada;
+    public void setQrEntrada(String qrEntrada) {
+        this.qrEntrada = qrEntrada;
     }
 
     public Integer getIdAsistente() {
@@ -161,7 +161,7 @@ public class PulseraNFCDTO {
                 + ", codigoUid='" + codigoUid + '\''
                 + ", saldo=" + saldo
                 + ", activa=" + activa
-                + ", idEntradaAsignada=" + idEntradaAsignada
+                + ", idEntrada=" + idEntrada
                 + ", idAsistente=" + idAsistente
                 + '}';
     }

@@ -96,19 +96,19 @@ public class CompraEntrada implements Serializable {
         this.compra = compra;
     }
 
-    public TipoEntrada getEntrada() {
+    public TipoEntrada getTipoEntrada() {
         return tipoEntrada;
     }
 
-    public void setEntrada(TipoEntrada tipoEntrada) {
+    public void setTipoEntrada(TipoEntrada tipoEntrada) {
         this.tipoEntrada = tipoEntrada;
     }
 
-    public Set<Entrada> getEntradasAsignadasGeneradas() {
+    public Set<Entrada> getEntradasGeneradas() {
         return entradasGeneradas;
     }
 
-    public void setEntradasAsignadasGeneradas(Set<Entrada> entradasGeneradas) {
+    public void setEntradasGeneradas(Set<Entrada> entradasGeneradas) {
         this.entradasGeneradas = entradasGeneradas;
     }
 

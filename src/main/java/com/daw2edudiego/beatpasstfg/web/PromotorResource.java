@@ -521,7 +521,7 @@ public class PromotorResource {
      * {@code /WEB-INF/jsp/promotor/promotor-entrada-detalle.jsp}. Requiere rol
      * PROMOTOR en sesión y ser dueño del festival asociado.
      *
-     * @param idEntrada ID del tipo de entrada a editar, obtenido del path.
+     * @param idTipoEntrada ID del tipo de entrada a editar, obtenido del path.
      * @return Una respuesta JAX-RS OK si el forward tiene éxito.
      * @throws BadRequestException Si el ID no es válido.
      * @throws NotFoundException Si la entrada no se encuentra.
@@ -533,18 +533,18 @@ public class PromotorResource {
      * @throws IOException Si ocurre un error de E/S durante el forward.
      */
     @GET
-    @Path("/tiposEntrada/{idEntrada}/editar")
+    @Path("/tiposEntrada/{idTipoEntrada}/editar")
     @Produces(MediaType.TEXT_HTML)
-    public Response mostrarFormularioEditarEntrada(@PathParam("idEntrada") Integer idEntrada) throws ServletException, IOException {
-        log.debug("GET /promotor/tiposEntrada/{}/editar recibido", idEntrada);
+    public Response mostrarFormularioEditarEntrada(@PathParam("idTipoEntrada") Integer idTipoEntrada) throws ServletException, IOException {
+        log.debug("GET /promotor/tiposEntrada/{}/editar recibido", idTipoEntrada);
         Integer idPromotor = verificarAccesoPromotor(request);
-        if (idEntrada == null || idEntrada <= 0) {
+        if (idTipoEntrada == null || idTipoEntrada <= 0) {
             throw new BadRequestException("ID de entrada no válido.");
         }
 
         try {
             // Obtener el DTO de la entrada, el servicio verifica propiedad
-            TipoEntradaDTO tipoEntradaDTO = tipoEntradaService.obtenerTipoEntradaPorId(idEntrada, idPromotor)
+            TipoEntradaDTO tipoEntradaDTO = tipoEntradaService.obtenerTipoEntradaPorId(idTipoEntrada, idPromotor)
                     .orElseThrow(() -> new NotFoundException("Tipo de entrada no encontrado o no tiene permiso."));
 
             request.setAttribute("tipoEntrada", tipoEntradaDTO);
@@ -558,7 +558,7 @@ public class PromotorResource {
         } catch (NotFoundException | ForbiddenException e) {
             throw e;
         } catch (Exception e) {
-            log.error("Error al mostrar formulario de edición para entrada ID {}: {}", idEntrada, e.getMessage(), e);
+            log.error("Error al mostrar formulario de edición para entrada ID {}: {}", idTipoEntrada, e.getMessage(), e);
             throw new InternalServerErrorException("Error al cargar datos del tipo de entrada.", e);
         }
     }
@@ -570,7 +570,7 @@ public class PromotorResource {
      * entrada si falla. Requiere rol PROMOTOR en sesión y ser dueño del
      * festival asociado.
      *
-     * @param idEntrada ID del tipo de entrada a actualizar, obtenido del path.
+     * @param idTipoEntrada ID del tipo de entrada a actualizar, obtenido del path.
      * @param tipo Nuevo nombre del tipo (obligatorio).
      * @param descripcion Nueva descripción (opcional).
      * @param precioStr Nuevo precio (String, obligatorio).
@@ -584,18 +584,18 @@ public class PromotorResource {
      * de error.
      */
     @POST
-    @Path("/tiposEntrada/{idEntrada}/actualizar")
+    @Path("/tiposEntrada/{idTipoEntrada}/actualizar")
     @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
     public Response actualizarEntrada(
-            @PathParam("idEntrada") Integer idEntrada,
+            @PathParam("idTipoEntrada") Integer idTipoEntrada,
             @FormParam("tipo") String tipo,
             @FormParam("descripcion") String descripcion,
             @FormParam("precio") String precioStr,
             @FormParam("stock") String stockStr) throws ServletException, IOException {
 
-        log.info("POST /promotor/tiposEntrada/{}/actualizar recibido", idEntrada);
+        log.info("POST /promotor/tiposEntrada/{}/actualizar recibido", idTipoEntrada);
         Integer idPromotor = verificarAccesoPromotor(request);
-        if (idEntrada == null || idEntrada <= 0) {
+        if (idTipoEntrada == null || idTipoEntrada <= 0) {
             throw new BadRequestException("ID de tipo de entrada no válido.");
         }
 
@@ -603,7 +603,7 @@ public class PromotorResource {
         String errorFlash = null;
         Integer idFestival = null; // Para redirigir
         TipoEntradaDTO dto = new TipoEntradaDTO(); // Para posible reenvío al form en error
-        dto.setIdTipoEntrada(idEntrada); // Guardar el ID en el DTO para repoblar form
+        dto.setIdTipoEntrada(idTipoEntrada); // Guardar el ID en el DTO para repoblar form
 
         try {
             // Validar y poblar DTO
@@ -639,17 +639,17 @@ public class PromotorResource {
             }
 
             // Llamar al servicio para actualizar (el servicio verifica propiedad)
-            TipoEntradaDTO actualizada = tipoEntradaService.actualizarTipoEntrada(idEntrada, dto, idPromotor);
+            TipoEntradaDTO actualizada = tipoEntradaService.actualizarTipoEntrada(idTipoEntrada, dto, idPromotor);
             mensajeFlash = "Tipo de entrada '" + actualizada.getTipo() + "' actualizado con éxito.";
             idFestival = actualizada.getIdFestival(); // Obtener ID del festival para redirigir
 
         } catch (IllegalArgumentException | SecurityException | TipoEntradaNotFoundException e) {
             errorFlash = "Error al actualizar: " + e.getMessage();
-            log.warn("Error de validación/negocio al actualizar tipo de entrada ID {}: {}", idEntrada, errorFlash);
+            log.warn("Error de validación/negocio al actualizar tipo de entrada ID {}: {}", idTipoEntrada, errorFlash);
             // DTO ya está poblado para repintar form
         } catch (Exception e) {
             errorFlash = "Error interno inesperado al actualizar el tipo de entrada.";
-            log.error("Error interno al actualizar tipo de entrada ID {}: {}", idEntrada, e.getMessage(), e);
+            log.error("Error interno al actualizar tipo de entrada ID {}: {}", idTipoEntrada, e.getMessage(), e);
             // DTO ya está poblado para repintar form
         }
 
@@ -661,7 +661,7 @@ public class PromotorResource {
             URI editUri = uriInfo.getBaseUriBuilder()
                     .path(PromotorResource.class)
                     .path(PromotorResource.class, "mostrarFormularioEditarEntrada") // Método GET para editar ENTRADA
-                    .resolveTemplate("idEntrada", idEntrada) // Pasar el ID de la ENTRADA que falló
+                    .resolveTemplate("idTipoEntrada", idTipoEntrada) // Pasar el ID de la ENTRADA que falló
                     .build();
             log.debug("Redirección post-actualización (fallida) a: {}", editUri);
             return Response.seeOther(editUri).build(); // 303 See Other
@@ -669,7 +669,7 @@ public class PromotorResource {
             // Si tuvo éxito, redirigir a la página de VISTA del FESTIVAL
             setFlashMessage(request, "mensaje", mensajeFlash);
             if (idFestival == null) {
-                log.error("No se pudo obtener idFestival para redirigir después de actualizar tipo de entrada ID {}. Redirigiendo a lista general.", idEntrada);
+                log.error("No se pudo obtener idFestival para redirigir después de actualizar tipo de entrada ID {}. Redirigiendo a lista general.", idTipoEntrada);
                 URI fallbackUri = uriInfo.getBaseUriBuilder().path(PromotorResource.class).path("festivales").build();
                 return Response.seeOther(fallbackUri).build();
             }
@@ -689,17 +689,17 @@ public class PromotorResource {
      * vista de detalle del festival. Requiere rol PROMOTOR en sesión y ser
      * dueño del festival asociado.
      *
-     * @param idEntrada ID del tipo de entrada a eliminar, obtenido del path.
+     * @param idTipoEntrada ID del tipo de entrada a eliminar, obtenido del path.
      * @return Una respuesta de redirección (303) a la vista de detalle del
      * festival.
      * @throws BadRequestException Si el ID no es válido.
      */
     @POST
-    @Path("/tiposEntrada/{idEntrada}/eliminar")
-    public Response eliminarEntrada(@PathParam("idEntrada") Integer idEntrada) {
-        log.info("POST /promotor/tiposEntrada/{}/eliminar recibido", idEntrada);
+    @Path("/tiposEntrada/{idTipoEntrada}/eliminar")
+    public Response eliminarEntrada(@PathParam("idTipoEntrada") Integer idTipoEntrada) {
+        log.info("POST /promotor/tiposEntrada/{}/eliminar recibido", idTipoEntrada);
         Integer idPromotor = verificarAccesoPromotor(request);
-        if (idEntrada == null || idEntrada <= 0) {
+        if (idTipoEntrada == null || idTipoEntrada <= 0) {
             throw new BadRequestException("ID de tipo de entrada no válido.");
         }
 
@@ -709,28 +709,28 @@ public class PromotorResource {
 
         try {
             // Obtener el ID del festival ANTES de intentar eliminar el tipo de entrada
-            Optional<TipoEntradaDTO> optDto = tipoEntradaService.obtenerTipoEntradaPorId(idEntrada, idPromotor);
+            Optional<TipoEntradaDTO> optDto = tipoEntradaService.obtenerTipoEntradaPorId(idTipoEntrada, idPromotor);
             if (optDto.isPresent()) {
                 idFestival = optDto.get().getIdFestival();
                 // Llamar al servicio para eliminar (el servicio verifica propiedad)
-                tipoEntradaService.eliminarTipoEntrada(idEntrada, idPromotor);
-                mensajeFlash = "Tipo de entrada ID " + idEntrada + " eliminado correctamente.";
+                tipoEntradaService.eliminarTipoEntrada(idTipoEntrada, idPromotor);
+                mensajeFlash = "Tipo de entrada ID " + idTipoEntrada + " eliminado correctamente.";
             } else {
                 errorFlash = "Tipo de entrada no encontrado o no tiene permiso para eliminarlo.";
-                log.warn("Intento de eliminar entrada ID {} fallido (no encontrada o sin permiso) por promotor {}", idEntrada, idPromotor);
+                log.warn("Intento de eliminar entrada ID {} fallido (no encontrada o sin permiso) por promotor {}", idTipoEntrada, idPromotor);
             }
         } catch (TipoEntradaNotFoundException | UsuarioNotFoundException e) { // UsuarioNotFound no debería ocurrir aquí
             errorFlash = e.getMessage();
-            log.warn("Error al eliminar tipo de entrada ID {}: {}", idEntrada, errorFlash);
+            log.warn("Error al eliminar tipo de entrada ID {}: {}", idTipoEntrada, errorFlash);
         } catch (SecurityException e) {
             errorFlash = e.getMessage(); // "No tiene permiso..."
-            log.warn("Error de seguridad al eliminar tipo de entrada ID {}: {}", idEntrada, errorFlash);
+            log.warn("Error de seguridad al eliminar tipo de entrada ID {}: {}", idTipoEntrada, errorFlash);
         } catch (RuntimeException e) { // Captura errores como violación de FK (IllegalStateException/PersistenceException del servicio)
             errorFlash = "No se pudo eliminar el tipo de entrada (posiblemente tiene ventas asociadas).";
-            log.error("Error runtime al eliminar tipo de entrada ID {}: {}", idEntrada, e.getMessage(), e);
+            log.error("Error runtime al eliminar tipo de entrada ID {}: {}", idTipoEntrada, e.getMessage(), e);
         } catch (Exception e) { // Captura genérica para otros errores
             errorFlash = "Error interno inesperado al eliminar.";
-            log.error("Error interno al eliminar tipo de entrada ID {}: {}", idEntrada, e.getMessage(), e);
+            log.error("Error interno al eliminar tipo de entrada ID {}: {}", idTipoEntrada, e.getMessage(), e);
         }
 
         // Guardar mensaje/error y redirigir
@@ -813,7 +813,7 @@ public class PromotorResource {
      * entradas del festival. Requiere rol PROMOTOR en sesión y ser
      * dueño del festival asociado a la entrada.
      *
-     * @param idEntrada ID de la entrada a nominar, obtenido
+     * @param idTipoEntrada ID de la entrada a nominar, obtenido
      * del path.
      * @param emailAsistente Email del asistente (obligatorio).
      * @param nombreAsistente Nombre del asistente (obligatorio si el asistente
@@ -825,19 +825,19 @@ public class PromotorResource {
      * entrada, email).
      */
     @POST
-    @Path("/entradas/{idEntrada}/nominar")
+    @Path("/entradas/{idTipoEntrada}/nominar")
     @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
     public Response nominarEntrada(
-            @PathParam("idEntrada") Integer idEntrada,
+            @PathParam("idTipoEntrada") Integer idTipoEntrada,
             @FormParam("emailAsistente") String emailAsistente,
             @FormParam("nombreAsistente") String nombreAsistente,
             @FormParam("telefonoAsistente") String telefonoAsistente) {
 
-        log.info("POST /promotor/entradas/{}/nominar recibido para asistente email {}", idEntrada, emailAsistente);
+        log.info("POST /promotor/entradas/{}/nominar recibido para asistente email {}", idTipoEntrada, emailAsistente);
         Integer idPromotor = verificarAccesoPromotor(request);
 
-        if (idEntrada == null || idEntrada <= 0 || emailAsistente == null || emailAsistente.isBlank()) {
-            throw new BadRequestException("Faltan parámetros requeridos o son inválidos (idEntrada, emailAsistente).");
+        if (idTipoEntrada == null || idTipoEntrada <= 0 || emailAsistente == null || emailAsistente.isBlank()) {
+            throw new BadRequestException("Faltan parámetros requeridos o son inválidos (idTipoEntrada, emailAsistente).");
         }
         // El servicio validará si el nombre es necesario
 
@@ -847,27 +847,27 @@ public class PromotorResource {
 
         try {
             // Llamar al servicio para nominar (el servicio verifica propiedad y estado)
-            entradaService.nominarEntrada(idEntrada, emailAsistente, nombreAsistente, telefonoAsistente, idPromotor);
-            mensajeFlash = "Entrada ID " + idEntrada + " nominada correctamente al asistente con email " + emailAsistente + ".";
+            entradaService.nominarEntrada(idTipoEntrada, emailAsistente, nombreAsistente, telefonoAsistente, idPromotor);
+            mensajeFlash = "Entrada ID " + idTipoEntrada + " nominada correctamente al asistente con email " + emailAsistente + ".";
 
             // Obtener el ID del festival para la redirección
-            Optional<EntradaDTO> optDto = entradaService.obtenerEntradaPorId(idEntrada, idPromotor);
+            Optional<EntradaDTO> optDto = entradaService.obtenerEntradaPorId(idTipoEntrada, idPromotor);
             if (optDto.isPresent()) {
                 idFestival = optDto.get().getIdFestival();
             } else {
-                log.warn("No se pudo obtener entrada ID {} después de nominarla para determinar el festival.", idEntrada);
+                log.warn("No se pudo obtener entrada ID {} después de nominarla para determinar el festival.", idTipoEntrada);
                 // errorFlash podría establecerse aquí si la redirección es crítica
             }
 
         } catch (EntradaNotFoundException | UsuarioNotFoundException | IllegalArgumentException e) {
             errorFlash = e.getMessage(); // Errores de datos o no encontrado
-            log.warn("Error al nominar entrada ID {}: {}", idEntrada, errorFlash);
+            log.warn("Error al nominar entrada ID {}: {}", idTipoEntrada, errorFlash);
         } catch (SecurityException | IllegalStateException e) {
             errorFlash = "No se pudo nominar la entrada: " + e.getMessage(); // Errores de permiso o estado
-            log.warn("Error de negocio/seguridad al nominar entrada ID {}: {}", idEntrada, errorFlash);
+            log.warn("Error de negocio/seguridad al nominar entrada ID {}: {}", idTipoEntrada, errorFlash);
         } catch (Exception e) {
             errorFlash = "Error interno inesperado al nominar la entrada.";
-            log.error("Error interno al nominar entrada ID {}: {}", idEntrada, e.getMessage(), e);
+            log.error("Error interno al nominar entrada ID {}: {}", idTipoEntrada, e.getMessage(), e);
         }
 
         // Guardar mensaje/error y redirigir
@@ -895,17 +895,17 @@ public class PromotorResource {
      * festival. Requiere rol PROMOTOR en sesión y ser dueño del festival
      * asociado.
      *
-     * @param idEntrada ID de la entrada a cancelar, obtenido
+     * @param idTipoEntrada ID de la entrada a cancelar, obtenido
      * del path.
      * @return Una respuesta de redirección (303) a la lista de entradas.
      * @throws BadRequestException Si falta el ID o no es válido.
      */
     @POST
-    @Path("/entradas/{idEntrada}/cancelar")
-    public Response cancelarEntrada(@PathParam("idEntrada") Integer idEntrada) {
-        log.info("POST /promotor/entradas/{}/cancelar recibido", idEntrada);
+    @Path("/entradas/{idTipoEntrada}/cancelar")
+    public Response cancelarEntrada(@PathParam("idTipoEntrada") Integer idTipoEntrada) {
+        log.info("POST /promotor/entradas/{}/cancelar recibido", idTipoEntrada);
         Integer idPromotor = verificarAccesoPromotor(request);
-        if (idEntrada == null || idEntrada <= 0) {
+        if (idTipoEntrada == null || idTipoEntrada <= 0) {
             throw new BadRequestException("ID entrada inválido.");
         }
 
@@ -915,25 +915,25 @@ public class PromotorResource {
 
         try {
             // Obtener ID del festival ANTES de cancelar, para poder redirigir incluso si falla
-            Optional<EntradaDTO> optDto = entradaService.obtenerEntradaPorId(idEntrada, idPromotor);
+            Optional<EntradaDTO> optDto = entradaService.obtenerEntradaPorId(idTipoEntrada, idPromotor);
             if (optDto.isPresent()) {
                 idFestival = optDto.get().getIdFestival();
                 // Llamar al servicio para cancelar (verifica propiedad y estado)
-                entradaService.cancelarEntrada(idEntrada, idPromotor);
-                mensajeFlash = "Entrada ID " + idEntrada + " cancelada correctamente (stock restaurado).";
+                entradaService.cancelarEntrada(idTipoEntrada, idPromotor);
+                mensajeFlash = "Entrada ID " + idTipoEntrada + " cancelada correctamente (stock restaurado).";
             } else {
                 errorFlash = "Entrada no encontrada o no tiene permiso para cancelarla.";
-                log.warn("Intento de cancelar entrada ID {} fallido (no encontrada o sin permiso) por promotor {}", idEntrada, idPromotor);
+                log.warn("Intento de cancelar entrada ID {} fallido (no encontrada o sin permiso) por promotor {}", idTipoEntrada, idPromotor);
             }
         } catch (EntradaNotFoundException | UsuarioNotFoundException e) {
             errorFlash = e.getMessage();
-            log.warn("Error al cancelar entrada ID {}: {}", idEntrada, e.getMessage());
+            log.warn("Error al cancelar entrada ID {}: {}", idTipoEntrada, e.getMessage());
         } catch (SecurityException | IllegalStateException e) {
             errorFlash = "No se pudo cancelar la entrada: " + e.getMessage();
-            log.warn("Error negocio/seguridad al cancelar entrada ID {}: {}", idEntrada, e.getMessage());
+            log.warn("Error negocio/seguridad al cancelar entrada ID {}: {}", idTipoEntrada, e.getMessage());
         } catch (Exception e) {
             errorFlash = "Error interno inesperado al cancelar la entrada.";
-            log.error("Error interno al cancelar entrada ID {}: {}", idEntrada, e.getMessage(), e);
+            log.error("Error interno al cancelar entrada ID {}: {}", idTipoEntrada, e.getMessage(), e);
         }
 
         setFlashMessage(request, mensajeFlash != null ? "mensaje" : "error", mensajeFlash != null ? mensajeFlash : errorFlash);
@@ -958,24 +958,24 @@ public class PromotorResource {
      * del festival. Requiere rol PROMOTOR en sesión y ser dueño del
      * festival asociado.
      *
-     * @param idEntrada ID de la entrada a la que asociar la
+     * @param idTipoEntrada ID de la entrada a la que asociar la
      * pulsera, obtenido del path.
      * @param codigoUid UID de la pulsera a asociar, obtenido del formulario.
      * @return Una respuesta de redirección (303) a la lista de entradas.
      * @throws BadRequestException Si faltan parámetros o son inválidos.
      */
     @POST
-    @Path("/entradas/{idEntrada}/asociar-pulsera")
+    @Path("/entradas/{idTipoEntrada}/asociar-pulsera")
     @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
     public Response asociarPulseraPromotor(
-            @PathParam("idEntrada") Integer idEntrada,
+            @PathParam("idTipoEntrada") Integer idTipoEntrada,
             @FormParam("codigoUid") String codigoUid) {
 
-        log.info("POST /promotor/entradas/{}/asociar-pulsera con UID: {}", idEntrada, codigoUid);
+        log.info("POST /promotor/entradas/{}/asociar-pulsera con UID: {}", idTipoEntrada, codigoUid);
         Integer idPromotor = verificarAccesoPromotor(request);
 
-        if (idEntrada == null || idEntrada <= 0 || codigoUid == null || codigoUid.isBlank()) {
-            throw new BadRequestException("Faltan parámetros requeridos o son inválidos (idEntrada, codigoUid).");
+        if (idTipoEntrada == null || idTipoEntrada <= 0 || codigoUid == null || codigoUid.isBlank()) {
+            throw new BadRequestException("Faltan parámetros requeridos o son inválidos (idTipoEntrada, codigoUid).");
         }
 
         String mensajeFlash = null;
@@ -984,25 +984,25 @@ public class PromotorResource {
 
         try {
             // Obtener ID del festival ANTES de asociar, para la redirección
-            Optional<EntradaDTO> optDto = entradaService.obtenerEntradaPorId(idEntrada, idPromotor);
+            Optional<EntradaDTO> optDto = entradaService.obtenerEntradaPorId(idTipoEntrada, idPromotor);
             if (optDto.isPresent()) {
                 idFestival = optDto.get().getIdFestival();
                 // Llamar al servicio para asociar la pulsera (verifica propiedad y estado)
-                pulseraNFCService.asociarPulseraEntrada(codigoUid, idEntrada, idPromotor);
-                mensajeFlash = "Pulsera con UID '" + codigoUid + "' asociada correctamente a la entrada ID " + idEntrada + ".";
+                pulseraNFCService.asociarPulseraEntrada(codigoUid, idTipoEntrada, idPromotor);
+                mensajeFlash = "Pulsera con UID '" + codigoUid + "' asociada correctamente a la entrada ID " + idTipoEntrada + ".";
             } else {
                 errorFlash = "Entrada no encontrada o no tiene permiso.";
-                log.warn("Intento de asociar pulsera a entrada ID {} fallido (no encontrada o sin permiso) por promotor {}", idEntrada, idPromotor);
+                log.warn("Intento de asociar pulsera a entrada ID {} fallido (no encontrada o sin permiso) por promotor {}", idTipoEntrada, idPromotor);
             }
         } catch (EntradaNotFoundException | UsuarioNotFoundException | IllegalArgumentException e) {
             errorFlash = e.getMessage();
-            log.warn("Error al asociar pulsera a entrada ID {}: {}", idEntrada, errorFlash);
+            log.warn("Error al asociar pulsera a entrada ID {}: {}", idTipoEntrada, errorFlash);
         } catch (SecurityException | IllegalStateException | PulseraYaAsociadaException | EntradaNoNominadaException e) {
             errorFlash = "No se pudo asociar la pulsera: " + e.getMessage();
-            log.warn("Error negocio/seguridad al asociar pulsera a entrada ID {}: {}", idEntrada, errorFlash);
+            log.warn("Error negocio/seguridad al asociar pulsera a entrada ID {}: {}", idTipoEntrada, errorFlash);
         } catch (Exception e) {
             errorFlash = "Error interno inesperado al asociar la pulsera.";
-            log.error("Error interno al asociar pulsera a entrada ID {}: {}", idEntrada, e.getMessage(), e);
+            log.error("Error interno al asociar pulsera a entrada ID {}: {}", idTipoEntrada, e.getMessage(), e);
         }
 
         setFlashMessage(request, mensajeFlash != null ? "mensaje" : "error", mensajeFlash != null ? mensajeFlash : errorFlash);

@@ -29,7 +29,7 @@
     </c:if>
 
     <%-- Formulario de Edición --%>
-    <form action="${pageContext.request.contextPath}/api/promotor/tiposEntrada/${tipoEntrada.idEntrada}/actualizar" method="post" class="bg-white p-6 md:p-8 rounded-lg shadow-md space-y-4">
+    <form action="${pageContext.request.contextPath}/api/promotor/tiposEntrada/${tipoEntrada.idTipoEntrada}/actualizar" method="post" class="bg-white p-6 md:p-8 rounded-lg shadow-md space-y-4">
         <input type="hidden" name="idTipoEntrada" value="${tipoEntrada.idTipoEntrada}">
         <p class="text-sm text-gray-500">Editando entrada para Festival ID: ${tipoEntrada.idFestival}</p>
 

@@ -124,7 +124,7 @@
                 </div>
             </c:if>
             <div class="bg-white p-4 md:p-6 rounded-lg shadow-md">
-                <form action="${pageContext.request.contextPath}/api/promotor/festivales/${festival.idFestival}/entradas" method="post" class="space-y-3">
+                <form action="${pageContext.request.contextPath}/api/promotor/festivales/${festival.idFestival}/tiposEntrada" method="post" class="space-y-3">
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div>
                             <label for="tipoEntrada" class="block text-sm font-medium text-gray-700 mb-1">Tipo <span class="text-red-500 ml-1">*</span></label>

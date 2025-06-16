@@ -125,8 +125,8 @@ public class EntradaRepositoryImpl implements EntradaRepository {
         try {
             String jpql = "SELECT ea FROM Entrada ea "
                     + "JOIN ea.compraEntrada ce "
-                    + "JOIN ce.entrada e "
-                    + "WHERE e.festival.idFestival = :festivalId "
+                    + "JOIN ce.tipoEntrada te "
+                    + "WHERE te.festival.idFestival = :festivalId "
                     + "ORDER BY ea.idEntrada";
 
             TypedQuery<Entrada> query = em.createQuery(jpql, Entrada.class);

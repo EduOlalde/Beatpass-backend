@@ -25,12 +25,12 @@ public class CompraEntradaRepositoryImpl implements CompraEntradaRepository {
         if (compraEntrada.getCompra() == null || compraEntrada.getCompra().getIdCompra() == null) {
             throw new IllegalArgumentException("La Compra asociada a CompraEntrada no puede ser nula y debe tener ID.");
         }
-        if (compraEntrada.getEntrada() == null || compraEntrada.getEntrada().getIdTipoEntrada() == null) {
+        if (compraEntrada.getTipoEntrada() == null || compraEntrada.getTipoEntrada().getIdTipoEntrada() == null) {
             throw new IllegalArgumentException("La Entrada asociada a CompraEntrada no puede ser nula y debe tener ID.");
         }
 
         log.debug("Intentando persistir nuevo CompraEntrada para Compra ID: {} y Entrada ID: {}",
-                compraEntrada.getCompra().getIdCompra(), compraEntrada.getEntrada().getIdTipoEntrada());
+                compraEntrada.getCompra().getIdCompra(), compraEntrada.getTipoEntrada().getIdTipoEntrada());
         try {
             em.persist(compraEntrada);
             log.info("Nuevo CompraEntrada persistido con ID: {}", compraEntrada.getIdCompraEntrada());

@@ -70,20 +70,23 @@ public class TipoEntradaRepositoryImpl implements TipoEntradaRepository {
 
     @Override
     public List<TipoEntrada> findByFestivalId(EntityManager em, Integer idFestival) {
-        log.debug("Buscando Entradas para Festival ID: {}", idFestival);
+        log.debug("Buscando Tipos de Entrada para Festival ID: {}", idFestival);
         if (idFestival == null) {
             log.warn("Intento de buscar tipos de entrada para un ID de festival nulo.");
             return Collections.emptyList();
         }
         try {
-            TypedQuery<TipoEntrada> query = em.createQuery("SELECT e FROM Entrada e WHERE e.festival.idFestival = :festivalId ORDER BY e.tipo",
-                    TipoEntrada.class);
+            // CONSULTA CORREGIDA
+            TypedQuery<TipoEntrada> query = em.createQuery(
+                    "SELECT te FROM TipoEntrada te WHERE te.festival.idFestival = :festivalId ORDER BY te.tipo",
+                    TipoEntrada.class
+            );
             query.setParameter("festivalId", idFestival);
             List<TipoEntrada> tiposEntrada = query.getResultList();
-            log.debug("Encontradas {} Entradas para Festival ID: {}", tiposEntrada.size(), idFestival);
+            log.debug("Encontrados {} Tipos de Entrada para Festival ID: {}", tiposEntrada.size(), idFestival);
             return tiposEntrada;
         } catch (Exception e) {
-            log.error("Error buscando Entradas para Festival ID {}: {}", idFestival, e.getMessage(), e);
+            log.error("Error buscando Tipos de Entrada para Festival ID {}: {}", idFestival, e.getMessage(), e);
             return Collections.emptyList();
         }
     }

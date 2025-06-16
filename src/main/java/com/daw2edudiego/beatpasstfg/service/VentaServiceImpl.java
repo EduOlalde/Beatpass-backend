@@ -26,6 +26,7 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -227,7 +228,7 @@ public class VentaServiceImpl implements VentaService {
     private CompraEntrada crearYGuardarCompraEntrada(EntityManager em, Compra compra, TipoEntrada tipoEntrada, int cantidad) {
         CompraEntrada compraEntrada = new CompraEntrada();
         compraEntrada.setCompra(compra);
-        compraEntrada.setEntrada(tipoEntrada);
+        compraEntrada.setTipoEntrada(tipoEntrada);
         compraEntrada.setCantidad(cantidad);
         compraEntrada.setPrecioUnitario(tipoEntrada.getPrecio());
         return compraEntradaRepository.save(em, compraEntrada);
@@ -343,7 +344,7 @@ public class VentaServiceImpl implements VentaService {
         try {
             if (compra.getDetallesCompra() != null && !compra.getDetallesCompra().isEmpty()) {
                 dto.setResumenEntradas(compra.getDetallesCompra().stream()
-                        .map(detalle -> detalle.getCantidad() + " x " + (detalle.getEntrada() != null ? detalle.getEntrada().getTipo() : "?"))
+                        .map(detalle -> detalle.getCantidad() + " x " + (detalle.getTipoEntrada() != null ? detalle.getTipoEntrada().getTipo() : "?"))
                         .collect(Collectors.toList()));
             } else { // Asegurar que la lista se inicialice si no hay detalles
                 dto.setResumenEntradas(new ArrayList<>());
@@ -363,13 +364,17 @@ public class VentaServiceImpl implements VentaService {
         dto.setIdEntrada(ea.getIdEntrada());
         dto.setCodigoQr(ea.getCodigoQr());
         dto.setEstado(ea.getEstado());
-        dto.setFechaAsignacion(ea.getFechaAsignacion());
-        dto.setFechaUso(ea.getFechaUso());
+        if (ea.getFechaAsignacion() != null) {
+            dto.setFechaAsignacion(Date.from(ea.getFechaAsignacion().atZone(ZoneId.systemDefault()).toInstant()));
+        }
+        if (ea.getFechaUso() != null) {
+            dto.setFechaUso(Date.from(ea.getFechaUso().atZone(ZoneId.systemDefault()).toInstant()));
+        }
 
         if (ea.getCompraEntrada() != null) {
             dto.setIdCompraEntrada(ea.getCompraEntrada().getIdCompraEntrada());
-            if (ea.getCompraEntrada().getEntrada() != null) {
-                TipoEntrada tipoEntradaOriginal = ea.getCompraEntrada().getEntrada();
+            if (ea.getCompraEntrada().getTipoEntrada() != null) {
+                TipoEntrada tipoEntradaOriginal = ea.getCompraEntrada().getTipoEntrada();
                 dto.setIdEntradaOriginal(tipoEntradaOriginal.getIdTipoEntrada());
                 dto.setTipoEntradaOriginal(tipoEntradaOriginal.getTipo());
                 if (tipoEntradaOriginal.getFestival() != null) {

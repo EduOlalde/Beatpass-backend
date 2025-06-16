@@ -2,7 +2,7 @@ package com.daw2edudiego.beatpasstfg.dto;
 
 import com.daw2edudiego.beatpasstfg.model.EstadoEntrada;
 import com.fasterxml.jackson.annotation.JsonInclude;
-import java.time.LocalDateTime;
+import java.util.Date;
 import java.util.Objects;
 
 /**
@@ -15,8 +15,8 @@ public class EntradaDTO {
     private Integer idEntrada;
     private String codigoQr;
     private EstadoEntrada estado;
-    private LocalDateTime fechaAsignacion;
-    private LocalDateTime fechaUso;
+    private Date fechaAsignacion;
+    private Date fechaUso;
 
     // Información relacionada
     private Integer idCompraEntrada;
@@ -63,19 +63,19 @@ public class EntradaDTO {
         this.estado = estado;
     }
 
-    public LocalDateTime getFechaAsignacion() {
+    public Date getFechaAsignacion() {
         return fechaAsignacion;
     }
 
-    public void setFechaAsignacion(LocalDateTime fechaAsignacion) {
+    public void setFechaAsignacion(Date fechaAsignacion) {
         this.fechaAsignacion = fechaAsignacion;
     }
 
-    public LocalDateTime getFechaUso() {
+    public Date getFechaUso() {
         return fechaUso;
     }
 
-    public void setFechaUso(LocalDateTime fechaUso) {
+    public void setFechaUso(Date fechaUso) {
         this.fechaUso = fechaUso;
     }
 

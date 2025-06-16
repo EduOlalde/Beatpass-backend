@@ -11,6 +11,8 @@ import jakarta.persistence.EntityTransaction;
 import jakarta.persistence.LockModeType;
 import jakarta.persistence.PersistenceException;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -84,14 +86,11 @@ public class EntradaServiceImpl implements EntradaService {
             }
 
             log.debug("Service - nominarEntrada (por ID): Obteniendo o creando asistente con email {}", emailAsistenteNominado);
-            // La creación/obtención de asistente se hace fuera de esta transacción si es necesario,
-            // o se pasa el EntityManager si AsistenteService lo requiere para operar en la misma TX.
-            // Por simplicidad, asumimos que asistenteService.obtenerOcrearAsistentePorEmail maneja su propia TX o es compatible.
             asistenteNominadoPersistido = asistenteService.obtenerOcrearAsistentePorEmail(emailAsistenteNominado, nombreAsistenteNominado, telefonoAsistente);
 
             log.debug("Service - nominarEntrada (por ID): Actualizando entrada ID {} con asistente ID {}", idEntrada, asistenteNominadoPersistido.getIdAsistente());
             entradaAActualizar.setAsistente(asistenteNominadoPersistido);
-            entradaAActualizar.setFechaAsignacion(LocalDateTime.now());
+            entradaAActualizar.setFechaAsignacion(LocalDateTime.now()); // <<-- CORREGIDO: Usamos LocalDateTime aquí porque el campo de la ENTIDAD es LocalDateTime
 
             entradaPersistida = entradaRepository.save(em, entradaAActualizar);
             entradaNominadaDTO = mapEntityToDto(entradaPersistida); // Mapear antes de commit para el email
@@ -108,7 +107,6 @@ public class EntradaServiceImpl implements EntradaService {
         } catch (Exception e) {
             log.error("Service - nominarEntrada (por ID): Excepción general en el proceso de nominación para entrada ID {}. Error: {}", idEntrada, e.getMessage(), e);
             handleTransactionException(e, tx, "nominar entrada ID " + idEntrada);
-            // Re-lanzar excepciones específicas para que el controlador las maneje
             if (e instanceof EntradaNotFoundException || e instanceof UsuarioNotFoundException
                     || e instanceof SecurityException || e instanceof IllegalStateException
                     || e instanceof IllegalArgumentException) {
@@ -164,7 +162,7 @@ public class EntradaServiceImpl implements EntradaService {
             log.debug("Service - nominarEntradaPorQr: Actualizando entrada ID {} (QR: {}) con asistente ID {}",
                     idEntrada, codigoQr, asistenteNominadoPersistido.getIdAsistente());
             entradaAActualizar.setAsistente(asistenteNominadoPersistido);
-            entradaAActualizar.setFechaAsignacion(LocalDateTime.now());
+            entradaAActualizar.setFechaAsignacion(LocalDateTime.now()); // <<-- CORREGIDO: Usamos LocalDateTime aquí porque el campo de la ENTIDAD es LocalDateTime
 
             entradaPersistida = entradaRepository.save(em, entradaAActualizar);
             entradaNominadaDTO = mapEntityToDto(entradaPersistida); // Mapear antes de commit para el email
@@ -362,7 +360,7 @@ public class EntradaServiceImpl implements EntradaService {
                 log.warn("Service - obtenerParaNominacionPublicaPorQr: Entrada no encontrada con QR: {}", codigoQr);
                 return Optional.empty();
             }
-           
+
             return entradaOpt.map(this::mapEntityToDto);
 
         } catch (Exception e) {
@@ -377,23 +375,23 @@ public class EntradaServiceImpl implements EntradaService {
 
     // --- Métodos Privados de Ayuda ---
     private Festival obtenerFestivalDesdeEntrada(Entrada ea) {
-        if (ea == null || ea.getCompraEntrada() == null || ea.getCompraEntrada().getEntrada() == null || ea.getCompraEntrada().getEntrada().getFestival() == null) {
+        if (ea == null || ea.getCompraEntrada() == null || ea.getCompraEntrada().getTipoEntrada() == null || ea.getCompraEntrada().getTipoEntrada().getFestival() == null) {
             Integer eaId = (ea != null) ? ea.getIdEntrada() : null;
             String errorMsg = "Inconsistencia de datos para Entrada ID " + eaId + ": no se pudo obtener el festival asociado.";
             log.error(errorMsg);
-            throw new IllegalStateException(errorMsg); 
+            throw new IllegalStateException(errorMsg);
         }
-        return ea.getCompraEntrada().getEntrada().getFestival();
+        return ea.getCompraEntrada().getTipoEntrada().getFestival();
     }
 
     private TipoEntrada obtenerEntradaOriginal(Entrada ea) {
-        if (ea == null || ea.getCompraEntrada() == null || ea.getCompraEntrada().getEntrada() == null) {
+        if (ea == null || ea.getCompraEntrada() == null || ea.getCompraEntrada().getTipoEntrada() == null) {
             Integer eaId = (ea != null) ? ea.getIdEntrada() : null;
             String errorMsg = "Inconsistencia de datos para Entrada ID " + eaId + ": no se pudo obtener la entrada original asociada.";
             log.error(errorMsg);
             throw new IllegalStateException(errorMsg);
         }
-        return ea.getCompraEntrada().getEntrada();
+        return ea.getCompraEntrada().getTipoEntrada();
     }
 
     private void verificarPropiedadFestival(Festival festival, Integer idPromotor) {
@@ -459,14 +457,19 @@ public class EntradaServiceImpl implements EntradaService {
         dto.setIdEntrada(ea.getIdEntrada());
         dto.setCodigoQr(ea.getCodigoQr());
         dto.setEstado(ea.getEstado());
-        dto.setFechaAsignacion(ea.getFechaAsignacion()); // Puede ser null si aún no se ha asignado/nominado
-        dto.setFechaUso(ea.getFechaUso());
+
+        if (ea.getFechaAsignacion() != null) {
+            dto.setFechaAsignacion(Date.from(ea.getFechaAsignacion().atZone(ZoneId.systemDefault()).toInstant()));
+        }
+        if (ea.getFechaUso() != null) {
+            dto.setFechaUso(Date.from(ea.getFechaUso().atZone(ZoneId.systemDefault()).toInstant()));
+        }
 
         // Información de la compra y entrada original
         if (ea.getCompraEntrada() != null) {
             dto.setIdCompraEntrada(ea.getCompraEntrada().getIdCompraEntrada());
-            if (ea.getCompraEntrada().getEntrada() != null) {
-                TipoEntrada entradaOriginal = ea.getCompraEntrada().getEntrada();
+            if (ea.getCompraEntrada().getTipoEntrada() != null) {
+                TipoEntrada entradaOriginal = ea.getCompraEntrada().getTipoEntrada();
                 dto.setIdEntradaOriginal(entradaOriginal.getIdTipoEntrada());
                 dto.setTipoEntradaOriginal(entradaOriginal.getTipo());
                 if (entradaOriginal.getFestival() != null) {
