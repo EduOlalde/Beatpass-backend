@@ -1,16 +1,11 @@
 -- phpMyAdmin SQL Dump
--- version 5.2.1
+-- version 5.2.2
 -- https://www.phpmyadmin.net/
 --
 -- Host: mysql-beatpasstfg.alwaysdata.net
--- Generation Time: May 12, 2025 at 01:08 PM
--- Server version: 10.11.11-MariaDB
+-- Generation Time: Jun 17, 2025 at 12:02 AM
+-- Server version: 10.11.13-MariaDB
 -- PHP Version: 7.4.33
-
-drop database beatpasstfg_db;
-
-create database beatpasstfg_db;
-use beatpasstfg_db;
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 START TRANSACTION;
@@ -46,13 +41,30 @@ CREATE TABLE `asistentes` (
 --
 
 INSERT INTO `asistentes` (`id_asistente`, `nombre`, `email`, `telefono`, `fecha_creacion`, `fecha_modificacion`) VALUES
-(62, 'Cristina Martínez', 'cristinam@gmail.com', '', '2025-05-12 12:13:36', '2025-05-12 12:13:36'),
-(63, 'Patricia Martínez', 'patrim@gmail.com', '678123456', '2025-05-12 12:16:40', '2025-05-12 12:16:40'),
-(64, 'Eduardo Martínez', 'edumar@gmail.com', '634123512', '2025-05-12 12:17:29', '2025-05-12 12:17:29'),
-(65, 'Pedro Ramirez', 'pedroram@hotmail.com', '624312987', '2025-05-12 12:36:24', '2025-05-12 12:36:24'),
-(66, 'Mario Lopez', 'mariolop@gmail.com', '', '2025-05-12 12:37:45', '2025-05-12 12:37:45'),
-(67, 'Carlos Lopez', 'carlos90@gamil.com', '', '2025-05-12 12:38:11', '2025-05-12 12:38:11'),
-(68, 'Raul Ramirez', 'raul91@hotmail.com', '', '2025-05-12 12:39:43', '2025-05-12 12:39:43');
+(71, 'Edu', 'edolaldecruz@gmail.com', '', '2025-06-16 17:06:01', '2025-06-16 17:06:01'),
+(72, 'Fran', 'fran@eamil.com', '654321456', '2025-06-16 18:59:24', '2025-06-16 18:59:24');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `compradores`
+--
+
+CREATE TABLE `compradores` (
+  `id_comprador` int(11) NOT NULL,
+  `nombre` varchar(100) NOT NULL,
+  `email` varchar(100) NOT NULL,
+  `telefono` varchar(20) DEFAULT NULL,
+  `fecha_creacion` datetime DEFAULT current_timestamp(),
+  `fecha_modificacion` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `compradores`
+--
+
+INSERT INTO `compradores` (`id_comprador`, `nombre`, `email`, `telefono`, `fecha_creacion`, `fecha_modificacion`) VALUES
+(1, 'Edu', 'gaudy.g@gmail.com', NULL, '2025-06-16 17:05:25', '2025-06-16 17:05:25');
 
 -- --------------------------------------------------------
 
@@ -62,7 +74,7 @@ INSERT INTO `asistentes` (`id_asistente`, `nombre`, `email`, `telefono`, `fecha_
 
 CREATE TABLE `compras` (
   `id_compra` int(11) NOT NULL,
-  `id_asistente` int(11) NOT NULL,
+  `id_comprador` int(11) NOT NULL,
   `fecha_compra` datetime DEFAULT current_timestamp(),
   `total` decimal(10,2) NOT NULL CHECK (`total` >= 0),
   `stripe_payment_intent_id` varchar(255) DEFAULT NULL,
@@ -74,10 +86,9 @@ CREATE TABLE `compras` (
 -- Dumping data for table `compras`
 --
 
-INSERT INTO `compras` (`id_compra`, `id_asistente`, `fecha_compra`, `total`, `stripe_payment_intent_id`, `estado_pago`, `fecha_pago_confirmado`) VALUES
-(46, 62, '2025-05-12 12:13:37', 360.00, 'pi_3RNtMV4Et9Src69R1tAn3EBg', 'PAGADO', '2025-05-12 10:13:31'),
-(47, 65, '2025-05-12 12:36:25', 360.00, 'pi_3RNtid4Et9Src69R0cRWJytG', 'PAGADO', '2025-05-12 10:36:23'),
-(48, 65, '2025-05-12 13:02:38', 170.00, 'pi_3RNu804Et9Src69R1YxTBRN2', 'PAGADO', '2025-05-12 11:02:36');
+INSERT INTO `compras` (`id_compra`, `id_comprador`, `fecha_compra`, `total`, `stripe_payment_intent_id`, `estado_pago`, `fecha_pago_confirmado`) VALUES
+(51, 1, '2025-06-16 17:05:26', 50.00, 'pi_3Raeb94Et9Src69R0G3VkYlJ', 'PAGADO', '2025-06-16 17:05:23'),
+(52, 1, '2025-06-16 18:58:48', 160.00, 'pi_3RagMs4Et9Src69R0l9CEmKI', 'PAGADO', '2025-06-16 18:58:46');
 
 -- --------------------------------------------------------
 
@@ -88,7 +99,7 @@ INSERT INTO `compras` (`id_compra`, `id_asistente`, `fecha_compra`, `total`, `st
 CREATE TABLE `compra_entradas` (
   `id_compra_entrada` int(11) NOT NULL,
   `id_compra` int(11) NOT NULL,
-  `id_entrada` int(11) NOT NULL,
+  `id_tipo_entrada` int(11) NOT NULL,
   `cantidad` int(11) NOT NULL CHECK (`cantidad` > 0),
   `precio_unitario` decimal(8,2) NOT NULL CHECK (`precio_unitario` >= 0)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
@@ -97,10 +108,9 @@ CREATE TABLE `compra_entradas` (
 -- Dumping data for table `compra_entradas`
 --
 
-INSERT INTO `compra_entradas` (`id_compra_entrada`, `id_compra`, `id_entrada`, `cantidad`, `precio_unitario`) VALUES
-(50, 46, 47, 3, 120.00),
-(51, 47, 50, 4, 90.00),
-(52, 48, 55, 2, 85.00);
+INSERT INTO `compra_entradas` (`id_compra_entrada`, `id_compra`, `id_tipo_entrada`, `cantidad`, `precio_unitario`) VALUES
+(55, 51, 57, 1, 50.00),
+(56, 52, 58, 2, 80.00);
 
 -- --------------------------------------------------------
 
@@ -118,13 +128,6 @@ CREATE TABLE `consumos` (
   `id_punto_venta` int(11) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
---
--- Dumping data for table `consumos`
---
-
-INSERT INTO `consumos` (`id_consumo`, `id_pulsera`, `id_festival`, `descripcion`, `monto`, `fecha`, `id_punto_venta`) VALUES
-(2, 104, 22, 'Bebida', 12.00, '2025-05-12 13:05:00', NULL);
-
 -- --------------------------------------------------------
 
 --
@@ -133,42 +136,6 @@ INSERT INTO `consumos` (`id_consumo`, `id_pulsera`, `id_festival`, `descripcion`
 
 CREATE TABLE `entradas` (
   `id_entrada` int(11) NOT NULL,
-  `id_festival` int(11) NOT NULL,
-  `tipo` varchar(50) NOT NULL,
-  `descripcion` text DEFAULT NULL,
-  `precio` decimal(8,2) NOT NULL CHECK (`precio` >= 0),
-  `stock` int(11) NOT NULL CHECK (`stock` >= 0),
-  `fecha_creacion` datetime DEFAULT current_timestamp(),
-  `fecha_modificacion` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp()
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
---
--- Dumping data for table `entradas`
---
-
-INSERT INTO `entradas` (`id_entrada`, `id_festival`, `tipo`, `descripcion`, `precio`, `stock`, `fecha_creacion`, `fecha_modificacion`) VALUES
-(44, 18, 'Abono General', 'Acceso los 3 días al recinto general.', 75.00, 10000, '2025-04-26 14:57:46', '2025-04-26 14:57:46'),
-(45, 18, 'Abono VIP', 'Acceso los 3 días a zona VIP y general.', 150.00, 2000, '2025-04-26 14:57:46', '2025-04-26 14:57:46'),
-(46, 18, 'Entrada Jueves', 'Acceso el jueves 10 de Julio.', 35.00, 3000, '2025-04-26 14:57:46', '2025-04-26 14:57:46'),
-(47, 19, 'Abono Completo', 'Acceso todos los días + camping.', 120.00, 12997, '2025-04-26 14:57:46', '2025-05-12 12:14:50'),
-(48, 19, 'Entrada Viernes', 'Acceso el viernes 22 de Agosto.', 50.00, 3000, '2025-04-26 14:57:46', '2025-05-12 12:14:29'),
-(49, 19, 'Entrada Sábado', 'Acceso el sábado 23 de Agosto.', 60.00, 3000, '2025-04-26 14:57:46', '2025-05-12 12:14:37'),
-(50, 20, 'Abono General', 'Acceso los 3 días.', 90.00, 19996, '2025-04-26 14:57:46', '2025-05-12 12:36:25'),
-(51, 20, 'Abono Premium', 'Acceso 3 días + Front Stage.', 135.00, 3000, '2025-04-26 14:57:46', '2025-05-12 13:01:36'),
-(52, 21, 'Abono Eco-Friendly', 'Acceso 3 días + Taller reciclaje.', 60.00, 5000, '2025-04-26 14:57:46', '2025-04-26 14:57:46'),
-(53, 21, 'Entrada Sábado', 'Acceso sábado 21 de Junio.', 30.00, 2000, '2025-04-26 14:57:46', '2025-04-26 14:57:46'),
-(54, 19, 'Abono VIP', 'Acceso todos los días + acceso VIP', 150.00, 1000, '2025-04-26 19:21:12', '2025-05-12 12:14:09'),
-(55, 22, 'Abono General', 'Acceso los 3 días.', 85.00, 17998, '2025-05-12 13:00:48', '2025-05-12 13:02:38'),
-(56, 22, 'Abono VIP', 'Acceso 3 días + Front Stage.', 130.00, 2000, '2025-05-12 13:01:24', '2025-05-12 13:01:24');
-
--- --------------------------------------------------------
-
---
--- Table structure for table `entradas_asignadas`
---
-
-CREATE TABLE `entradas_asignadas` (
-  `id_entrada_asignada` int(11) NOT NULL,
   `id_compra_entrada` int(11) NOT NULL,
   `id_asistente` int(11) DEFAULT NULL,
   `codigo_qr` varchar(255) NOT NULL,
@@ -180,19 +147,13 @@ CREATE TABLE `entradas_asignadas` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Dumping data for table `entradas_asignadas`
+-- Dumping data for table `entradas`
 --
 
-INSERT INTO `entradas_asignadas` (`id_entrada_asignada`, `id_compra_entrada`, `id_asistente`, `codigo_qr`, `estado`, `fecha_asignacion`, `fecha_uso`, `fecha_creacion`, `fecha_modificacion`) VALUES
-(186, 50, 62, 'BEATPASS-TICKET-d8643481-c856-452d-af04-008506a6e99f', 'ACTIVA', '2025-05-12 10:15:40', NULL, '2025-05-12 12:13:37', '2025-05-12 12:15:40'),
-(187, 50, 63, 'BEATPASS-TICKET-8c884382-dd83-4d38-9463-b1bb37fa43b9', 'ACTIVA', '2025-05-12 10:16:40', NULL, '2025-05-12 12:13:37', '2025-05-12 12:16:40'),
-(188, 50, 64, 'BEATPASS-TICKET-fafca816-cf86-4ec9-9343-e110dccea27a', 'ACTIVA', '2025-05-12 10:17:29', NULL, '2025-05-12 12:13:37', '2025-05-12 12:17:29'),
-(189, 51, 65, 'BEATPASS-TICKET-4d04960d-6847-4b87-b797-7b5a528dbce3', 'ACTIVA', '2025-05-12 10:36:56', NULL, '2025-05-12 12:36:25', '2025-05-12 12:36:56'),
-(190, 51, 66, 'BEATPASS-TICKET-4dffde9f-54c8-4ce6-a808-02961f5fc8f3', 'ACTIVA', '2025-05-12 10:37:45', NULL, '2025-05-12 12:36:25', '2025-05-12 12:37:45'),
-(191, 51, 67, 'BEATPASS-TICKET-8208aaed-0947-48cc-b082-5b57bca419fd', 'ACTIVA', '2025-05-12 10:38:11', NULL, '2025-05-12 12:36:25', '2025-05-12 12:38:11'),
-(192, 51, 68, 'BEATPASS-TICKET-2cf2c110-936f-4977-aff9-41fdf5dbca55', 'ACTIVA', '2025-05-12 10:39:43', NULL, '2025-05-12 12:36:25', '2025-05-12 12:39:43'),
-(193, 52, 65, 'BEATPASS-TICKET-30c84976-d23f-4ece-97f9-36f47feb98f7', 'ACTIVA', '2025-05-12 11:02:49', NULL, '2025-05-12 13:02:38', '2025-05-12 13:02:49'),
-(194, 52, 68, 'BEATPASS-TICKET-5ad1e96a-e206-4599-b86b-bfd2dc8ea859', 'ACTIVA', '2025-05-12 11:03:03', NULL, '2025-05-12 13:02:38', '2025-05-12 13:03:03');
+INSERT INTO `entradas` (`id_entrada`, `id_compra_entrada`, `id_asistente`, `codigo_qr`, `estado`, `fecha_asignacion`, `fecha_uso`, `fecha_creacion`, `fecha_modificacion`) VALUES
+(197, 55, 71, 'BEATPASS-TICKET-e38422c1-a929-497f-a3be-33e96243f605', 'ACTIVA', '2025-06-16 17:06:00', NULL, '2025-06-16 17:05:26', '2025-06-16 17:06:02'),
+(198, 56, NULL, 'BEATPASS-TICKET-5b9f2e71-ddcc-4427-9448-0029c328a3e4', 'ACTIVA', NULL, NULL, '2025-06-16 18:58:48', '2025-06-16 18:58:48'),
+(199, 56, 72, 'BEATPASS-TICKET-6dcebf77-6d2e-41f1-9adf-43e3b1a180dc', 'ACTIVA', '2025-06-16 18:59:24', NULL, '2025-06-16 18:58:48', '2025-06-16 18:59:24');
 
 -- --------------------------------------------------------
 
@@ -240,7 +201,7 @@ INSERT INTO `festivales` (`id_festival`, `nombre`, `descripcion`, `fecha_inicio`
 (19, 'Luna Negra Fest', 'Rock y metal en un entorno único.', '2025-08-22', '2025-08-24', 'Recinto Ferial, Villarrobledo', 10, 25000, 'https://placehold.co/600x400/333333/ffffff?text=Luna+Negra+Fest', 'PUBLICADO', '2025-04-26 14:57:46', '2025-05-07 21:37:24'),
 (20, 'Ritmos del Sur', 'Festival de música urbana y latina. Edición del 2025.', '2025-09-05', '2025-09-07', 'Estadio Olímpico, Sevilla', 11, 30000, 'https://placehold.co/600x400/EB5757/ffffff?text=Ritmos+del+Sur', 'PUBLICADO', '2025-04-26 14:57:46', '2025-05-12 12:52:41'),
 (21, 'EcoSound Festival', 'Música indie y pop con conciencia ecológica.', '2025-06-20', '2025-06-22', 'Parque Natural, Sierra de Gredos', 12, 8000, 'https://placehold.co/600x400/27AE60/ffffff?text=EcoSound+Festival', 'BORRADOR', '2025-04-26 14:57:46', '2025-04-26 14:57:46'),
-(22, 'Ritmos del Sur', 'Festival de música urbana y latina. Edición del 2024.', '2024-09-06', '2024-09-08', 'Estadio Olímpico, Sevilla', 11, 20000, 'https://placehold.co/600x400/EB5757/ffffff?text=Ritmos+del+Sur', 'PUBLICADO', '2025-05-12 12:53:20', '2025-05-12 12:56:26');
+(22, 'Ritmos del Sur', 'Festival de música urbana y latina. Edición del 2024.', '2024-09-06', '2024-09-08', 'Estadio Olímpico, Sevilla', 11, 20000, 'https://placehold.co/600x400/EB5757/ffffff?text=Ritmos+del+Sur', 'FINALIZADO', '2025-05-12 12:53:20', '2025-06-11 17:59:33');
 
 -- --------------------------------------------------------
 
@@ -251,7 +212,7 @@ INSERT INTO `festivales` (`id_festival`, `nombre`, `descripcion`, `fecha_inicio`
 CREATE TABLE `pulseras_nfc` (
   `id_pulsera` int(11) NOT NULL,
   `codigo_uid` varchar(100) NOT NULL,
-  `id_entrada_asignada` int(11) DEFAULT NULL,
+  `id_entrada` int(11) DEFAULT NULL,
   `saldo` decimal(10,2) DEFAULT 0.00 CHECK (`saldo` >= 0),
   `activa` tinyint(1) DEFAULT 1,
   `id_festival` int(11) NOT NULL,
@@ -259,16 +220,6 @@ CREATE TABLE `pulseras_nfc` (
   `fecha_alta` datetime DEFAULT current_timestamp(),
   `ultima_modificacion` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
---
--- Dumping data for table `pulseras_nfc`
---
-
-INSERT INTO `pulseras_nfc` (`id_pulsera`, `codigo_uid`, `id_entrada_asignada`, `saldo`, `activa`, `id_festival`, `fecha_asociacion`, `fecha_alta`, `ultima_modificacion`) VALUES
-(101, 'pulsera-001', 186, 100.00, 1, 19, '2025-05-12 10:21:01', '2025-05-12 12:21:01', '2025-05-12 12:21:59'),
-(102, 'pritmos-001', 189, 50.00, 1, 20, '2025-05-12 10:51:42', '2025-05-12 12:51:42', '2025-05-12 13:08:09'),
-(103, 'prit2024-001', 193, 100.00, 1, 22, '2025-05-12 11:03:40', '2025-05-12 13:03:40', '2025-05-12 13:04:32'),
-(104, 'prit2024-002', 194, 108.00, 1, 22, '2025-05-12 11:03:47', '2025-05-12 13:03:47', '2025-05-12 13:05:00');
 
 -- --------------------------------------------------------
 
@@ -285,15 +236,30 @@ CREATE TABLE `recargas` (
   `id_usuario_cajero` int(11) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+-- --------------------------------------------------------
+
 --
--- Dumping data for table `recargas`
+-- Table structure for table `tipos_entrada`
 --
 
-INSERT INTO `recargas` (`id_recarga`, `id_pulsera`, `monto`, `fecha`, `metodo_pago`, `id_usuario_cajero`) VALUES
-(4, 101, 100.00, '2025-05-12 12:21:59', 'Tarjeta', 4),
-(5, 103, 100.00, '2025-05-12 13:04:32', 'Efectivo', 4),
-(6, 104, 120.00, '2025-05-12 13:04:48', 'Efectivo', 4),
-(7, 102, 50.00, '2025-05-12 13:08:09', 'Efectivo', 4);
+CREATE TABLE `tipos_entrada` (
+  `id_tipo_entrada` int(11) NOT NULL,
+  `id_festival` int(11) NOT NULL,
+  `tipo` varchar(50) NOT NULL,
+  `descripcion` text DEFAULT NULL,
+  `precio` decimal(8,2) NOT NULL CHECK (`precio` >= 0),
+  `stock` int(11) NOT NULL CHECK (`stock` >= 0),
+  `fecha_creacion` datetime DEFAULT current_timestamp(),
+  `fecha_modificacion` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `tipos_entrada`
+--
+
+INSERT INTO `tipos_entrada` (`id_tipo_entrada`, `id_festival`, `tipo`, `descripcion`, `precio`, `stock`, `fecha_creacion`, `fecha_modificacion`) VALUES
+(57, 19, 'General', 'Entrada general', 50.00, 9999, '2025-06-16 13:55:31', '2025-06-16 17:05:26'),
+(58, 19, 'VIP', 'VIP', 80.00, 498, '2025-06-16 17:00:00', '2025-06-16 18:58:48');
 
 -- --------------------------------------------------------
 
@@ -339,12 +305,19 @@ ALTER TABLE `asistentes`
   ADD UNIQUE KEY `uq_asistente_email` (`email`);
 
 --
+-- Indexes for table `compradores`
+--
+ALTER TABLE `compradores`
+  ADD PRIMARY KEY (`id_comprador`),
+  ADD UNIQUE KEY `uq_comprador_email` (`email`);
+
+--
 -- Indexes for table `compras`
 --
 ALTER TABLE `compras`
   ADD PRIMARY KEY (`id_compra`),
   ADD UNIQUE KEY `stripe_payment_intent_id` (`stripe_payment_intent_id`),
-  ADD KEY `idx_compras_asistente` (`id_asistente`),
+  ADD KEY `idx_compras_asistente` (`id_comprador`),
   ADD KEY `idx_compras_fecha` (`fecha_compra`),
   ADD KEY `idx_stripe_payment_intent` (`stripe_payment_intent_id`);
 
@@ -354,7 +327,7 @@ ALTER TABLE `compras`
 ALTER TABLE `compra_entradas`
   ADD PRIMARY KEY (`id_compra_entrada`),
   ADD KEY `idx_compraentradas_compra` (`id_compra`),
-  ADD KEY `idx_compraentradas_entrada` (`id_entrada`);
+  ADD KEY `idx_compraentradas_entrada` (`id_tipo_entrada`);
 
 --
 -- Indexes for table `consumos`
@@ -370,13 +343,6 @@ ALTER TABLE `consumos`
 --
 ALTER TABLE `entradas`
   ADD PRIMARY KEY (`id_entrada`),
-  ADD KEY `idx_entradas_festival` (`id_festival`);
-
---
--- Indexes for table `entradas_asignadas`
---
-ALTER TABLE `entradas_asignadas`
-  ADD PRIMARY KEY (`id_entrada_asignada`),
   ADD UNIQUE KEY `codigo_qr` (`codigo_qr`),
   ADD UNIQUE KEY `uq_entradaasignada_codigoqr` (`codigo_qr`),
   ADD KEY `idx_entradasasignadas_compraentrada` (`id_compra_entrada`),
@@ -405,9 +371,9 @@ ALTER TABLE `pulseras_nfc`
   ADD PRIMARY KEY (`id_pulsera`),
   ADD UNIQUE KEY `codigo_uid` (`codigo_uid`),
   ADD UNIQUE KEY `uq_pulseranfc_codigouid` (`codigo_uid`),
-  ADD UNIQUE KEY `id_entrada_asignada` (`id_entrada_asignada`),
-  ADD UNIQUE KEY `uq_pulseranfc_entradaasignada` (`id_entrada_asignada`),
-  ADD KEY `idx_pulserasnfc_entradaasignada` (`id_entrada_asignada`),
+  ADD UNIQUE KEY `id_entrada_asignada` (`id_entrada`),
+  ADD UNIQUE KEY `uq_pulseranfc_entradaasignada` (`id_entrada`),
+  ADD KEY `idx_pulserasnfc_entradaasignada` (`id_entrada`),
   ADD KEY `idx_pulserasnfc_festival` (`id_festival`);
 
 --
@@ -418,6 +384,13 @@ ALTER TABLE `recargas`
   ADD KEY `id_usuario_cajero` (`id_usuario_cajero`),
   ADD KEY `idx_recargas_pulsera` (`id_pulsera`),
   ADD KEY `idx_recargas_fecha` (`fecha`);
+
+--
+-- Indexes for table `tipos_entrada`
+--
+ALTER TABLE `tipos_entrada`
+  ADD PRIMARY KEY (`id_tipo_entrada`),
+  ADD KEY `idx_entradas_festival` (`id_festival`);
 
 --
 -- Indexes for table `usuarios`
@@ -436,37 +409,37 @@ ALTER TABLE `usuarios`
 -- AUTO_INCREMENT for table `asistentes`
 --
 ALTER TABLE `asistentes`
-  MODIFY `id_asistente` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=69;
+  MODIFY `id_asistente` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=73;
+
+--
+-- AUTO_INCREMENT for table `compradores`
+--
+ALTER TABLE `compradores`
+  MODIFY `id_comprador` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
 -- AUTO_INCREMENT for table `compras`
 --
 ALTER TABLE `compras`
-  MODIFY `id_compra` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=49;
+  MODIFY `id_compra` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=53;
 
 --
 -- AUTO_INCREMENT for table `compra_entradas`
 --
 ALTER TABLE `compra_entradas`
-  MODIFY `id_compra_entrada` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=53;
+  MODIFY `id_compra_entrada` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=57;
 
 --
 -- AUTO_INCREMENT for table `consumos`
 --
 ALTER TABLE `consumos`
-  MODIFY `id_consumo` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+  MODIFY `id_consumo` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
 -- AUTO_INCREMENT for table `entradas`
 --
 ALTER TABLE `entradas`
-  MODIFY `id_entrada` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=57;
-
---
--- AUTO_INCREMENT for table `entradas_asignadas`
---
-ALTER TABLE `entradas_asignadas`
-  MODIFY `id_entrada_asignada` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=195;
+  MODIFY `id_entrada` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=200;
 
 --
 -- AUTO_INCREMENT for table `festivales`
@@ -478,13 +451,19 @@ ALTER TABLE `festivales`
 -- AUTO_INCREMENT for table `pulseras_nfc`
 --
 ALTER TABLE `pulseras_nfc`
-  MODIFY `id_pulsera` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=105;
+  MODIFY `id_pulsera` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=106;
 
 --
 -- AUTO_INCREMENT for table `recargas`
 --
 ALTER TABLE `recargas`
-  MODIFY `id_recarga` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
+  MODIFY `id_recarga` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
+
+--
+-- AUTO_INCREMENT for table `tipos_entrada`
+--
+ALTER TABLE `tipos_entrada`
+  MODIFY `id_tipo_entrada` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=59;
 
 --
 -- AUTO_INCREMENT for table `usuarios`
@@ -500,14 +479,14 @@ ALTER TABLE `usuarios`
 -- Constraints for table `compras`
 --
 ALTER TABLE `compras`
-  ADD CONSTRAINT `compras_ibfk_1` FOREIGN KEY (`id_asistente`) REFERENCES `asistentes` (`id_asistente`) ON UPDATE CASCADE;
+  ADD CONSTRAINT `fk_compras_comprador` FOREIGN KEY (`id_comprador`) REFERENCES `compradores` (`id_comprador`) ON UPDATE CASCADE;
 
 --
 -- Constraints for table `compra_entradas`
 --
 ALTER TABLE `compra_entradas`
   ADD CONSTRAINT `compra_entradas_ibfk_1` FOREIGN KEY (`id_compra`) REFERENCES `compras` (`id_compra`) ON DELETE CASCADE ON UPDATE CASCADE,
-  ADD CONSTRAINT `compra_entradas_ibfk_2` FOREIGN KEY (`id_entrada`) REFERENCES `entradas` (`id_entrada`) ON UPDATE CASCADE;
+  ADD CONSTRAINT `compra_entradas_ibfk_2` FOREIGN KEY (`id_tipo_entrada`) REFERENCES `tipos_entrada` (`id_tipo_entrada`) ON UPDATE CASCADE;
 
 --
 -- Constraints for table `consumos`
@@ -520,14 +499,8 @@ ALTER TABLE `consumos`
 -- Constraints for table `entradas`
 --
 ALTER TABLE `entradas`
-  ADD CONSTRAINT `entradas_ibfk_1` FOREIGN KEY (`id_festival`) REFERENCES `festivales` (`id_festival`) ON DELETE CASCADE ON UPDATE CASCADE;
-
---
--- Constraints for table `entradas_asignadas`
---
-ALTER TABLE `entradas_asignadas`
-  ADD CONSTRAINT `entradas_asignadas_ibfk_1` FOREIGN KEY (`id_compra_entrada`) REFERENCES `compra_entradas` (`id_compra_entrada`) ON DELETE CASCADE ON UPDATE CASCADE,
-  ADD CONSTRAINT `entradas_asignadas_ibfk_2` FOREIGN KEY (`id_asistente`) REFERENCES `asistentes` (`id_asistente`) ON DELETE SET NULL ON UPDATE CASCADE;
+  ADD CONSTRAINT `entradas_ibfk_1` FOREIGN KEY (`id_compra_entrada`) REFERENCES `compra_entradas` (`id_compra_entrada`) ON DELETE CASCADE ON UPDATE CASCADE,
+  ADD CONSTRAINT `entradas_ibfk_2` FOREIGN KEY (`id_asistente`) REFERENCES `asistentes` (`id_asistente`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 --
 -- Constraints for table `estadisticas_festival`
@@ -546,7 +519,7 @@ ALTER TABLE `festivales`
 --
 ALTER TABLE `pulseras_nfc`
   ADD CONSTRAINT `FKb6mtkr037q3e0ppmrd1r0wrgj` FOREIGN KEY (`id_festival`) REFERENCES `festivales` (`id_festival`),
-  ADD CONSTRAINT `pulseras_nfc_ibfk_1` FOREIGN KEY (`id_entrada_asignada`) REFERENCES `entradas_asignadas` (`id_entrada_asignada`) ON DELETE SET NULL ON UPDATE CASCADE;
+  ADD CONSTRAINT `pulseras_nfc_ibfk_1` FOREIGN KEY (`id_entrada`) REFERENCES `entradas` (`id_entrada`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 --
 -- Constraints for table `recargas`
@@ -554,6 +527,12 @@ ALTER TABLE `pulseras_nfc`
 ALTER TABLE `recargas`
   ADD CONSTRAINT `recargas_ibfk_1` FOREIGN KEY (`id_pulsera`) REFERENCES `pulseras_nfc` (`id_pulsera`) ON UPDATE CASCADE,
   ADD CONSTRAINT `recargas_ibfk_2` FOREIGN KEY (`id_usuario_cajero`) REFERENCES `usuarios` (`id_usuario`);
+
+--
+-- Constraints for table `tipos_entrada`
+--
+ALTER TABLE `tipos_entrada`
+  ADD CONSTRAINT `tipos_entrada_ibfk_1` FOREIGN KEY (`id_festival`) REFERENCES `festivales` (`id_festival`) ON DELETE CASCADE ON UPDATE CASCADE;
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
