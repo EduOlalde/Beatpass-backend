@@ -1,6 +1,8 @@
 package com.daw2edudiego.beatpasstfg.service;
 
+import com.daw2edudiego.beatpasstfg.dto.CompradorDTO;
 import com.daw2edudiego.beatpasstfg.model.Comprador;
+import java.util.List;
 
 /**
  * Define la lógica de negocio para la gestión de Compradores.
@@ -18,4 +20,12 @@ public interface CompradorService {
      * @throws IllegalArgumentException Si faltan datos obligatorios para crear.
      */
     Comprador obtenerOcrearCompradorPorEmail(String email, String nombre, String telefono);
+
+    /**
+     * Busca compradores por nombre o email que contengan el término.
+     *
+     * @param searchTerm Término de búsqueda (si es nulo/vacío, devuelve todos).
+     * @return Lista de CompradorDTO coincidentes.
+     */
+    List<CompradorDTO> buscarCompradores(String searchTerm);
 }

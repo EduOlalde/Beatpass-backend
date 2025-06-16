@@ -72,4 +72,6 @@ public interface AsistenteService {
      */
     List<AsistenteDTO> obtenerAsistentesPorFestival(Integer idFestival, Integer idPromotor);
 
+    List<AsistenteDTO> obtenerTodosLosAsistentesConFiltro(String searchTerm);
+
 }

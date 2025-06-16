@@ -43,6 +43,7 @@ public class AdminResource {
     private final FestivalService festivalService;
     private final AsistenteService asistenteService;
     private final PulseraNFCService pulseraNFCService;
+    private final CompradorService compradorService;
 
     @Context
     private UriInfo uriInfo;
@@ -56,6 +57,7 @@ public class AdminResource {
         this.festivalService = new FestivalServiceImpl();
         this.asistenteService = new AsistenteServiceImpl();
         this.pulseraNFCService = new PulseraNFCServiceImpl();
+        this.compradorService = new CompradorServiceImpl();
     }
 
     // --- Gestión de Usuarios ---
@@ -63,36 +65,35 @@ public class AdminResource {
     @Path("/admins/listar")
     @Produces(MediaType.TEXT_HTML)
     public Response listarAdmins() throws ServletException, IOException {
-        return listarUsuariosPorRol(RolUsuario.ADMIN, "admins");
+        return listarUsuariosPorRol(RolUsuario.ADMIN, "admins", "Gestionar Administradores");
     }
 
     @GET
     @Path("/promotores/listar")
     @Produces(MediaType.TEXT_HTML)
     public Response listarPromotores() throws ServletException, IOException {
-        return listarUsuariosPorRol(RolUsuario.PROMOTOR, "promotores");
+        return listarUsuariosPorRol(RolUsuario.PROMOTOR, "promotores", "Gestionar Promotores");
     }
 
     @GET
     @Path("/cajeros/listar")
     @Produces(MediaType.TEXT_HTML)
     public Response listarCajeros() throws ServletException, IOException {
-        return listarUsuariosPorRol(RolUsuario.CAJERO, "cajeros");
+        return listarUsuariosPorRol(RolUsuario.CAJERO, "cajeros", "Gestionar Cajeros");
     }
 
-    private Response listarUsuariosPorRol(RolUsuario rol, String activePage) throws ServletException, IOException {
-        log.debug("GET /admin/{}/listar", activePage);
+    private Response listarUsuariosPorRol(RolUsuario rol, String activePage, String titulo) throws ServletException, IOException {
+        log.debug("GET /admin/usuarios/listar para rol: {}", rol);
         Integer idAdmin = verificarAccesoAdmin(request);
         List<UsuarioDTO> listaUsuarios = usuarioService.obtenerUsuariosPorRol(rol);
 
         request.setAttribute("usuarios", listaUsuarios);
         request.setAttribute("rolListado", rol.name());
-        request.setAttribute("tituloPagina", "Gestionar " + activePage.substring(0, 1).toUpperCase() + activePage.substring(1));
-        request.setAttribute("idAdminAutenticado", idAdmin);
+        request.setAttribute("tituloPagina", titulo);
+        request.setAttribute("activePage", activePage);
         mostrarMensajeFlash(request);
 
-        String jspPath = "/WEB-INF/jsp/admin/admin-" + activePage + ".jsp";
-        forwardToJsp(jspPath);
+        forwardToJsp("/WEB-INF/jsp/admin/admin-usuarios-lista.jsp");
         return Response.ok().build();
     }
 
@@ -140,6 +141,30 @@ public class AdminResource {
             log.error("Error al mostrar formulario editar usuario ID {}: {}", idUsuario, e.getMessage(), e);
             throw new InternalServerErrorException("Error al cargar datos del usuario para editar.", e);
         }
+    }
+
+    @GET
+    @Path("/clientes")
+    @Produces(MediaType.TEXT_HTML)
+    public Response listarClientes(@QueryParam("tab") String tab, @QueryParam("buscar") String searchTerm) throws ServletException, IOException {
+        Integer idAdmin = verificarAccesoAdmin(request);
+        String activeTab = "compradores".equalsIgnoreCase(tab) ? "compradores" : "asistentes"; // Default a asistentes
+
+        if ("compradores".equals(activeTab)) {
+            request.setAttribute("pageTitle", "Gestionar Clientes - Compradores");
+            request.setAttribute("compradores", compradorService.buscarCompradores(searchTerm));
+        } else {
+            request.setAttribute("pageTitle", "Gestionar Clientes - Asistentes");
+            request.setAttribute("asistentes", asistenteService.obtenerTodosLosAsistentesConFiltro(searchTerm));
+        }
+
+        request.setAttribute("activeTab", activeTab);
+        request.setAttribute("idAdminAutenticado", idAdmin);
+        request.setAttribute("searchTerm", searchTerm);
+        mostrarMensajeFlash(request);
+
+        forwardToJsp("/WEB-INF/jsp/admin/admin-clientes.jsp");
+        return Response.ok().build();
     }
 
     @POST
