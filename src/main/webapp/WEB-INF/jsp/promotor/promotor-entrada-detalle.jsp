@@ -63,9 +63,20 @@
             <textarea id="descripcion" name="descripcion" rows="3"
                       class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-500 focus:ring-opacity-50 sm:text-sm">${tipoEntrada.descripcion}</textarea>
         </div>
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Opciones</label>
+            <div class="mt-1 flex items-center">
+                <input id="requiereNominacion" name="requiereNominacion" type="checkbox" value="true" 
+                       <c:if test="${tipoEntrada.requiereNominacion}">checked</c:if>
+                           class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+                       <label for="requiereNominacion" class="ml-2 block text-sm text-gray-900">
+                           Requiere Nominación
+                       </label>
+                </div>
+            </div>
 
-        <div class="mt-6 flex justify-end space-x-3 pt-4 border-t border-gray-200">
-            <a href="${pageContext.request.contextPath}/api/promotor/festivales/ver/${tipoEntrada.idFestival}"
+            <div class="mt-6 flex justify-end space-x-3 pt-4 border-t border-gray-200">
+                <a href="${pageContext.request.contextPath}/api/promotor/festivales/ver/${tipoEntrada.idFestival}"
                class="btn btn-secondary">
                 Cancelar
             </a>

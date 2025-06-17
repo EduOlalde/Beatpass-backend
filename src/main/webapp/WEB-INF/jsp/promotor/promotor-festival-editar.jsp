@@ -143,6 +143,15 @@
                         <label for="descEntrada" class="block text-sm font-medium text-gray-700 mb-1">Descripción (Opcional)</label>
                         <textarea id="descEntrada" name="descripcion" rows="2" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-500 focus:ring-opacity-50 sm:text-sm" placeholder="Detalles sobre este tipo de entrada...">${nuevaEntrada.descripcion}</textarea>
                     </div>
+                    <div class="py-2">
+                        <div class="flex items-center">
+                            <input id="requiereNominacion" name="requiereNominacion" type="checkbox" value="true" checked
+                                   class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+                            <label for="requiereNominacion" class="ml-2 block text-sm text-gray-900">
+                                Requiere Nominación (el asistente debe poner sus datos)
+                            </label>
+                        </div>
+                    </div>
                     <div class="flex justify-end pt-2">
                         <button type="submit" class="btn btn-success text-sm"> Añadir Tipo de Entrada </button>
                     </div>

@@ -1,12 +1,10 @@
 package com.daw2edudiego.beatpasstfg.web;
 
-// DTOs, Excepciones, Modelo, Servicios
-import com.daw2edudiego.beatpasstfg.dto.*; // Import all DTOs
-import com.daw2edudiego.beatpasstfg.exception.*; // Import all exceptions
+import com.daw2edudiego.beatpasstfg.dto.*;
+import com.daw2edudiego.beatpasstfg.exception.*;
 import com.daw2edudiego.beatpasstfg.model.RolUsuario;
-import com.daw2edudiego.beatpasstfg.service.*; // Import all services
+import com.daw2edudiego.beatpasstfg.service.*;
 
-// Jakarta EE Servlets y JAX-RS
 import jakarta.servlet.RequestDispatcher;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -18,11 +16,9 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.UriInfo;
 
-// Logging
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-// Clases estándar Java
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.net.URI;
@@ -43,8 +39,8 @@ import java.util.Optional;
  * edición, crear solicitud, guardar cambios.</li>
  * <li>Tipos de Entrada: Añadir, editar, eliminar (asociados a sus
  * festivales).</li>
- * <li>Entradas: Listar por festival, nominar a asistentes, cancelar,
- * asociar pulseras.</li>
+ * <li>Entradas: Listar por festival, nominar a asistentes, cancelar, asociar
+ * pulseras.</li>
  * <li>Asistentes: Listar los asociados a sus festivales.</li>
  * <li>Pulseras NFC: Listar las asociadas a sus festivales.</li>
  * <li>Cambio de Contraseña: Gestionar el cambio de contraseña obligatorio
@@ -422,6 +418,7 @@ public class PromotorResource {
      * @param precioStr Precio (String, obligatorio, se parseará a BigDecimal).
      * @param stockStr Stock inicial (String, obligatorio, se parseará a
      * Integer).
+     * @param requiereNominacion
      * @return Una respuesta de redirección (303) a la vista de detalle del
      * festival.
      * @throws BadRequestException Si el ID del festival no es válido.
@@ -434,7 +431,8 @@ public class PromotorResource {
             @FormParam("tipo") String tipo,
             @FormParam("descripcion") String descripcion,
             @FormParam("precio") String precioStr,
-            @FormParam("stock") String stockStr) {
+            @FormParam("stock") String stockStr,
+            @FormParam("requiereNominacion") Boolean requiereNominacion) {
 
         log.info("POST /promotor/festivales/{}/tiposEntrada recibido", idFestival);
         Integer idPromotor = verificarAccesoPromotor(request);
@@ -460,6 +458,7 @@ public class PromotorResource {
             if (stockStr == null || stockStr.isBlank()) {
                 throw new IllegalArgumentException("El stock es obligatorio.");
             }
+            dto.setRequiereNominacion(requiereNominacion != null && requiereNominacion);
 
             // Parsear precio y stock
             try {
@@ -570,11 +569,13 @@ public class PromotorResource {
      * entrada si falla. Requiere rol PROMOTOR en sesión y ser dueño del
      * festival asociado.
      *
-     * @param idTipoEntrada ID del tipo de entrada a actualizar, obtenido del path.
+     * @param idTipoEntrada ID del tipo de entrada a actualizar, obtenido del
+     * path.
      * @param tipo Nuevo nombre del tipo (obligatorio).
      * @param descripcion Nueva descripción (opcional).
      * @param precioStr Nuevo precio (String, obligatorio).
      * @param stockStr Nuevo stock (String, obligatorio).
+     * @param requiereNominacion
      * @return Una respuesta de redirección (303) a la vista de detalle del
      * festival o al formulario de edición de entrada si hay error.
      * @throws BadRequestException Si el ID no es válido.
@@ -591,7 +592,8 @@ public class PromotorResource {
             @FormParam("tipo") String tipo,
             @FormParam("descripcion") String descripcion,
             @FormParam("precio") String precioStr,
-            @FormParam("stock") String stockStr) throws ServletException, IOException {
+            @FormParam("stock") String stockStr,
+            @FormParam("requiereNominacion") Boolean requiereNominacion) throws ServletException, IOException {
 
         log.info("POST /promotor/tiposEntrada/{}/actualizar recibido", idTipoEntrada);
         Integer idPromotor = verificarAccesoPromotor(request);
@@ -618,7 +620,7 @@ public class PromotorResource {
             if (stockStr == null || stockStr.isBlank()) {
                 throw new IllegalArgumentException("El stock es obligatorio.");
             }
-
+            dto.setRequiereNominacion(requiereNominacion != null && requiereNominacion);
             // Parsear y validar precio
             try {
                 dto.setPrecio(new BigDecimal(precioStr.replace(',', '.')));
@@ -689,7 +691,8 @@ public class PromotorResource {
      * vista de detalle del festival. Requiere rol PROMOTOR en sesión y ser
      * dueño del festival asociado.
      *
-     * @param idTipoEntrada ID del tipo de entrada a eliminar, obtenido del path.
+     * @param idTipoEntrada ID del tipo de entrada a eliminar, obtenido del
+     * path.
      * @return Una respuesta de redirección (303) a la vista de detalle del
      * festival.
      * @throws BadRequestException Si el ID no es válido.
@@ -754,14 +757,13 @@ public class PromotorResource {
 
     // --- Endpoints para Gestión de Entradas ---
     /**
-     * Endpoint GET para listar las entradas (vendidas/generadas) de
-     * un festival específico perteneciente al promotor autenticado. Realiza
-     * forward al JSP
-     * {@code /WEB-INF/jsp/promotor/promotor-entradas.jsp}. Requiere
-     * rol PROMOTOR en sesión y ser dueño del festival.
+     * Endpoint GET para listar las entradas (vendidas/generadas) de un festival
+     * específico perteneciente al promotor autenticado. Realiza forward al JSP
+     * {@code /WEB-INF/jsp/promotor/promotor-entradas.jsp}. Requiere rol
+     * PROMOTOR en sesión y ser dueño del festival.
      *
-     * @param idFestival ID del festival cuyas entradas se listarán,
-     * obtenido del path.
+     * @param idFestival ID del festival cuyas entradas se listarán, obtenido
+     * del path.
      * @return Una respuesta JAX-RS OK si el forward tiene éxito.
      * @throws BadRequestException Si el ID no es válido.
      * @throws NotFoundException Si el festival no se encuentra.
@@ -807,20 +809,19 @@ public class PromotorResource {
     }
 
     /**
-     * Endpoint POST para nominar una entrada a un asistente. Recibe el
-     * email, nombre y teléfono (opcional) del asistente desde el formulario. El
+     * Endpoint POST para nominar una entrada a un asistente. Recibe el email,
+     * nombre y teléfono (opcional) del asistente desde el formulario. El
      * servicio buscará o creará el asistente por email. Redirige a la lista de
-     * entradas del festival. Requiere rol PROMOTOR en sesión y ser
-     * dueño del festival asociado a la entrada.
+     * entradas del festival. Requiere rol PROMOTOR en sesión y ser dueño del
+     * festival asociado a la entrada.
      *
-     * @param idTipoEntrada ID de la entrada a nominar, obtenido
-     * del path.
+     * @param idTipoEntrada ID de la entrada a nominar, obtenido del path.
      * @param emailAsistente Email del asistente (obligatorio).
      * @param nombreAsistente Nombre del asistente (obligatorio si el asistente
      * es nuevo).
      * @param telefonoAsistente Teléfono del asistente (opcional).
-     * @return Una respuesta de redirección (303) a la lista de entradas
-     * del festival.
+     * @return Una respuesta de redirección (303) a la lista de entradas del
+     * festival.
      * @throws BadRequestException Si faltan parámetros obligatorios (ID
      * entrada, email).
      */
@@ -889,14 +890,12 @@ public class PromotorResource {
     }
 
     /**
-     * Endpoint POST para cancelar una entrada. El servicio se encarga
-     * de verificar permisos, estado de la entrada y de restaurar el stock del
-     * tipo de entrada original. Redirige a la lista de entradas del
-     * festival. Requiere rol PROMOTOR en sesión y ser dueño del festival
-     * asociado.
+     * Endpoint POST para cancelar una entrada. El servicio se encarga de
+     * verificar permisos, estado de la entrada y de restaurar el stock del tipo
+     * de entrada original. Redirige a la lista de entradas del festival.
+     * Requiere rol PROMOTOR en sesión y ser dueño del festival asociado.
      *
-     * @param idTipoEntrada ID de la entrada a cancelar, obtenido
-     * del path.
+     * @param idTipoEntrada ID de la entrada a cancelar, obtenido del path.
      * @return Una respuesta de redirección (303) a la lista de entradas.
      * @throws BadRequestException Si falta el ID o no es válido.
      */
@@ -953,13 +952,13 @@ public class PromotorResource {
     }
 
     /**
-     * Endpoint POST para asociar una pulsera NFC a una entrada. Recibe
-     * el UID de la pulsera desde el formulario. Redirige a la lista de entradas
-     * del festival. Requiere rol PROMOTOR en sesión y ser dueño del
-     * festival asociado.
+     * Endpoint POST para asociar una pulsera NFC a una entrada. Recibe el UID
+     * de la pulsera desde el formulario. Redirige a la lista de entradas del
+     * festival. Requiere rol PROMOTOR en sesión y ser dueño del festival
+     * asociado.
      *
-     * @param idTipoEntrada ID de la entrada a la que asociar la
-     * pulsera, obtenido del path.
+     * @param idTipoEntrada ID de la entrada a la que asociar la pulsera,
+     * obtenido del path.
      * @param codigoUid UID de la pulsera a asociar, obtenido del formulario.
      * @return Una respuesta de redirección (303) a la lista de entradas.
      * @throws BadRequestException Si faltan parámetros o son inválidos.

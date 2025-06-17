@@ -52,6 +52,10 @@ public class TipoEntrada implements Serializable {
     @Column(name = "fecha_modificacion", columnDefinition = "DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP", insertable = false, updatable = false)
     private LocalDateTime fechaModificacion;
 
+    @NotNull
+    @Column(name = "requiere_nominacion", nullable = false, columnDefinition = "BOOLEAN DEFAULT TRUE")
+    private Boolean requiereNominacion = true;
+
     /**
      * El festival al que pertenece este tipo de entrada. Relación muchos a uno.
      * FK 'id_festival' no nula. Fetch LAZY.
@@ -135,6 +139,14 @@ public class TipoEntrada implements Serializable {
 
     public void setComprasDondeAparece(Set<CompraEntrada> comprasDondeAparece) {
         this.comprasDondeAparece = comprasDondeAparece;
+    }
+
+    public Boolean getRequiereNominacion() {
+        return requiereNominacion;
+    }
+
+    public void setRequiereNominacion(Boolean requiereNominacion) {
+        this.requiereNominacion = requiereNominacion;
     }
 
     // --- equals, hashCode y toString ---

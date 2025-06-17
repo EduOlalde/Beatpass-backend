@@ -469,14 +469,15 @@ public class EntradaServiceImpl implements EntradaService {
         if (ea.getCompraEntrada() != null) {
             dto.setIdCompraEntrada(ea.getCompraEntrada().getIdCompraEntrada());
             if (ea.getCompraEntrada().getTipoEntrada() != null) {
-                TipoEntrada entradaOriginal = ea.getCompraEntrada().getTipoEntrada();
-                dto.setIdEntradaOriginal(entradaOriginal.getIdTipoEntrada());
-                dto.setTipoEntradaOriginal(entradaOriginal.getTipo());
-                if (entradaOriginal.getFestival() != null) {
-                    dto.setIdFestival(entradaOriginal.getFestival().getIdFestival());
-                    dto.setNombreFestival(entradaOriginal.getFestival().getNombre());
+                TipoEntrada tipoEntradaOriginal = ea.getCompraEntrada().getTipoEntrada();
+                dto.setIdEntradaOriginal(tipoEntradaOriginal.getIdTipoEntrada());
+                dto.setTipoEntradaOriginal(tipoEntradaOriginal.getTipo());
+                dto.setRequiereNominacion(tipoEntradaOriginal.getRequiereNominacion()); 
+                if (tipoEntradaOriginal.getFestival() != null) {
+                    dto.setIdFestival(tipoEntradaOriginal.getFestival().getIdFestival());
+                    dto.setNombreFestival(tipoEntradaOriginal.getFestival().getNombre());
                 } else {
-                    log.warn("La entrada original ID {} (asociada a Entrada ID {}) no tiene un festival vinculado.", entradaOriginal.getIdTipoEntrada(), ea.getIdEntrada());
+                    log.warn("La entrada original ID {} (asociada a Entrada ID {}) no tiene un festival vinculado.", tipoEntradaOriginal.getIdTipoEntrada(), ea.getIdEntrada());
                 }
             } else {
                 log.warn("La CompraEntrada ID {} (asociada a Entrada ID {}) no tiene una entrada original vinculada.", ea.getCompraEntrada().getIdCompraEntrada(), ea.getIdEntrada());

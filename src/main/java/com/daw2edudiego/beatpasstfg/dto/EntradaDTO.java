@@ -6,8 +6,8 @@ import java.util.Date;
 import java.util.Objects;
 
 /**
- * DTO para representar una Entrada individual. Incluye información de
- * la entrada, asistente, festival y la imagen QR.
+ * DTO para representar una Entrada individual. Incluye información de la
+ * entrada, asistente, festival y la imagen QR.
  */
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class EntradaDTO {
@@ -17,6 +17,7 @@ public class EntradaDTO {
     private EstadoEntrada estado;
     private Date fechaAsignacion;
     private Date fechaUso;
+    private Boolean requiereNominacion;
 
     // Información relacionada
     private Integer idCompraEntrada;
@@ -165,6 +166,14 @@ public class EntradaDTO {
 
     public void setQrCodeImageDataUrl(String qrCodeImageDataUrl) {
         this.qrCodeImageDataUrl = qrCodeImageDataUrl;
+    }
+
+    public Boolean getRequiereNominacion() {
+        return requiereNominacion;
+    }
+
+    public void setRequiereNominacion(Boolean requiereNominacion) {
+        this.requiereNominacion = requiereNominacion;
     }
 
     // --- equals y hashCode ---

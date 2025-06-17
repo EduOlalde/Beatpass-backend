@@ -79,12 +79,18 @@
                                 </td>
                                 <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-700">
                                     <c:choose>
+                                        <%-- Si ya está nominada, muestra los datos --%>
                                         <c:when test="${not empty ea.idAsistente}">
-                                            ${ea.nombreAsistente} <br>
-                                            <span class="text-xs text-gray-500">${ea.emailAsistente}</span>
+                                            <div class="font-medium text-gray-900">${ea.nombreAsistente}</div>
+                                            <div class="text-xs text-gray-500">${ea.emailAsistente}</div>
                                         </c:when>
+                                        <%-- Si requiere nominación y está pendiente --%>
+                                        <c:when test="${ea.requiereNominacion}">
+                                            <span class="text-xs text-gray-500 italic">(Pendiente de nominación)</span>
+                                        </c:when>
+                                        <%-- Si no requiere nominación --%>
                                         <c:otherwise>
-                                            <span class="text-xs text-gray-500 italic">(Pendiente)</span>
+                                            <span class="badge badge-usada">Al Portador</span>
                                         </c:otherwise>
                                     </c:choose>
                                 </td>
@@ -95,12 +101,13 @@
                                 </td>
                                 <td class="px-4 py-4 whitespace-nowrap text-center text-sm">
                                     <div class="flex flex-col items-center space-y-1 md:space-y-2">
-                                        <%-- Formulario Nominar --%>
-                                        <c:if test="${empty ea.idAsistente and ea.estado == 'ACTIVA'}">
+
+                                        <%-- Formulario Nominar: Solo si la entrada lo requiere y está sin nominar --%>
+                                        <c:if test="${ea.requiereNominacion and empty ea.idAsistente and ea.estado == 'ACTIVA'}">
                                             <form action="${pageContext.request.contextPath}/api/promotor/entradas/${ea.idEntrada}/nominar" method="post" class="inline-block"
-                                                  onsubmit="return confirm('Nominar entrada ID ${ea.idEntrada} a ' + document.getElementById('emailAsistente_${ea.idEntrada}').value + '?');">
+                                                  onsubmit="return confirm('Nominar entrada ID ${ea.idEntrada} a ' + this.emailAsistente.value + '?');">
                                                 <div class="flex flex-col space-y-1 text-left">
-                                                    <input type="email" id="emailAsistente_${ea.idEntrada}" name="emailAsistente" required placeholder="Email Asistente" title="Email del asistente" class="action-input">
+                                                    <input type="email" name="emailAsistente" required placeholder="Email Asistente" title="Email del asistente" class="action-input">
                                                     <input type="text" name="nombreAsistente" required placeholder="Nombre Asistente" title="Nombre (obligatorio si es nuevo)" class="action-input">
                                                     <input type="tel" name="telefonoAsistente" placeholder="Teléfono (Opcional)" title="Teléfono (opcional)" class="action-input">
                                                     <button type="submit" class="action-button action-button-nominate w-full text-center" title="Nominar esta entrada">Confirmar Nominación</button>
@@ -108,8 +115,8 @@
                                             </form>
                                         </c:if>
 
-                                        <%-- Formulario Asociar Pulsera --%>
-                                        <c:if test="${not empty ea.idAsistente and ea.estado == 'ACTIVA' and empty ea.idPulseraAsociada}">
+                                        <%-- Formulario Asociar Pulsera: Si la entrada está activa, no tiene pulsera y (es al portador O ya está nominada) --%>
+                                        <c:if test="${ea.estado == 'ACTIVA' and empty ea.idPulseraAsociada and (not ea.requiereNominacion or not empty ea.idAsistente)}">
                                             <form action="${pageContext.request.contextPath}/api/promotor/entradas/${ea.idEntrada}/asociar-pulsera" method="post" class="inline-block mt-1"
                                                   onsubmit="return confirm('Asociar pulsera con UID ' + this.codigoUid.value + ' a entrada ID ${ea.idEntrada}?');">
                                                 <div class="flex items-center space-x-1">
@@ -118,24 +125,21 @@
                                                 </div>
                                             </form>
                                         </c:if>
+
                                         <c:if test="${not empty ea.idPulseraAsociada}">
                                             <span class="text-xs text-green-700 font-medium block mt-1" title="Pulsera asociada">
                                                 Pulsera: <span class="uid-code">${ea.codigoUidPulsera}</span>
                                             </span>
                                         </c:if>
 
-                                        <%-- Otros botones --%>
-                                        <div class="flex justify-center space-x-2 mt-1">
-                                            <c:if test="${not empty ea.idAsistente and ea.estado == 'ACTIVA'}">
-                                                <a href="#" class="action-link action-link-edit" onclick="alert('Modificar nominación entrada ID ${ea.idEntrada} - Pendiente'); return false;">Modificar</a>
-                                            </c:if>
-                                            <c:if test="${ea.estado == 'ACTIVA'}">
-                                                <form action="${pageContext.request.contextPath}/api/promotor/entradas/${ea.idEntrada}/cancelar" method="post" class="inline"
-                                                      onsubmit="return confirm('¿Cancelar entrada ID ${ea.idEntrada}?');">
-                                                    <button type="submit" class="action-button action-button-cancel" title="Cancelar Entrada">Cancelar</button>
-                                                </form>
-                                            </c:if>
-                                        </div>
+                                        <%-- Botón Cancelar --%>
+                                        <c:if test="${ea.estado == 'ACTIVA'}">
+                                            <form action="${pageContext.request.contextPath}/api/promotor/entradas/${ea.idEntrada}/cancelar" method="post" class="inline mt-2"
+                                                  onsubmit="return confirm('¿Cancelar entrada ID ${ea.idEntrada}?');">
+                                                <button type="submit" class="action-button action-button-cancel" title="Cancelar Entrada">Cancelar</button>
+                                            </form>
+                                        </c:if>
+
                                     </div>
                                 </td>
                             </tr>
