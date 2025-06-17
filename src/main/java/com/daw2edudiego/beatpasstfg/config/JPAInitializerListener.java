@@ -1,3 +1,4 @@
+// src/main/java/com/daw2edudiego/beatpasstfg/config/JPAInitializerListener.java
 package com.daw2edudiego.beatpasstfg.config;
 
 import com.daw2edudiego.beatpasstfg.util.JPAUtil;
@@ -25,20 +26,29 @@ public class JPAInitializerListener implements ServletContextListener {
     @Override
     public void contextDestroyed(ServletContextEvent sce) {
         log.info("Destruyendo contexto de la aplicación. Cerrando JPA y desregistrando drivers.");
-        JPAUtil.shutdown(); // Cierra el EntityManagerFactory
+        JPAUtil.shutdown();
 
-        // Desregistrar manualmente el driver JDBC para prevenir memory leaks en Tomcat
         Enumeration<Driver> drivers = DriverManager.getDrivers();
+        Driver mariadbDriver = null;
         while (drivers.hasMoreElements()) {
             Driver driver = drivers.nextElement();
-            if (driver.getClass().getName().equals("org.mariadb.jdbc.Driver")) {
-                try {
-                    DriverManager.deregisterDriver(driver);
-                    log.info("JDBC Driver desregistrado: {}", driver);
-                } catch (java.sql.SQLException e) {
-                    log.error("Error al desregistrar JDBC Driver {}: {}", driver, e.getMessage(), e);
-                }
+            if (driver.getClass().getName().equals("org.mariadb.jdbc.Driver") && driver.getClass().getClassLoader() == this.getClass().getClassLoader()) {
+                mariadbDriver = driver;
+                break;
+            } else if (driver.getClass().getName().equals("org.mariadb.jdbc.Driver")) {
+                mariadbDriver = driver;
             }
+        }
+
+        if (mariadbDriver != null) {
+            try {
+                DriverManager.deregisterDriver(mariadbDriver);
+                log.info("JDBC Driver {} desregistrado explícitamente.", mariadbDriver.getClass().getName());
+            } catch (java.sql.SQLException e) {
+                log.error("Error al desregistrar JDBC Driver {}: {}", mariadbDriver.getClass().getName(), e.getMessage(), e);
+            }
+        } else {
+            log.warn("JDBC Driver org.mariadb.jdbc.Driver no encontrado en DriverManager para desregistrar.");
         }
         log.info("Contexto de la aplicación destruido.");
     }
