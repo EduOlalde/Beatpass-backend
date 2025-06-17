@@ -109,13 +109,17 @@
                             <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Descripción</th>
                             <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Precio (€)</th>
                             <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Stock</th>
+
+                            <%-- NUEVA COLUMNA --%>
+                            <th class="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase">Modalidad</th>
+
                             <th class="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase">Acciones</th>
                         </tr>
                     </thead>
                     <tbody class="bg-white divide-y divide-gray-200">
                         <c:choose>
                             <c:when test="${empty tiposEntrada}">
-                                <tr><td colspan="5" class="px-4 py-3 text-center text-sm text-gray-500 italic">Aún no hay tipos de entrada definidos para este festival.</td></tr>
+                                <tr><td colspan="6" class="px-4 py-3 text-center text-sm text-gray-500 italic">Aún no hay tipos de entrada definidos para este festival.</td></tr>
                             </c:when>
                             <c:otherwise>
                                 <c:forEach var="tipoEntrada" items="${tiposEntrada}">
@@ -124,9 +128,21 @@
                                         <td class="px-4 py-2 text-sm text-gray-600">${tipoEntrada.descripcion}</td>
                                         <td class="px-4 py-2 whitespace-nowrap text-sm text-gray-600 text-right"><fmt:formatNumber value="${tipoEntrada.precio}" type="currency" currencySymbol="€" minFractionDigits="2" maxFractionDigits="2"/></td>
                                         <td class="px-4 py-2 whitespace-nowrap text-sm text-gray-600 text-right">${tipoEntrada.stock}</td>
+
+                                        <td class="px-4 py-2 whitespace-nowrap text-center text-sm">
+                                            <c:choose>
+                                                <c:when test="${tipoEntrada.requiereNominacion}">
+                                                    <span class="badge badge-activo" title="Esta entrada debe ser asignada a un asistente.">Nominativa</span>
+                                                </c:when>
+                                                <c:otherwise>
+                                                    <span class="badge badge-usada" title="Esta entrada no necesita ser asignada a un asistente.">Al Portador</span>
+                                                </c:otherwise>
+                                            </c:choose>
+                                        </td>
+
                                         <td class="px-4 py-2 whitespace-nowrap text-center text-sm space-x-2">
                                             <a href="${pageContext.request.contextPath}/api/promotor/tiposEntrada/${tipoEntrada.idTipoEntrada}/editar" class="action-link-edit">Editar</a>
-                                            <form action="${pageContext.request.contextPath}/api/promotor/tiposEntrada/${tipoEntrada.idTipoEntrada}/eliminar" method="POST" style="display:inline;">
+                                            <form action="${pageContext.request.contextPath}/api/promotor/tiposEntrada/${tipoEntrada.idTipoEntrada}/eliminar" method="POST" style="display:inline;" onsubmit="return confirm('¿Estás seguro de que quieres eliminar el tipo de entrada \'${fn:escapeXml(tipoEntrada.tipo)}\'? Esta acción no se puede deshacer.');">
                                                 <button type="submit" class="action-button action-button-danger">Eliminar</button>
                                             </form>
                                         </td>

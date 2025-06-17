@@ -377,6 +377,8 @@ public class VentaServiceImpl implements VentaService {
                 TipoEntrada tipoEntradaOriginal = ea.getCompraEntrada().getTipoEntrada();
                 dto.setIdEntradaOriginal(tipoEntradaOriginal.getIdTipoEntrada());
                 dto.setTipoEntradaOriginal(tipoEntradaOriginal.getTipo());
+                dto.setRequiereNominacion(tipoEntradaOriginal.getRequiereNominacion());
+
                 if (tipoEntradaOriginal.getFestival() != null) {
                     dto.setIdFestival(tipoEntradaOriginal.getFestival().getIdFestival());
                     dto.setNombreFestival(tipoEntradaOriginal.getFestival().getNombre());

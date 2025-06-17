@@ -442,8 +442,8 @@ public class PromotorResource {
 
         String mensajeFlash = null;
         String errorFlash = null;
-        TipoEntradaDTO dto = new TipoEntradaDTO(); // Para posible reenvío si hay error
-        dto.setIdFestival(idFestival); // Establecer el ID del festival en el DTO
+        TipoEntradaDTO dto = new TipoEntradaDTO();
+        dto.setIdFestival(idFestival);
 
         try {
             // Validar y poblar DTO
