@@ -29,6 +29,8 @@ public class TipoEntradaDTO {
     @Min(value = 0, message = "El stock no puede ser negativo.")
     private Integer stock;
 
+    private Boolean requiereNominacion;
+
     public TipoEntradaDTO() {
     }
 
@@ -79,6 +81,14 @@ public class TipoEntradaDTO {
 
     public void setStock(Integer stock) {
         this.stock = stock;
+    }
+
+    public Boolean getRequiereNominacion() {
+        return requiereNominacion;
+    }
+
+    public void setRequiereNominacion(Boolean requiereNominacion) {
+        this.requiereNominacion = requiereNominacion;
     }
 
     // --- toString ---

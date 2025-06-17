@@ -42,7 +42,7 @@ public class PdfServiceImpl implements PdfService {
 
                     float currentY = PDRectangle.A4.getHeight() - margin;
 
-                    // Logo (Placeholder - Necesitarías tu imagen de logo)
+                    // Logo (Placeholder)
                     // try {
                     //     InputStream logoStream = getClass().getResourceAsStream("/path/to/your/logo.png");
                     //     if (logoStream != null) {
@@ -76,7 +76,18 @@ public class PdfServiceImpl implements PdfService {
 
                     contentStream.showText("Asistente: ");
                     contentStream.setFont(fontBold, 12);
-                    contentStream.showText(entrada.getNombreAsistente() != null ? entrada.getNombreAsistente() : "Pendiente de nominar");
+
+                    if (entrada.getNombreAsistente() != null && !entrada.getNombreAsistente().isBlank()) {
+                        // Si la entrada está nominada, muestra el nombre
+                        contentStream.showText(entrada.getNombreAsistente());
+                    } else if (Boolean.FALSE.equals(entrada.getRequiereNominacion())) {
+                        // Si NO requiere nominación, es al portador
+                        contentStream.showText("Al Portador");
+                    } else {
+                        // Si requiere nominación y no tiene nombre, está pendiente
+                        contentStream.showText("Pendiente de nominar");
+                    }
+
                     contentStream.setFont(fontRegular, 12);
                     currentY -= lineHeight;
                     contentStream.newLineAtOffset(0, -lineHeight);
@@ -88,8 +99,7 @@ public class PdfServiceImpl implements PdfService {
                     contentStream.setFont(fontRegular, 12);
                     currentY -= lineHeight;
                     contentStream.newLineAtOffset(0, -lineHeight);
-                    */
-
+                     */
                     contentStream.showText("Código QR: ");
                     contentStream.setFont(fontBold, 12);
                     contentStream.showText(entrada.getCodigoQr() != null ? entrada.getCodigoQr() : "N/A");
@@ -137,7 +147,13 @@ public class PdfServiceImpl implements PdfService {
                     contentStream.newLineAtOffset(margin, margin + lineHeight * 2); // Posicionar cerca del fondo
                     contentStream.showText("Presenta esta entrada (impresa o en tu dispositivo móvil) en el acceso al festival.");
                     contentStream.newLineAtOffset(0, -lineHeight);
-                    contentStream.showText("Esta entrada es personal e intransferible una vez nominada. No se admiten devoluciones.");
+
+                    if (Boolean.TRUE.equals(entrada.getRequiereNominacion())) {
+                        contentStream.showText("Esta entrada es personal e intransferible una vez nominada. No se admiten devoluciones.");
+                    } else {
+                        contentStream.showText("Esta entrada al portador no es nominal. No se admiten devoluciones.");
+                    }
+
                     contentStream.newLineAtOffset(0, -lineHeight);
                     contentStream.setFont(fontBold, 9);
                     contentStream.showText("Beatpass TFG - " + java.time.Year.now().getValue());

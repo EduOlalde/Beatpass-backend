@@ -188,10 +188,12 @@ public class TipoEntradaServiceImpl implements TipoEntradaService {
 
             verificarPropiedadFestival(entrada.getFestival(), idPromotor);
 
+            // Actualización de los campos
             entrada.setTipo(tipoEntradaDTO.getTipo().trim());
             entrada.setDescripcion(tipoEntradaDTO.getDescripcion() != null ? tipoEntradaDTO.getDescripcion().trim() : null);
             entrada.setPrecio(tipoEntradaDTO.getPrecio());
             entrada.setStock(tipoEntradaDTO.getStock());
+            entrada.setRequiereNominacion(tipoEntradaDTO.getRequiereNominacion());
 
             TipoEntrada entradaActualizada = tipoEntradaRepository.save(em, entrada);
             tx.commit();
@@ -310,11 +312,13 @@ public class TipoEntradaServiceImpl implements TipoEntradaService {
             return null;
         }
         TipoEntrada entity = new TipoEntrada();
-        // No mapeamos idEntrada ni idFestival aquí
         entity.setTipo(dto.getTipo().trim());
         entity.setDescripcion(dto.getDescripcion() != null ? dto.getDescripcion().trim() : null);
         entity.setPrecio(dto.getPrecio());
         entity.setStock(dto.getStock());
+        if (dto.getRequiereNominacion() != null) {
+            entity.setRequiereNominacion(dto.getRequiereNominacion());
+        }
         return entity;
     }
 
@@ -334,6 +338,8 @@ public class TipoEntradaServiceImpl implements TipoEntradaService {
         dto.setDescripcion(entrada.getDescripcion());
         dto.setPrecio(entrada.getPrecio());
         dto.setStock(entrada.getStock());
+        dto.setRequiereNominacion(entrada.getRequiereNominacion());
+
         return dto;
     }
 

@@ -162,12 +162,11 @@ public class EmailServiceImpl implements EmailService {
         StringBuilder sb = new StringBuilder();
         String appBaseUrl = MailConfig.getAppBaseUrl();
 
-        // Asegurar que appBaseUrl termine con / si no está vacío
         if (appBaseUrl != null && !appBaseUrl.isEmpty() && !appBaseUrl.endsWith("/")) {
             appBaseUrl += "/";
         } else if (appBaseUrl == null || appBaseUrl.isEmpty()) {
             log.error("APP_BASE_URL no está configurada. Usando fallback que podría ser incorrecto: http://localhost:8080/BeatpassTFG/");
-            appBaseUrl = "http://localhost:8080/BeatpassTFG/"; // Fallback
+            appBaseUrl = "http://localhost:8080/BeatpassTFG/";
         }
 
         sb.append("<!DOCTYPE html><html lang='es'><head><meta charset='UTF-8'><title>Tus Entradas para ").append(escapeHtml(nombreFestival)).append("</title>");
@@ -176,18 +175,34 @@ public class EmailServiceImpl implements EmailService {
         sb.append("<div class='email-body'>");
         sb.append("<h2>¡Hola ").append(escapeHtml(nombreComprador)).append("!</h2>");
         sb.append("<p>Gracias por tu compra. Aquí tienes tus entradas para el festival: <strong>").append(escapeHtml(nombreFestival)).append("</strong>.</p>");
-        sb.append("<p>Hemos adjuntado un archivo PDF con todas tus entradas. Cada entrada contiene un código QR único.</p>");
-        sb.append("<p class='highlight'>Para nominar cada entrada al asistente correspondiente, utiliza el enlace individual proporcionado para cada una:</p>");
+        sb.append("<p>Hemos adjuntado un archivo PDF con todas tus entradas. Por favor, revisa las instrucciones para cada una a continuación:</p>");
+
+        boolean hayEntradasNominativas = false;
+
         sb.append("<ul>");
         for (EntradaDTO entrada : entradas) {
-            String nominationLink = appBaseUrl + "api/public/venta/nominar-entrada/" + entrada.getCodigoQr();
+            sb.append("<li>");
 
-            sb.append("<li>Tipo: <span class='ticket-detail'>").append(escapeHtml(entrada.getTipoEntradaOriginal())).append("</span>");
-            sb.append(" - Código QR: <code>").append(escapeHtml(entrada.getCodigoQr())).append("</code>");
-            sb.append(" <a href='").append(nominationLink).append("' class='button' style='font-size:0.8em; padding: 5px 10px; margin-left:10px;'>Nominar esta entrada</a></li>");
+            sb.append("Tipo: <span class='ticket-detail'>").append(escapeHtml(entrada.getTipoEntradaOriginal())).append("</span>");
+            sb.append(" - Código: <code>").append(escapeHtml(entrada.getCodigoQr())).append("</code><br>");
+
+            if (Boolean.TRUE.equals(entrada.getRequiereNominacion())) {
+                hayEntradasNominativas = true;
+                String nominationLink = appBaseUrl + "api/public/venta/nominar-entrada/" + entrada.getCodigoQr();
+                sb.append("<span class='highlight'>Esta entrada requiere ser nominada.</span> Utiliza el siguiente botón para asignar un asistente:");
+                sb.append(" <a href='").append(nominationLink).append("' class='button' style='font-size:0.8em; padding: 5px 10px; margin-left:10px;'>Nominar esta entrada</a>");
+            } else {
+                sb.append("<span style='color: #059669; font-weight: bold;'>Esta entrada es al portador y no requiere nominación.</span> Puedes entregarla directamente o usarla tú mismo.");
+            }
+
+            sb.append("</li>");
         }
         sb.append("</ul>");
-        sb.append("<p>Una vez nominada, el asistente recibirá un email con su entrada personalizada en PDF.</p>");
+
+        if (hayEntradasNominativas) {
+            sb.append("<p>Recuerda que una vez nominada una entrada, el asistente recibirá su propia copia en su correo.</p>");
+        }
+
         appendFooter(sb);
         sb.append("</div></div></body></html>");
         return sb.toString();

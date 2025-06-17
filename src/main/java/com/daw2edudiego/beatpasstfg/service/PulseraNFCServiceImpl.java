@@ -478,14 +478,16 @@ public class PulseraNFCServiceImpl implements PulseraNFCService {
             throw new IllegalStateException("La entrada ID " + entrada.getIdEntrada()
                     + " no está activa (Estado: " + entrada.getEstado() + "). No se puede asociar pulsera.");
         }
-        if (entrada.getAsistente() == null) {
+        TipoEntrada tipoOriginal = entrada.getCompraEntrada().getTipoEntrada();
+
+        if (Boolean.TRUE.equals(tipoOriginal.getRequiereNominacion()) && entrada.getAsistente() == null) {
             throw new EntradaNoNominadaException("La entrada ID " + entrada.getIdEntrada()
                     + " debe estar nominada a un asistente antes de asociar una pulsera.");
         }
     }
 
     private void validarEstadoPulseraParaAsociacion(PulseraNFC pulsera, Entrada nuevaEntrada) {
-        if (pulsera.getIdPulsera() == null) { // Solo para pulseras nuevas, no existentes
+        if (pulsera.getIdPulsera() == null) {
             return;
         }
         if (!Boolean.TRUE.equals(pulsera.getActiva())) {
