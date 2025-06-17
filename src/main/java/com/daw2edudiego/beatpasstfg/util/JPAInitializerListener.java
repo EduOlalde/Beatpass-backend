@@ -1,7 +1,6 @@
 // src/main/java/com/daw2edudiego/beatpasstfg/config/JPAInitializerListener.java
-package com.daw2edudiego.beatpasstfg.config;
+package com.daw2edudiego.beatpasstfg.util;
 
-import com.daw2edudiego.beatpasstfg.util.JPAUtil;
 import jakarta.servlet.ServletContextEvent;
 import jakarta.servlet.ServletContextListener;
 import jakarta.servlet.annotation.WebListener;
