@@ -41,7 +41,6 @@ public class AsistenteServiceImpl implements AsistenteService {
             em = JPAUtil.createEntityManager();
             List<Asistente> asistentes = asistenteRepository.findAll(em);
             log.info("Encontrados {} asistentes en total.", asistentes.size());
-            // CORRECCIÓN: Usar una variable final para el EntityManager en la lambda.
             final EntityManager finalEm = em;
             return asistentes.stream()
                     .map(a -> mapEntityToDto(a, finalEm))
