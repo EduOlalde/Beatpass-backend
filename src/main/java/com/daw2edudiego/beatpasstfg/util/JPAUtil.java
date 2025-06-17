@@ -1,4 +1,3 @@
-// eduolalde/daw2-tfg-beatpass/DAW2-TFG-Beatpass-4c3b952517b6b4cf690ee7094dfc77d96c74f4c6/src/main/java/com/daw2edudiego/beatpasstfg/util/JPAUtil.java
 package com.daw2edudiego.beatpasstfg.util;
 
 import jakarta.persistence.EntityManager;
@@ -51,7 +50,7 @@ public class JPAUtil {
         if (emf != null && emf.isOpen()) {
             log.info("Cerrando EntityManagerFactory.");
             emf.close();
-            emf = null; 
+            emf = null;
             log.info("EntityManagerFactory cerrado correctamente.");
         }
     }
