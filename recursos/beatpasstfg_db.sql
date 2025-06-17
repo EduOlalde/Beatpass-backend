@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: mysql-beatpasstfg.alwaysdata.net
--- Generation Time: Jun 17, 2025 at 12:02 AM
+-- Generation Time: Jun 17, 2025 at 10:15 PM
 -- Server version: 10.11.13-MariaDB
 -- PHP Version: 7.4.33
 
@@ -250,16 +250,17 @@ CREATE TABLE `tipos_entrada` (
   `precio` decimal(8,2) NOT NULL CHECK (`precio` >= 0),
   `stock` int(11) NOT NULL CHECK (`stock` >= 0),
   `fecha_creacion` datetime DEFAULT current_timestamp(),
-  `fecha_modificacion` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp()
+  `fecha_modificacion` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  `requiere_nominacion` tinyint(1) NOT NULL DEFAULT 1
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `tipos_entrada`
 --
 
-INSERT INTO `tipos_entrada` (`id_tipo_entrada`, `id_festival`, `tipo`, `descripcion`, `precio`, `stock`, `fecha_creacion`, `fecha_modificacion`) VALUES
-(57, 19, 'General', 'Entrada general', 50.00, 9999, '2025-06-16 13:55:31', '2025-06-16 17:05:26'),
-(58, 19, 'VIP', 'VIP', 80.00, 498, '2025-06-16 17:00:00', '2025-06-16 18:58:48');
+INSERT INTO `tipos_entrada` (`id_tipo_entrada`, `id_festival`, `tipo`, `descripcion`, `precio`, `stock`, `fecha_creacion`, `fecha_modificacion`, `requiere_nominacion`) VALUES
+(57, 19, 'General', 'Entrada general', 50.00, 9999, '2025-06-16 13:55:31', '2025-06-16 17:05:26', 1),
+(58, 19, 'VIP', 'VIP', 80.00, 498, '2025-06-16 17:00:00', '2025-06-16 18:58:48', 1);
 
 -- --------------------------------------------------------
 
