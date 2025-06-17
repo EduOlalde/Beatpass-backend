@@ -32,7 +32,7 @@ public class JPAUtil {
                 properties.put("jakarta.persistence.jdbc.user", dbUser);
                 properties.put("jakarta.persistence.jdbc.password", dbPassword);
 
-                Class.forName("com.mysql.cj.jdbc.Driver");
+                Class.forName("org.mariadb.jdbc.Driver");
 
                 emf = Persistence.createEntityManagerFactory(PERSISTENCE_UNIT_NAME, properties);
                 log.info("EntityManagerFactory inicializado correctamente.");
