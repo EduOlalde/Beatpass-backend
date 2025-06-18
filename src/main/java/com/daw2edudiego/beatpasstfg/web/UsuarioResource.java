@@ -2,8 +2,6 @@ package com.daw2edudiego.beatpasstfg.web;
 
 import com.daw2edudiego.beatpasstfg.dto.UsuarioCreacionDTO;
 import com.daw2edudiego.beatpasstfg.dto.UsuarioDTO;
-import com.daw2edudiego.beatpasstfg.exception.EmailExistenteException;
-import com.daw2edudiego.beatpasstfg.exception.UsuarioNotFoundException;
 import com.daw2edudiego.beatpasstfg.model.RolUsuario;
 import com.daw2edudiego.beatpasstfg.service.UsuarioService;
 import com.daw2edudiego.beatpasstfg.service.UsuarioServiceImpl;
@@ -20,7 +18,6 @@ import org.slf4j.LoggerFactory;
 
 import java.net.URI;
 import java.util.List;
-import java.util.Map; // Importar Map
 import java.util.Optional;
 
 /**
@@ -54,33 +51,22 @@ public class UsuarioResource {
     @POST
     public Response crearUsuario(@Valid UsuarioCreacionDTO usuarioCreacionDTO) {
         log.info("POST /usuarios para email: {}", usuarioCreacionDTO != null ? usuarioCreacionDTO.getEmail() : "null");
-        verificarAccesoAdmin(); // Lanza excepción si no es ADMIN
+        verificarAccesoAdmin();
 
-        try {
-            // Validación básica (complementaria a @Valid)
-            if (usuarioCreacionDTO == null || usuarioCreacionDTO.getEmail() == null || usuarioCreacionDTO.getEmail().isBlank()
-                    || usuarioCreacionDTO.getPassword() == null || usuarioCreacionDTO.getPassword().isEmpty()
-                    || usuarioCreacionDTO.getNombre() == null || usuarioCreacionDTO.getNombre().isBlank()
-                    || usuarioCreacionDTO.getRol() == null) {
-                return crearRespuestaError(Response.Status.BAD_REQUEST, "Datos inválidos (nombre, email, password, rol).");
-            }
-            if (usuarioCreacionDTO.getPassword().length() < 8) {
-                return crearRespuestaError(Response.Status.BAD_REQUEST, "Contraseña debe tener al menos 8 caracteres.");
-            }
-
-            UsuarioDTO usuarioCreado = usuarioService.crearUsuario(usuarioCreacionDTO);
-            URI location = uriInfo.getAbsolutePathBuilder().path(usuarioCreado.getIdUsuario().toString()).build();
-            log.info("Usuario creado ID: {}, Location: {}", usuarioCreado.getIdUsuario(), location);
-            return Response.created(location).entity(usuarioCreado).build();
-
-        } catch (EmailExistenteException e) {
-            return crearRespuestaError(Response.Status.CONFLICT, e.getMessage());
-        } catch (IllegalArgumentException e) {
-            return crearRespuestaError(Response.Status.BAD_REQUEST, e.getMessage());
-        } catch (Exception e) {
-            log.error("Error interno al crear usuario: {}", e.getMessage(), e);
-            return crearRespuestaError(Response.Status.INTERNAL_SERVER_ERROR, "Error interno al crear usuario.");
+        if (usuarioCreacionDTO == null || usuarioCreacionDTO.getEmail() == null || usuarioCreacionDTO.getEmail().isBlank()
+                || usuarioCreacionDTO.getPassword() == null || usuarioCreacionDTO.getPassword().isEmpty()
+                || usuarioCreacionDTO.getNombre() == null || usuarioCreacionDTO.getNombre().isBlank()
+                || usuarioCreacionDTO.getRol() == null) {
+            throw new BadRequestException("Datos inválidos (nombre, email, password, rol).");
         }
+        if (usuarioCreacionDTO.getPassword().length() < 8) {
+            throw new BadRequestException("Contraseña debe tener al menos 8 caracteres.");
+        }
+
+        UsuarioDTO usuarioCreado = usuarioService.crearUsuario(usuarioCreacionDTO);
+        URI location = uriInfo.getAbsolutePathBuilder().path(usuarioCreado.getIdUsuario().toString()).build();
+        log.info("Usuario creado ID: {}, Location: {}", usuarioCreado.getIdUsuario(), location);
+        return Response.created(location).entity(usuarioCreado).build();
     }
 
     /**
@@ -96,34 +82,22 @@ public class UsuarioResource {
         log.info("GET /usuarios/{}", id);
         Integer idUsuarioAutenticado;
         boolean esAdmin;
-        try {
-            idUsuarioAutenticado = obtenerIdUsuarioAutenticado();
-            esAdmin = esRol(RolUsuario.ADMIN);
-        } catch (NotAuthorizedException e) {
-            return e.getResponse();
-        } catch (Exception e) {
-            return crearRespuestaError(Response.Status.INTERNAL_SERVER_ERROR, "Error procesando identidad.");
-        }
+        idUsuarioAutenticado = obtenerIdUsuarioAutenticado();
+        esAdmin = esRol(RolUsuario.ADMIN);
 
         if (id == null) {
-            return crearRespuestaError(Response.Status.BAD_REQUEST, "ID de usuario inválido.");
+            throw new BadRequestException("ID de usuario inválido.");
         }
 
-        // Verificar permiso
         if (idUsuarioAutenticado == null || (!esAdmin && !idUsuarioAutenticado.equals(id))) {
             log.warn("Acceso no autorizado a GET /usuarios/{} por usuario {}", id, idUsuarioAutenticado);
-            return crearRespuestaError(Response.Status.FORBIDDEN, "Acceso denegado.");
+            throw new ForbiddenException("Acceso denegado.");
         }
 
-        try {
-            Optional<UsuarioDTO> usuarioOpt = usuarioService.obtenerUsuarioPorId(id);
-            return usuarioOpt
-                    .map(dto -> Response.ok(dto).build())
-                    .orElseGet(() -> crearRespuestaError(Response.Status.NOT_FOUND, "Usuario no encontrado."));
-        } catch (Exception e) {
-            log.error("Error interno al obtener usuario ID {}: {}", id, e.getMessage(), e);
-            return crearRespuestaError(Response.Status.INTERNAL_SERVER_ERROR, "Error interno al obtener usuario.");
-        }
+        Optional<UsuarioDTO> usuarioOpt = usuarioService.obtenerUsuarioPorId(id);
+        return usuarioOpt
+                .map(dto -> Response.ok(dto).build())
+                .orElseThrow(() -> new NotFoundException("Usuario no encontrado."));
     }
 
     /**
@@ -135,7 +109,7 @@ public class UsuarioResource {
     @GET
     public Response obtenerUsuariosPorRol(@QueryParam("rol") String rolStr) {
         log.info("GET /usuarios?rol={}", rolStr);
-        verificarAccesoAdmin(); // Verifica ADMIN
+        verificarAccesoAdmin(); // Verifica ADMIN - lanza ForbiddenException.
 
         RolUsuario rol;
         try {
@@ -144,17 +118,12 @@ public class UsuarioResource {
             }
             rol = RolUsuario.valueOf(rolStr.toUpperCase());
         } catch (IllegalArgumentException e) {
-            return crearRespuestaError(Response.Status.BAD_REQUEST, "Valor 'rol' inválido. Posibles: ADMIN, PROMOTOR, CAJERO.");
+            throw new BadRequestException("Valor 'rol' inválido. Posibles: ADMIN, PROMOTOR, CAJERO.");
         }
 
-        try {
-            List<UsuarioDTO> usuarios = usuarioService.obtenerUsuariosPorRol(rol);
-            log.info("Devolviendo {} usuarios rol {}", usuarios.size(), rol);
-            return Response.ok(usuarios).build();
-        } catch (Exception e) {
-            log.error("Error interno obteniendo usuarios rol {}: {}", rol, e.getMessage(), e);
-            return crearRespuestaError(Response.Status.INTERNAL_SERVER_ERROR, "Error interno al obtener usuarios.");
-        }
+        List<UsuarioDTO> usuarios = usuarioService.obtenerUsuariosPorRol(rol);
+        log.info("Devolviendo {} usuarios rol {}", usuarios.size(), rol);
+        return Response.ok(usuarios).build();
     }
 
     /**
@@ -169,25 +138,18 @@ public class UsuarioResource {
     @Path("/{id}/estado")
     public Response actualizarEstadoUsuario(@PathParam("id") Integer id, @QueryParam("activo") Boolean activo) {
         log.info("PUT /usuarios/{}/estado?activo={}", id, activo);
-        verificarAccesoAdmin();
+        verificarAccesoAdmin(); // Lanza ForbiddenException
 
         if (id == null) {
-            return crearRespuestaError(Response.Status.BAD_REQUEST, "ID usuario inválido.");
+            throw new BadRequestException("ID usuario inválido.");
         }
         if (activo == null) {
-            return crearRespuestaError(Response.Status.BAD_REQUEST, "Parámetro 'activo' (true/false) obligatorio.");
+            throw new BadRequestException("Parámetro 'activo' (true/false) obligatorio.");
         }
 
-        try {
-            UsuarioDTO usuarioActualizado = usuarioService.actualizarEstadoUsuario(id, activo);
-            log.info("Estado usuario ID {} actualizado a {}.", id, activo);
-            return Response.ok(usuarioActualizado).build();
-        } catch (UsuarioNotFoundException e) {
-            return crearRespuestaError(Response.Status.NOT_FOUND, e.getMessage());
-        } catch (Exception e) {
-            log.error("Error interno al actualizar estado usuario ID {}: {}", id, e.getMessage(), e);
-            return crearRespuestaError(Response.Status.INTERNAL_SERVER_ERROR, "Error interno al actualizar estado.");
-        }
+        UsuarioDTO usuarioActualizado = usuarioService.actualizarEstadoUsuario(id, activo);
+        log.info("Estado usuario ID {} actualizado a {}.", id, activo);
+        return Response.ok(usuarioActualizado).build();
     }
 
     /**
@@ -201,43 +163,30 @@ public class UsuarioResource {
     @Path("/{id}")
     public Response eliminarUsuario(@PathParam("id") Integer id) {
         log.info("DELETE /usuarios/{}", id);
-        verificarAccesoAdmin();
+        verificarAccesoAdmin(); // Lanza ForbiddenException
         if (id == null) {
-            return crearRespuestaError(Response.Status.BAD_REQUEST, "ID usuario inválido.");
+            throw new BadRequestException("ID usuario inválido.");
         }
 
         // Evitar que un admin se borre a sí mismo
-        try {
-            Integer idAdminAutenticado = obtenerIdUsuarioAutenticado();
-            if (id.equals(idAdminAutenticado)) {
-                return crearRespuestaError(Response.Status.BAD_REQUEST, "Un administrador no puede eliminarse a sí mismo.");
-            }
-        } catch (Exception e) {
-            /* Ignorar si falla la verificación, la eliminación fallará después si es el caso */ }
-
-        try {
-            usuarioService.eliminarUsuario(id);
-            log.info("Usuario ID {} eliminado.", id);
-            return Response.noContent().build();
-        } catch (UsuarioNotFoundException e) {
-            return crearRespuestaError(Response.Status.NOT_FOUND, e.getMessage());
-        } catch (RuntimeException e) { // Captura errores de FK
-            log.error("Error al eliminar usuario ID {}: {}", id, e.getMessage());
-            return crearRespuestaError(Response.Status.CONFLICT, "No se pudo eliminar: " + e.getMessage());
-        } catch (Exception e) {
-            log.error("Error interno al eliminar usuario ID {}: {}", id, e.getMessage(), e);
-            return crearRespuestaError(Response.Status.INTERNAL_SERVER_ERROR, "Error interno al eliminar usuario.");
+        Integer idAdminAutenticado = obtenerIdUsuarioAutenticado(); // Lanza NotAuthorizedException
+        if (id.equals(idAdminAutenticado)) {
+            throw new BadRequestException("Un administrador no puede eliminarse a sí mismo.");
         }
+
+        usuarioService.eliminarUsuario(id);
+        log.info("Usuario ID {} eliminado.", id);
+        return Response.noContent().build();
     }
 
     // --- Métodos Auxiliares ---
     /**
-     * Crea una respuesta de error estándar JSON.
+     * El método `crearRespuestaError` se ha vuelto redundante y se puede
+     * eliminar después de implementar el `GenericExceptionMapper`. El
+     * `ExceptionMapper` ahora se encarga de traducir las excepciones a
+     * respuestas JSON.
      */
-    private Response crearRespuestaError(Response.Status status, String mensaje) {
-        return Response.status(status).entity(Map.of("error", mensaje)).build();
-    }
-
+    // private Response crearRespuestaError(Response.Status status, String mensaje) { ... }
     /**
      * Obtiene ID del usuario autenticado. Lanza excepción JAX-RS si no
      * autenticado o error.

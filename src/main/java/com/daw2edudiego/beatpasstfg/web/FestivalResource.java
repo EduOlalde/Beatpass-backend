@@ -2,8 +2,6 @@ package com.daw2edudiego.beatpasstfg.web;
 
 import com.daw2edudiego.beatpasstfg.dto.TipoEntradaDTO;
 import com.daw2edudiego.beatpasstfg.dto.FestivalDTO;
-import com.daw2edudiego.beatpasstfg.exception.FestivalNoPublicadoException;
-import com.daw2edudiego.beatpasstfg.exception.FestivalNotFoundException;
 import com.daw2edudiego.beatpasstfg.model.EstadoFestival;
 import com.daw2edudiego.beatpasstfg.model.RolUsuario;
 import com.daw2edudiego.beatpasstfg.service.TipoEntradaServiceImpl;
@@ -56,29 +54,19 @@ public class FestivalResource {
      * si está PUBLICADO).
      *
      * @param id ID del festival.
-     * @return 200 OK con lista de TipoEntradaDTO, 400 Bad Request, 404 Not Found,
- 500 Error.
+     * @return 200 OK con lista de TipoEntradaDTO, 400 Bad Request, 404 Not
+     * Found, 500 Error.
      */
     @GET
     @Path("/{id}/tipos-entrada")
     public Response obtenerTiposEntradaPublico(@PathParam("id") Integer id) {
         log.info("GET /festivales/{}/tipos-entrada (Público)", id);
         if (id == null) {
-            return Response.status(Response.Status.BAD_REQUEST).entity("{\"error\": \"ID de festival inválido.\"}").build();
+            throw new BadRequestException("ID de festival inválido.");
         }
-        try {
-            List<TipoEntradaDTO> tiposEntrada = tipoEntradaService.obtenerTiposEntradaPublicasPorFestival(id);
-            log.info("Devolviendo {} tipos de entrada para festival público ID {}", tiposEntrada.size(), id);
-            return Response.ok(tiposEntrada).build();
-        } catch (FestivalNotFoundException | FestivalNoPublicadoException e) {
-            log.warn("No se pueden obtener tipos de entrada públicas para festival ID {}: {}", id, e.getMessage());
-            return Response.status(Response.Status.NOT_FOUND).entity("{\"error\": \"" + e.getMessage() + "\"}").build();
-        } catch (IllegalArgumentException e) {
-            return Response.status(Response.Status.BAD_REQUEST).entity("{\"error\": \"" + e.getMessage() + "\"}").build();
-        } catch (Exception e) {
-            log.error("Error interno al obtener tipos de entrada públicos para festival ID {}: {}", id, e.getMessage(), e);
-            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity("{\"error\": \"Error interno.\"}").build();
-        }
+        List<TipoEntradaDTO> tiposEntrada = tipoEntradaService.obtenerTiposEntradaPublicasPorFestival(id);
+        log.info("Devolviendo {} tipos de entrada para festival público ID {}", tiposEntrada.size(), id);
+        return Response.ok(tiposEntrada).build();
     }
 
     /**
@@ -91,33 +79,17 @@ public class FestivalResource {
     @POST
     public Response crearFestival(@Valid FestivalDTO festivalDTO) {
         log.info("POST /festivales");
-        Integer idPromotorAutenticado;
-        try {
-            idPromotorAutenticado = obtenerIdUsuarioAutenticadoYVerificarRol(RolUsuario.PROMOTOR);
-        } catch (NotAuthorizedException | ForbiddenException e) {
-            return e.getResponse();
-        } catch (Exception e) {
-            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity("{\"error\": \"Error procesando identidad.\"}").build();
-        }
+        Integer idPromotorAutenticado = obtenerIdUsuarioAutenticadoYVerificarRol(RolUsuario.PROMOTOR);
 
-        try {
-            if (festivalDTO == null || festivalDTO.getNombre() == null || festivalDTO.getNombre().isBlank()
-                    || festivalDTO.getFechaInicio() == null || festivalDTO.getFechaFin() == null
-                    || festivalDTO.getFechaFin().isBefore(festivalDTO.getFechaInicio())) {
-                return Response.status(Response.Status.BAD_REQUEST)
-                        .entity("{\"error\": \"Nombre y fechas válidas (inicio <= fin) son obligatorios.\"}")
-                        .build();
-            }
-            FestivalDTO festivalCreado = festivalService.crearFestival(festivalDTO, idPromotorAutenticado);
-            URI location = uriInfo.getAbsolutePathBuilder().path(festivalCreado.getIdFestival().toString()).build();
-            log.info("Festival creado con ID: {}, Location: {}", festivalCreado.getIdFestival(), location);
-            return Response.created(location).entity(festivalCreado).build();
-        } catch (IllegalArgumentException e) {
-            return Response.status(Response.Status.BAD_REQUEST).entity("{\"error\": \"" + e.getMessage() + "\"}").build();
-        } catch (Exception e) {
-            log.error("Error interno al crear festival: {}", e.getMessage(), e);
-            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity("{\"error\": \"Error interno.\"}").build();
+        if (festivalDTO == null || festivalDTO.getNombre() == null || festivalDTO.getNombre().isBlank()
+                || festivalDTO.getFechaInicio() == null || festivalDTO.getFechaFin() == null
+                || festivalDTO.getFechaFin().isBefore(festivalDTO.getFechaInicio())) {
+            throw new BadRequestException("Nombre y fechas válidas (inicio <= fin) son obligatorios.");
         }
+        FestivalDTO festivalCreado = festivalService.crearFestival(festivalDTO, idPromotorAutenticado);
+        URI location = uriInfo.getAbsolutePathBuilder().path(festivalCreado.getIdFestival().toString()).build();
+        log.info("Festival creado con ID: {}, Location: {}", festivalCreado.getIdFestival(), location);
+        return Response.created(location).entity(festivalCreado).build();
     }
 
     /**
@@ -132,17 +104,12 @@ public class FestivalResource {
     public Response obtenerFestival(@PathParam("id") Integer id) {
         log.info("GET /festivales/{}", id);
         if (id == null) {
-            return Response.status(Response.Status.BAD_REQUEST).entity("{\"error\": \"ID de festival inválido.\"}").build();
+            throw new BadRequestException("ID de festival inválido.");
         }
-        try {
-            Optional<FestivalDTO> festivalOpt = festivalService.obtenerFestivalPorId(id);
-            return festivalOpt
-                    .map(dto -> Response.ok(dto).build())
-                    .orElseGet(() -> Response.status(Response.Status.NOT_FOUND).entity("{\"error\": \"Festival no encontrado.\"}").build());
-        } catch (Exception e) {
-            log.error("Error interno al obtener festival ID {}: {}", id, e.getMessage(), e);
-            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity("{\"error\": \"Error interno.\"}").build();
-        }
+        Optional<FestivalDTO> festivalOpt = festivalService.obtenerFestivalPorId(id);
+        return festivalOpt
+                .map(dto -> Response.ok(dto).build())
+                .orElseThrow(() -> new NotFoundException("Festival no encontrado."));
     }
 
     /**
@@ -156,38 +123,20 @@ public class FestivalResource {
     @Path("/{id}")
     public Response actualizarFestival(@PathParam("id") Integer id, @Valid FestivalDTO festivalDTO) {
         log.info("PUT /festivales/{}", id);
-        Integer idPromotorAutenticado;
-        try {
-            idPromotorAutenticado = obtenerIdUsuarioAutenticadoYVerificarRol(RolUsuario.PROMOTOR);
-        } catch (NotAuthorizedException | ForbiddenException e) {
-            return e.getResponse();
-        } catch (Exception e) {
-            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity("{\"error\": \"Error procesando identidad.\"}").build();
-        }
+        Integer idPromotorAutenticado = obtenerIdUsuarioAutenticadoYVerificarRol(RolUsuario.PROMOTOR);
 
         if (id == null) {
-            return Response.status(Response.Status.BAD_REQUEST).entity("{\"error\": \"ID de festival inválido.\"}").build();
+            throw new BadRequestException("ID de festival inválido.");
         }
-        try {
-            if (festivalDTO == null || festivalDTO.getNombre() == null || festivalDTO.getNombre().isBlank()
-                    || festivalDTO.getFechaInicio() == null || festivalDTO.getFechaFin() == null
-                    || festivalDTO.getFechaFin().isBefore(festivalDTO.getFechaInicio())) {
-                return Response.status(Response.Status.BAD_REQUEST)
-                        .entity("{\"error\": \"Nombre y fechas válidas (inicio <= fin) son obligatorios.\"}").build();
-            }
-            FestivalDTO festivalActualizado = festivalService.actualizarFestival(id, festivalDTO, idPromotorAutenticado);
-            log.info("Festival ID {} actualizado por promotor ID {}.", id, idPromotorAutenticado);
-            return Response.ok(festivalActualizado).build();
-        } catch (FestivalNotFoundException e) {
-            return Response.status(Response.Status.NOT_FOUND).entity("{\"error\": \"" + e.getMessage() + "\"}").build();
-        } catch (SecurityException e) {
-            return Response.status(Response.Status.FORBIDDEN).entity("{\"error\": \"" + e.getMessage() + "\"}").build();
-        } catch (IllegalArgumentException e) {
-            return Response.status(Response.Status.BAD_REQUEST).entity("{\"error\": \"" + e.getMessage() + "\"}").build();
-        } catch (Exception e) {
-            log.error("Error interno al actualizar festival ID {}: {}", id, e.getMessage(), e);
-            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity("{\"error\": \"Error interno.\"}").build();
+        // Validaciones previas al servicio
+        if (festivalDTO == null || festivalDTO.getNombre() == null || festivalDTO.getNombre().isBlank()
+                || festivalDTO.getFechaInicio() == null || festivalDTO.getFechaFin() == null
+                || festivalDTO.getFechaFin().isBefore(festivalDTO.getFechaInicio())) {
+            throw new BadRequestException("Nombre y fechas válidas (inicio <= fin) son obligatorios.");
         }
+        FestivalDTO festivalActualizado = festivalService.actualizarFestival(id, festivalDTO, idPromotorAutenticado);
+        log.info("Festival ID {} actualizado por promotor ID {}.", id, idPromotorAutenticado);
+        return Response.ok(festivalActualizado).build();
     }
 
     /**
@@ -201,33 +150,15 @@ public class FestivalResource {
     @Path("/{id}")
     public Response eliminarFestival(@PathParam("id") Integer id) {
         log.info("DELETE /festivales/{}", id);
-        Integer idPromotorAutenticado;
-        try {
-            idPromotorAutenticado = obtenerIdUsuarioAutenticadoYVerificarRol(RolUsuario.PROMOTOR);
-        } catch (NotAuthorizedException | ForbiddenException e) {
-            return e.getResponse();
-        } catch (Exception e) {
-            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity("{\"error\": \"Error procesando identidad.\"}").build();
-        }
+        // Las excepciones de autenticación/autorización ya se propagan.
+        Integer idPromotorAutenticado = obtenerIdUsuarioAutenticadoYVerificarRol(RolUsuario.PROMOTOR);
 
         if (id == null) {
-            return Response.status(Response.Status.BAD_REQUEST).entity("{\"error\": \"ID de festival inválido.\"}").build();
+            throw new BadRequestException("ID de festival inválido.");
         }
-        try {
-            festivalService.eliminarFestival(id, idPromotorAutenticado);
-            log.info("Festival ID {} eliminado por promotor ID {}.", id, idPromotorAutenticado);
-            return Response.noContent().build();
-        } catch (FestivalNotFoundException e) {
-            return Response.status(Response.Status.NOT_FOUND).entity("{\"error\": \"" + e.getMessage() + "\"}").build();
-        } catch (SecurityException e) {
-            return Response.status(Response.Status.FORBIDDEN).entity("{\"error\": \"" + e.getMessage() + "\"}").build();
-        } catch (RuntimeException e) { // Captura errores de FK
-            log.error("Error al eliminar festival ID {}: {}", id, e.getMessage());
-            return Response.status(Response.Status.CONFLICT).entity("{\"error\": \"No se pudo eliminar: " + e.getMessage() + "\"}").build();
-        } catch (Exception e) {
-            log.error("Error interno al eliminar festival ID {}: {}", id, e.getMessage(), e);
-            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity("{\"error\": \"Error interno.\"}").build();
-        }
+        festivalService.eliminarFestival(id, idPromotorAutenticado);
+        log.info("Festival ID {} eliminado por promotor ID {}.", id, idPromotorAutenticado);
+        return Response.noContent().build();
     }
 
     /**
@@ -251,20 +182,15 @@ public class FestivalResource {
             fechaDesde = (fechaDesdeStr != null && !fechaDesdeStr.isBlank()) ? LocalDate.parse(fechaDesdeStr) : LocalDate.now();
             fechaHasta = (fechaHastaStr != null && !fechaHastaStr.isBlank()) ? LocalDate.parse(fechaHastaStr) : fechaDesde.plusYears(1);
             if (fechaHasta.isBefore(fechaDesde)) {
-                return Response.status(Response.Status.BAD_REQUEST).entity("{\"error\": \"Fecha 'hasta' no puede ser anterior a 'desde'.\"}").build();
+                throw new BadRequestException("Fecha 'hasta' no puede ser anterior a 'desde'.");
             }
         } catch (DateTimeParseException e) {
-            return Response.status(Response.Status.BAD_REQUEST).entity("{\"error\": \"Formato fecha inválido (YYYY-MM-DD).\"}").build();
+            throw new BadRequestException("Formato fecha inválido (YYYY-MM-DD).");
         }
 
-        try {
-            List<FestivalDTO> festivales = festivalService.buscarFestivalesPublicados(fechaDesde, fechaHasta);
-            log.info("Devolviendo {} festivales publicados entre {} y {}.", festivales.size(), fechaDesde, fechaHasta);
-            return Response.ok(festivales).build();
-        } catch (Exception e) {
-            log.error("Error interno buscando festivales publicados: {}", e.getMessage(), e);
-            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity("{\"error\": \"Error interno.\"}").build();
-        }
+        List<FestivalDTO> festivales = festivalService.buscarFestivalesPublicados(fechaDesde, fechaHasta);
+        log.info("Devolviendo {} festivales publicados entre {} y {}.", festivales.size(), fechaDesde, fechaHasta);
+        return Response.ok(festivales).build();
     }
 
     /**
@@ -277,23 +203,11 @@ public class FestivalResource {
     @Path("/mis-festivales")
     public Response obtenerMisFestivales() {
         log.info("GET /festivales/mis-festivales");
-        Integer idPromotorAutenticado;
-        try {
-            idPromotorAutenticado = obtenerIdUsuarioAutenticadoYVerificarRol(RolUsuario.PROMOTOR);
-        } catch (NotAuthorizedException | ForbiddenException e) {
-            return e.getResponse();
-        } catch (Exception e) {
-            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity("{\"error\": \"Error procesando identidad.\"}").build();
-        }
+        Integer idPromotorAutenticado = obtenerIdUsuarioAutenticadoYVerificarRol(RolUsuario.PROMOTOR);
 
-        try {
-            List<FestivalDTO> festivales = festivalService.obtenerFestivalesPorPromotor(idPromotorAutenticado);
-            log.info("Devolviendo {} festivales para promotor ID {}", festivales.size(), idPromotorAutenticado);
-            return Response.ok(festivales).build();
-        } catch (Exception e) {
-            log.error("Error interno obteniendo mis-festivales para promotor ID {}: {}", idPromotorAutenticado, e.getMessage(), e);
-            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity("{\"error\": \"Error interno.\"}").build();
-        }
+        List<FestivalDTO> festivales = festivalService.obtenerFestivalesPorPromotor(idPromotorAutenticado);
+        log.info("Devolviendo {} festivales para promotor ID {}", festivales.size(), idPromotorAutenticado);
+        return Response.ok(festivales).build();
     }
 
     /**
@@ -312,17 +226,10 @@ public class FestivalResource {
             @PathParam("id") Integer id,
             @QueryParam("nuevoEstado") String nuevoEstadoStr) {
         log.warn("PUT /festivales/{}/estado por promotor (¡Permite cualquier estado!). Nuevo: {}", id, nuevoEstadoStr);
-        Integer idPromotorAutenticado;
-        try {
-            idPromotorAutenticado = obtenerIdUsuarioAutenticadoYVerificarRol(RolUsuario.PROMOTOR);
-        } catch (NotAuthorizedException | ForbiddenException e) {
-            return e.getResponse();
-        } catch (Exception e) {
-            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity("{\"error\": \"Error procesando identidad.\"}").build();
-        }
+        Integer idPromotorAutenticado = obtenerIdUsuarioAutenticadoYVerificarRol(RolUsuario.PROMOTOR);
 
         if (id == null) {
-            return Response.status(Response.Status.BAD_REQUEST).entity("{\"error\": \"ID festival inválido.\"}").build();
+            throw new BadRequestException("ID festival inválido.");
         }
         EstadoFestival nuevoEstado;
         try {
@@ -331,26 +238,12 @@ public class FestivalResource {
             }
             nuevoEstado = EstadoFestival.valueOf(nuevoEstadoStr.toUpperCase());
         } catch (IllegalArgumentException e) {
-            return Response.status(Response.Status.BAD_REQUEST)
-                    .entity("{\"error\": \"Valor 'nuevoEstado' inválido.\"}")
-                    .build();
+            throw new BadRequestException("Valor 'nuevoEstado' inválido. Posibles: BORRADOR, PUBLICADO, CANCELADO, FINALIZADO."); // Incluir todos los posibles estados.
         }
 
-        try {
-            // ¡Advertencia! El servicio actual permite al promotor cambiar a cualquier estado.
-            FestivalDTO festivalActualizado = festivalService.cambiarEstadoFestival(id, nuevoEstado, idPromotorAutenticado);
-            log.info("Estado festival ID {} cambiado a {} por promotor ID {}.", id, nuevoEstado, idPromotorAutenticado);
-            return Response.ok(festivalActualizado).build();
-        } catch (FestivalNotFoundException e) {
-            return Response.status(Response.Status.NOT_FOUND).entity("{\"error\": \"" + e.getMessage() + "\"}").build();
-        } catch (SecurityException e) { // El servicio no lanza SecurityException aquí, pero por si acaso
-            return Response.status(Response.Status.FORBIDDEN).entity("{\"error\": \"" + e.getMessage() + "\"}").build();
-        } catch (IllegalStateException e) { // Error de transición lógica
-            return Response.status(Response.Status.CONFLICT).entity("{\"error\": \"Cambio de estado no permitido: " + e.getMessage() + "\"}").build();
-        } catch (Exception e) {
-            log.error("Error interno al cambiar estado festival ID {}: {}", id, e.getMessage(), e);
-            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity("{\"error\": \"Error interno.\"}").build();
-        }
+        FestivalDTO festivalActualizado = festivalService.cambiarEstadoFestival(id, nuevoEstado, idPromotorAutenticado);
+        log.info("Estado festival ID {} cambiado a {} por promotor ID {}.", id, nuevoEstado, idPromotorAutenticado);
+        return Response.ok(festivalActualizado).build();
     }
 
     // --- Métodos Auxiliares de Seguridad (Simulados/Placeholder) ---

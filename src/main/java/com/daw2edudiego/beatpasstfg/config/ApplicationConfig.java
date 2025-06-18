@@ -1,7 +1,8 @@
 package com.daw2edudiego.beatpasstfg.config;
 
+import com.daw2edudiego.beatpasstfg.mapper.GenericExceptionMapper;
 import com.daw2edudiego.beatpasstfg.security.AuthenticationFilter;
-import com.daw2edudiego.beatpasstfg.web.*; 
+import com.daw2edudiego.beatpasstfg.web.*;
 
 import jakarta.ws.rs.ApplicationPath;
 import jakarta.ws.rs.core.Application;
@@ -45,19 +46,19 @@ public class ApplicationConfig extends Application {
         Set<Class<?>> resources = new HashSet<>();
 
         // Recursos RESTful que devuelven principalmente JSON
-        resources.add(FestivalResource.class);      
-        resources.add(UsuarioResource.class);      
-        resources.add(AuthResource.class);          
-        resources.add(PuntoVentaResource.class);   
-        resources.add(PublicVentaResource.class);   
-
+        resources.add(FestivalResource.class);
+        resources.add(UsuarioResource.class);
+        resources.add(AuthResource.class);
+        resources.add(PuntoVentaResource.class);
+        resources.add(PublicVentaResource.class);
 
         // Recursos que actúan como controladores para paneles web (usan JSPs)
-        resources.add(PromotorResource.class);     
-        resources.add(AdminResource.class);         
+        resources.add(PromotorResource.class);
+        resources.add(AdminResource.class);
 
         // Filtros, Interceptores, Mapeadores de Excepciones, etc.
-        resources.add(AuthenticationFilter.class);  
+        resources.add(AuthenticationFilter.class);
+        resources.add(GenericExceptionMapper.class);
 
         return resources;
     }
