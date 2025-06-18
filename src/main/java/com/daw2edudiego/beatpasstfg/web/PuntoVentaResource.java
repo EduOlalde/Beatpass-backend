@@ -17,7 +17,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.math.BigDecimal;
-import java.util.HashMap; 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
@@ -54,33 +54,20 @@ public class PuntoVentaResource {
     @Path("/pulseras/{codigoUid}")
     public Response obtenerDatosPulsera(@PathParam("codigoUid") String codigoUid) {
         log.debug("GET /pos/pulseras/{}", codigoUid);
-        Integer idActor;
-        try {
-            idActor = verificarAccesoActor();
-        } catch (NotAuthorizedException | ForbiddenException e) {
-            return e.getResponse();
-        } catch (Exception e) {
-            return manejarErrorApi(e, "verificando acceso para obtener datos pulsera");
-        }
+        // Las excepciones de autenticación/autorización ya se propagan.
+        Integer idActor = verificarAccesoActor();
 
         if (codigoUid == null || codigoUid.isBlank()) {
-            return manejarErrorApi(new BadRequestException("Código UID obligatorio."), "obtener datos pulsera");
+            throw new BadRequestException("Código UID obligatorio.");
         }
 
-        try {
-            Optional<PulseraNFCDTO> pulseraDTOOpt = pulseraNFCService.obtenerPulseraPorCodigoUid(codigoUid, idActor);
-            return pulseraDTOOpt
-                    .map(dto -> {
-                        log.debug("Datos obtenidos para pulsera UID {}", codigoUid);
-                        return Response.ok(dto).build();
-                    })
-                    .orElseGet(() -> {
-                        log.warn("Pulsera UID {} no encontrada o sin permiso para actor ID {}", codigoUid, idActor);
-                        return manejarErrorApi(new PulseraNFCNotFoundException("Pulsera no encontrada o sin permiso: " + codigoUid), "obteniendo datos pulsera");
-                    });
-        } catch (Exception e) {
-            return manejarErrorApi(e, "obteniendo datos pulsera UID " + codigoUid);
-        }
+        Optional<PulseraNFCDTO> pulseraDTOOpt = pulseraNFCService.obtenerPulseraPorCodigoUid(codigoUid, idActor);
+        return pulseraDTOOpt
+                .map(dto -> {
+                    log.debug("Datos obtenidos para pulsera UID {}", codigoUid);
+                    return Response.ok(dto).build();
+                })
+                .orElseThrow(() -> new PulseraNFCNotFoundException("Pulsera no encontrada o sin permiso: " + codigoUid));
     }
 
     /**
@@ -99,37 +86,25 @@ public class PuntoVentaResource {
     @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
     public Response registrarRecarga(
             @PathParam("codigoUid") String codigoUid,
-            @QueryParam("festivalId") Integer festivalId, // Mantenido como QueryParam según el original
+            @QueryParam("festivalId") Integer festivalId,
             @FormParam("monto") BigDecimal monto,
             @FormParam("metodoPago") String metodoPago) {
 
         log.info("POST /pos/pulseras/{}/recargar?festivalId={} - Monto: {}, Metodo: {}",
                 codigoUid, festivalId, monto, metodoPago);
-        Integer idUsuarioCajero;
-        try {
-            idUsuarioCajero = verificarAccesoActor();
-        } catch (NotAuthorizedException | ForbiddenException e) {
-            return e.getResponse();
-        } catch (Exception e) {
-            return manejarErrorApi(e, "verificando acceso para registrar recarga");
-        }
+        Integer idUsuarioCajero = verificarAccesoActor();
 
         if (festivalId == null) {
-            return manejarErrorApi(new BadRequestException("Parámetro 'festivalId' obligatorio."), "registrando recarga");
+            throw new BadRequestException("Parámetro 'festivalId' obligatorio.");
         }
         if (codigoUid == null || codigoUid.isBlank()) {
-            return manejarErrorApi(new BadRequestException("Código UID obligatorio."), "registrando recarga");
+            throw new BadRequestException("Código UID obligatorio.");
         }
         // Validación del monto se delega al servicio
 
-        try {
-            PulseraNFCDTO pulseraActualizada = pulseraNFCService.registrarRecarga(codigoUid, monto, metodoPago, idUsuarioCajero, festivalId);
-            log.info("Recarga exitosa UID {} en festival {}. Nuevo saldo: {}", codigoUid, festivalId, pulseraActualizada.getSaldo());
-            return Response.ok(pulseraActualizada).build();
-        } catch (Exception e) {
-            // manejarErrorApi se encarga de loguear y mapear la excepción
-            return manejarErrorApi(e, "registrando recarga UID " + codigoUid + " fest " + festivalId);
-        }
+        PulseraNFCDTO pulseraActualizada = pulseraNFCService.registrarRecarga(codigoUid, monto, metodoPago, idUsuarioCajero, festivalId);
+        log.info("Recarga exitosa UID {} en festival {}. Nuevo saldo: {}", codigoUid, festivalId, pulseraActualizada.getSaldo());
+        return Response.ok(pulseraActualizada).build();
     }
 
     /**
@@ -156,30 +131,19 @@ public class PuntoVentaResource {
 
         log.info("POST /pos/pulseras/{}/consumir - Monto: {}, Desc: {}, FestivalID: {}",
                 codigoUid, monto, descripcion, idFestival);
-        Integer idActor;
-        try {
-            idActor = verificarAccesoActor();
-        } catch (NotAuthorizedException | ForbiddenException e) {
-            return e.getResponse();
-        } catch (Exception e) {
-            return manejarErrorApi(e, "verificando acceso para registrar consumo");
-        }
+        Integer idActor = verificarAccesoActor();
 
         if (codigoUid == null || codigoUid.isBlank()) {
-            return manejarErrorApi(new BadRequestException("Código UID obligatorio."), "registrando consumo");
+            throw new BadRequestException("Código UID obligatorio.");
         }
         if (idFestival == null) { // Aseguramos que idFestival sea obligatorio
-            return manejarErrorApi(new BadRequestException("Parámetro 'idFestival' obligatorio."), "registrando consumo");
+            throw new BadRequestException("Parámetro 'idFestival' obligatorio.");
         }
         // Validación de otros params en servicio
 
-        try {
-            PulseraNFCDTO pulseraActualizada = pulseraNFCService.registrarConsumo(codigoUid, monto, descripcion, idFestival, idPuntoVenta, idActor);
-            log.info("Consumo {} registrado UID {} fest {}. Nuevo saldo: {}", monto, codigoUid, idFestival, pulseraActualizada.getSaldo());
-            return Response.ok(pulseraActualizada).build();
-        } catch (Exception e) {
-            return manejarErrorApi(e, "registrando consumo UID " + codigoUid + " fest " + idFestival);
-        }
+        PulseraNFCDTO pulseraActualizada = pulseraNFCService.registrarConsumo(codigoUid, monto, descripcion, idFestival, idPuntoVenta, idActor);
+        log.info("Consumo {} registrado UID {} fest {}. Nuevo saldo: {}", monto, codigoUid, idFestival, pulseraActualizada.getSaldo());
+        return Response.ok(pulseraActualizada).build();
     }
 
     /**
@@ -204,36 +168,24 @@ public class PuntoVentaResource {
         log.info("POST /pos/pulseras/asociar-pulsera - QR Entrada: {}, UID Pulsera: {}, FestivalID: {}",
                 qrLog, codigoUidPulsera, idFestival);
 
-        try {
-            // Verificar acceso del actor (cajero, admin, promotor)
-            verificarAccesoActor();
-        } catch (NotAuthorizedException | ForbiddenException e) {
-            return e.getResponse();
-        } catch (Exception e) {
-            return manejarErrorApi(e, "verificando acceso para asociar pulsera a entrada");
-        }
+        verificarAccesoActor();
 
         if (codigoQrEntrada == null || codigoQrEntrada.isBlank()
                 || codigoUidPulsera == null || codigoUidPulsera.isBlank()) {
-            return manejarErrorApi(new BadRequestException("Los parámetros 'codigoQrEntrada' y 'codigoUidPulsera' son obligatorios."), "asociando pulsera");
+            throw new BadRequestException("Los parámetros 'codigoQrEntrada' y 'codigoUidPulsera' son obligatorios.");
         }
         if (idFestival == null) {
-            return manejarErrorApi(new BadRequestException("El parámetro 'idFestival' es obligatorio."), "asociando pulsera");
+            throw new BadRequestException("El parámetro 'idFestival' es obligatorio.");
         }
 
-        try {
-            PulseraNFCDTO pulseraAsociadaDTO = pulseraNFCService.asociarPulseraViaQrEntrada(codigoQrEntrada, codigoUidPulsera, idFestival);
+        PulseraNFCDTO pulseraAsociadaDTO = pulseraNFCService.asociarPulseraViaQrEntrada(codigoQrEntrada, codigoUidPulsera, idFestival);
 
-            Map<String, Object> successResponse = new HashMap<>();
-            successResponse.put("mensaje", "Pulsera UID " + pulseraAsociadaDTO.getCodigoUid() + " asociada correctamente a la entrada con QR.");
-            successResponse.put("pulsera", pulseraAsociadaDTO);
+        Map<String, Object> successResponse = new HashMap<>();
+        successResponse.put("mensaje", "Pulsera UID " + pulseraAsociadaDTO.getCodigoUid() + " asociada correctamente a la entrada con QR.");
+        successResponse.put("pulsera", pulseraAsociadaDTO);
 
-            log.info("Pulsera UID {} asociada a entrada QR {} en festival {}", pulseraAsociadaDTO.getCodigoUid(), qrLog, idFestival);
-            return Response.ok(successResponse).build();
-
-        } catch (Exception e) {
-            return manejarErrorApi(e, "asociando pulsera UID " + codigoUidPulsera + " a QR " + qrLog);
-        }
+        log.info("Pulsera UID {} asociada a entrada QR {} en festival {}", pulseraAsociadaDTO.getCodigoUid(), qrLog, idFestival);
+        return Response.ok(successResponse).build();
     }
 
     // --- Métodos Auxiliares ---
@@ -273,49 +225,4 @@ public class PuntoVentaResource {
         return userId;
     }
 
-    /**
-     * Mapea excepciones comunes a respuestas JAX-RS estándar con cuerpo JSON.
-     *
-     * @param e Excepción capturada.
-     * @param operacion Descripción de la operación donde ocurrió el error.
-     * @return Objeto Response con el estado y mensaje de error apropiados.
-     */
-    private Response manejarErrorApi(Exception e, String operacion) {
-        Response.Status status;
-        String mensaje;
-
-        if (e instanceof NotFoundException || e instanceof PulseraNFCNotFoundException || e instanceof EntradaNotFoundException
-                || e instanceof AsistenteNotFoundException || e instanceof FestivalNotFoundException || e instanceof UsuarioNotFoundException) {
-            status = Response.Status.NOT_FOUND; // 404
-            mensaje = e.getMessage();
-            log.warn("Error 404 durante '{}': {}", operacion, mensaje);
-        } else if (e instanceof SecurityException || e instanceof ForbiddenException) {
-            status = Response.Status.FORBIDDEN; // 403
-            mensaje = e.getMessage();
-            log.warn("Error 403 durante '{}': {}", operacion, mensaje);
-        } else if (e instanceof NotAuthorizedException) {
-            status = Response.Status.UNAUTHORIZED; // 401
-            mensaje = e.getMessage();
-            log.warn("Error 401 durante '{}': {}", operacion, mensaje);
-        } else if (e instanceof IllegalArgumentException || e instanceof BadRequestException
-                || e instanceof EntradaNoNominadaException || e instanceof IllegalStateException) {
-            // PulseraYaAsociadaException también podría ser CONFLICT (409) pero el servicio podría decidir.
-            status = Response.Status.BAD_REQUEST; // 400
-            mensaje = e.getMessage();
-            log.warn("Error 400/Bad Request durante '{}': {}", operacion, mensaje);
-        } else if (e instanceof SaldoInsuficienteException || e instanceof PulseraYaAsociadaException || e instanceof StockInsuficienteException) {
-            // Considerar StockInsuficienteException aquí también si aplica a POS.
-            status = Response.Status.CONFLICT; // 409
-            mensaje = e.getMessage();
-            log.warn("Error 409/Conflict durante '{}': {}", operacion, mensaje);
-        } else {
-            status = Response.Status.INTERNAL_SERVER_ERROR; // 500
-            mensaje = "Error interno inesperado al procesar la solicitud."; // Mensaje genérico para el cliente
-            log.error("Error 500/Interno durante '{}': {}", operacion, e.getMessage(), e); // Loguear el detalle real
-        }
-
-        Map<String, String> errorResponse = new HashMap<>();
-        errorResponse.put("error", mensaje);
-        return Response.status(status).entity(errorResponse).build();
-    }
 }

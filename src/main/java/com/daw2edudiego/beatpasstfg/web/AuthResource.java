@@ -52,46 +52,30 @@ public class AuthResource {
         if (credenciales == null || credenciales.getEmail() == null || credenciales.getEmail().isBlank()
                 || credenciales.getPassword() == null || credenciales.getPassword().isEmpty()) {
             log.warn("Login API fallido: Credenciales incompletas.");
-            return Response.status(Response.Status.BAD_REQUEST)
-                    .entity("{\"error\": \"Email y contraseña son obligatorios.\"}")
-                    .build();
+            throw new BadRequestException("Email y contraseña son obligatorios.");
         }
 
-        try {
-            Optional<Usuario> usuarioOpt = usuarioService.obtenerEntidadUsuarioPorEmailParaAuth(credenciales.getEmail());
+        Optional<Usuario> usuarioOpt = usuarioService.obtenerEntidadUsuarioPorEmailParaAuth(credenciales.getEmail());
 
-            if (usuarioOpt.isPresent()) {
-                Usuario usuario = usuarioOpt.get();
+        if (usuarioOpt.isPresent()) {
+            Usuario usuario = usuarioOpt.get();
 
-                if (!Boolean.TRUE.equals(usuario.getEstado())) {
-                    log.warn("Login API fallido: Cuenta inactiva para email {}", credenciales.getEmail());
-                    return Response.status(Response.Status.UNAUTHORIZED)
-                            .entity("{\"error\": \"Cuenta inactiva.\"}")
-                            .build();
-                }
-
-                if (PasswordUtil.checkPassword(credenciales.getPassword(), usuario.getPassword())) {
-                    log.info("Autenticación API exitosa para email: {}", credenciales.getEmail());
-                    String token = jwtUtil.generarToken(usuario.getIdUsuario().toString(), usuario.getRol().name());
-                    return Response.ok(new TokenDTO(token)).build();
-                } else {
-                    log.warn("Login API fallido: Contraseña incorrecta para email {}", credenciales.getEmail());
-                    return Response.status(Response.Status.UNAUTHORIZED)
-                            .entity("{\"error\": \"Email o contraseña incorrectos.\"}")
-                            .build();
-                }
-            } else {
-                log.warn("Login API fallido: Usuario no encontrado con email {}", credenciales.getEmail());
-                return Response.status(Response.Status.UNAUTHORIZED)
-                        .entity("{\"error\": \"Email o contraseña incorrectos.\"}")
-                        .build();
+            if (!Boolean.TRUE.equals(usuario.getEstado())) {
+                log.warn("Login API fallido: Cuenta inactiva para email {}", credenciales.getEmail());
+                throw new NotAuthorizedException("Cuenta inactiva.");
             }
 
-        } catch (Exception e) {
-            log.error("Error interno durante login API para email {}: {}", credenciales.getEmail(), e.getMessage(), e);
-            return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-                    .entity("{\"error\": \"Error interno al procesar el login.\"}")
-                    .build();
+            if (PasswordUtil.checkPassword(credenciales.getPassword(), usuario.getPassword())) {
+                log.info("Autenticación API exitosa para email: {}", credenciales.getEmail());
+                String token = jwtUtil.generarToken(usuario.getIdUsuario().toString(), usuario.getRol().name());
+                return Response.ok(new TokenDTO(token)).build();
+            } else {
+                log.warn("Login API fallido: Contraseña incorrecta para email {}", credenciales.getEmail());
+                throw new NotAuthorizedException("Email o contraseña incorrectos.");
+            }
+        } else {
+            log.warn("Login API fallido: Usuario no encontrado con email {}", credenciales.getEmail());
+            throw new NotAuthorizedException("Email o contraseña incorrectos.");
         }
     }
 }

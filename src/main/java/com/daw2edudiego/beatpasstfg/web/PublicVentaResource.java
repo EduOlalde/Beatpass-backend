@@ -6,7 +6,6 @@ import com.daw2edudiego.beatpasstfg.dto.FestivalDTO;
 import com.daw2edudiego.beatpasstfg.dto.IniciarCompraRequestDTO;
 import com.daw2edudiego.beatpasstfg.dto.IniciarCompraResponseDTO;
 import com.daw2edudiego.beatpasstfg.exception.*;
-import com.daw2edudiego.beatpasstfg.model.Asistente;
 import com.daw2edudiego.beatpasstfg.model.EstadoEntrada;
 import com.daw2edudiego.beatpasstfg.service.*;
 
@@ -28,7 +27,6 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.URI;
-import java.util.Map;
 import java.util.Optional;
 
 @Path("/public/venta")
@@ -210,21 +208,13 @@ public class PublicVentaResource {
                 requestDTO != null ? requestDTO.getCantidad() : "null");
 
         if (requestDTO == null || requestDTO.getIdEntrada() == null || requestDTO.getCantidad() == null || requestDTO.getCantidad() <= 0) {
-            return crearRespuestaError(Response.Status.BAD_REQUEST, "Datos inválidos (idEntrada, cantidad > 0).");
+            throw new BadRequestException("Datos inválidos (idEntrada y cantidad > 0 son obligatorios).");
         }
 
-        try {
-            IniciarCompraResponseDTO responseDTO = ventaService.iniciarProcesoPago(
-                    requestDTO.getIdEntrada(), requestDTO.getCantidad());
-            log.info("Proceso de pago iniciado. Devolviendo client_secret.");
-            return Response.ok(responseDTO).build();
-        } catch (TipoEntradaNotFoundException | FestivalNoPublicadoException | IllegalArgumentException e) {
-            log.warn("Error de validación o negocio en POST /iniciar-pago: {}", e.getMessage());
-            return crearRespuestaError(Response.Status.BAD_REQUEST, e.getMessage());
-        } catch (Exception e) {
-            log.error("Error interno en POST /iniciar-pago: {}", e.getMessage(), e);
-            return crearRespuestaError(Response.Status.INTERNAL_SERVER_ERROR, "Error interno al iniciar pago.");
-        }
+        IniciarCompraResponseDTO responseDTO = ventaService.iniciarProcesoPago(
+                requestDTO.getIdEntrada(), requestDTO.getCantidad());
+        log.info("Proceso de pago iniciado. Devolviendo client_secret.");
+        return Response.ok(responseDTO).build();
     }
 
     @POST
@@ -243,29 +233,21 @@ public class PublicVentaResource {
 
         if (idEntrada == null || cantidad == null || cantidad <= 0 || emailComprador == null || emailComprador.isBlank()
                 || nombreComprador == null || nombreComprador.isBlank() || paymentIntentId == null || paymentIntentId.isBlank()) {
-            return crearRespuestaError(Response.Status.BAD_REQUEST, "Faltan datos obligatorios (entrada, cantidad>0, email, nombre, paymentIntentId).");
+            throw new BadRequestException("Faltan datos obligatorios (entrada, cantidad>0, email, nombre, paymentIntentId).");
         }
 
-        try {
-            CompraDTO compraConfirmada = ventaService.confirmarVentaConPago(
-                    emailComprador, nombreComprador, telefonoComprador, idEntrada, cantidad, paymentIntentId);
+        CompraDTO compraConfirmada = ventaService.confirmarVentaConPago(
+                emailComprador, nombreComprador, telefonoComprador, idEntrada, cantidad, paymentIntentId);
 
-            log.info("Compra confirmada. Compra ID: {}, PI: {}", compraConfirmada.getIdCompra(), paymentIntentId);
-            return Response.ok(compraConfirmada).build();
-
-        } catch (TipoEntradaNotFoundException | FestivalNotFoundException e) {
-            log.warn("Recurso no encontrado al confirmar compra PI {}: {}", paymentIntentId, e.getMessage());
-            return crearRespuestaError(Response.Status.NOT_FOUND, e.getMessage());
-        } catch (FestivalNoPublicadoException | StockInsuficienteException | IllegalArgumentException | PagoInvalidoException e) {
-            log.warn("Error de negocio/pago al confirmar compra PI {}: {}", paymentIntentId, e.getMessage());
-            return crearRespuestaError(Response.Status.BAD_REQUEST, e.getMessage());
-        } catch (Exception e) {
-            log.error("Error interno en POST /confirmar-compra PI {}: {}", paymentIntentId, e.getMessage(), e);
-            return crearRespuestaError(Response.Status.INTERNAL_SERVER_ERROR, "Error interno al confirmar compra.");
-        }
+        log.info("Compra confirmada. Compra ID: {}, PI: {}", compraConfirmada.getIdCompra(), paymentIntentId);
+        return Response.ok(compraConfirmada).build();
     }
 
-    private Response crearRespuestaError(Response.Status status, String mensaje) {
-        return Response.status(status).entity(Map.of("error", mensaje)).build();
-    }
+    /**
+     * El método `crearRespuestaError` se ha vuelto redundante y se puede
+     * eliminar después de implementar el `GenericExceptionMapper`. El
+     * `ExceptionMapper` ahora se encarga de traducir las excepciones a
+     * respuestas JSON.
+     */
+    // private Response crearRespuestaError(Response.Status status, String mensaje) { ... }
 }
