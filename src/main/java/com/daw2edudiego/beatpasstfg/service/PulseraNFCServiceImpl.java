@@ -4,18 +4,14 @@ import com.daw2edudiego.beatpasstfg.dto.PulseraNFCDTO;
 import com.daw2edudiego.beatpasstfg.exception.*;
 import com.daw2edudiego.beatpasstfg.model.*;
 import com.daw2edudiego.beatpasstfg.repository.*;
-import com.daw2edudiego.beatpasstfg.util.JPAUtil;
 
 import jakarta.persistence.EntityManager;
-import jakarta.persistence.EntityTransaction;
 import jakarta.persistence.LockModeType;
-import jakarta.persistence.PersistenceException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -23,7 +19,7 @@ import java.util.stream.Collectors;
 /**
  * Implementación de PulseraNFCService.
  */
-public class PulseraNFCServiceImpl implements PulseraNFCService {
+public class PulseraNFCServiceImpl extends AbstractService implements PulseraNFCService {
 
     private static final Logger log = LoggerFactory.getLogger(PulseraNFCServiceImpl.class);
 
@@ -51,13 +47,7 @@ public class PulseraNFCServiceImpl implements PulseraNFCService {
             throw new IllegalArgumentException("UID de pulsera, ID de entrada y ID de actor son requeridos.");
         }
 
-        EntityManager em = null;
-        EntityTransaction tx = null;
-        try {
-            em = JPAUtil.createEntityManager();
-            tx = em.getTransaction();
-            tx.begin();
-
+        return executeTransactional(em -> {
             Usuario actor = verificarActorPermitido(em, idActor, RolUsuario.ADMIN, RolUsuario.PROMOTOR, RolUsuario.CAJERO);
 
             Entrada entrada = entradaRepository.findById(em, idEntrada)
@@ -116,18 +106,11 @@ public class PulseraNFCServiceImpl implements PulseraNFCService {
             entradaRepository.save(em, entrada);
             log.info("Entrada ID {} marcada como USADA y fecha_uso actualizada a {}", entrada.getIdEntrada(), entrada.getFechaUso());
 
-            tx.commit();
             log.info("Pulsera UID {} (ID: {}) asociada correctamente a Entrada ID {} del Festival ID {}. Fecha de uso de entrada actualizada.",
                     pulsera.getCodigoUid(), pulsera.getIdPulsera(), idEntrada, festival.getIdFestival());
 
             return mapEntityToDto(pulsera);
-
-        } catch (Exception e) {
-            handleException(e, tx, "asociando pulsera UID " + codigoUid + " a entrada ID " + idEntrada);
-            throw mapException(e);
-        } finally {
-            closeEntityManager(em);
-        }
+        }, "asociarPulseraEntrada " + codigoUid + " to " + idEntrada);
     }
 
     @Override
@@ -136,9 +119,7 @@ public class PulseraNFCServiceImpl implements PulseraNFCService {
         if (idPulsera == null || idActor == null) {
             throw new IllegalArgumentException("ID pulsera y ID actor requeridos.");
         }
-        EntityManager em = null;
-        try {
-            em = JPAUtil.createEntityManager();
+        return executeRead(em -> {
             Optional<PulseraNFC> pulseraOpt = pulseraNFCRepository.findById(em, idPulsera);
             if (pulseraOpt.isEmpty()) {
                 return Optional.empty();
@@ -146,15 +127,7 @@ public class PulseraNFCServiceImpl implements PulseraNFCService {
             PulseraNFC pulsera = pulseraOpt.get();
             verificarPermisoLecturaPulsera(em, pulsera, idActor);
             return Optional.of(mapEntityToDto(pulsera));
-        } catch (Exception e) {
-            log.error("Error obteniendo pulsera ID {}: {}", idPulsera, e.getMessage(), e);
-            if (e instanceof SecurityException) {
-                return Optional.empty();
-            }
-            return Optional.empty();
-        } finally {
-            closeEntityManager(em);
-        }
+        }, "obtenerPulseraPorId " + idPulsera);
     }
 
     @Override
@@ -163,9 +136,7 @@ public class PulseraNFCServiceImpl implements PulseraNFCService {
         if (codigoUid == null || codigoUid.isBlank() || idActor == null) {
             throw new IllegalArgumentException("UID pulsera y ID actor requeridos.");
         }
-        EntityManager em = null;
-        try {
-            em = JPAUtil.createEntityManager();
+        return executeRead(em -> {
             Optional<PulseraNFC> pulseraOpt = pulseraNFCRepository.findByCodigoUid(em, codigoUid);
             if (pulseraOpt.isEmpty()) {
                 return Optional.empty();
@@ -173,15 +144,7 @@ public class PulseraNFCServiceImpl implements PulseraNFCService {
             PulseraNFC pulsera = pulseraOpt.get();
             verificarPermisoLecturaPulsera(em, pulsera, idActor);
             return Optional.of(mapEntityToDto(pulsera));
-        } catch (Exception e) {
-            log.error("Error obteniendo pulsera UID {}: {}", codigoUid, e.getMessage(), e);
-            if (e instanceof SecurityException) {
-                return Optional.empty();
-            }
-            return Optional.empty();
-        } finally {
-            closeEntityManager(em);
-        }
+        }, "obtenerPulseraPorCodigoUid " + codigoUid);
     }
 
     @Override
@@ -198,23 +161,13 @@ public class PulseraNFCServiceImpl implements PulseraNFCService {
         if (idFestival == null || idActor == null) {
             throw new IllegalArgumentException("ID festival y ID actor requeridos.");
         }
-        EntityManager em = null;
-        try {
-            em = JPAUtil.createEntityManager();
+        return executeRead(em -> {
             Usuario actor = usuarioRepository.findById(em, idActor)
                     .orElseThrow(() -> new UsuarioNotFoundException("Usuario actor no encontrado: " + idActor));
             verificarPermisoListadoPulserasFestival(em, idFestival, actor);
             List<PulseraNFC> pulseras = pulseraNFCRepository.findByFestivalId(em, idFestival);
             return pulseras.stream().map(this::mapEntityToDto).collect(Collectors.toList());
-        } catch (Exception e) {
-            log.error("Error obteniendo pulseras para festival ID {}: {}", idFestival, e.getMessage(), e);
-            if (e instanceof SecurityException || e instanceof FestivalNotFoundException) {
-                return Collections.emptyList();
-            }
-            return Collections.emptyList();
-        } finally {
-            closeEntityManager(em);
-        }
+        }, "obtenerPulserasPorFestival " + idFestival);
     }
 
     @Override
@@ -229,13 +182,7 @@ public class PulseraNFCServiceImpl implements PulseraNFCService {
             throw new IllegalArgumentException("El monto de la recarga debe ser positivo.");
         }
 
-        EntityManager em = null;
-        EntityTransaction tx = null;
-        try {
-            em = JPAUtil.createEntityManager();
-            tx = em.getTransaction();
-            tx.begin();
-
+        return executeTransactional(em -> {
             Usuario cajero = verificarActorPermitido(em, idUsuarioCajero, RolUsuario.ADMIN, RolUsuario.PROMOTOR, RolUsuario.CAJERO);
 
             PulseraNFC pulsera = pulseraNFCRepository.findByCodigoUid(em, codigoUid)
@@ -265,17 +212,9 @@ public class PulseraNFCServiceImpl implements PulseraNFCService {
             pulsera.setSaldo(saldoActual.add(monto));
             pulsera = pulseraNFCRepository.save(em, pulsera);
 
-            tx.commit();
             log.info("Recarga de {} realizada en pulsera UID {} (Fest:{}). Nuevo saldo: {}", monto, codigoUid, idFestival, pulsera.getSaldo());
-
             return mapEntityToDto(pulsera);
-
-        } catch (Exception e) {
-            handleException(e, tx, "registrando recarga para UID " + codigoUid);
-            throw mapException(e);
-        } finally {
-            closeEntityManager(em);
-        }
+        }, "registrarRecarga " + codigoUid + " fest " + idFestival);
     }
 
     @Override
@@ -293,13 +232,7 @@ public class PulseraNFCServiceImpl implements PulseraNFCService {
             throw new IllegalArgumentException("La descripción del consumo es requerida.");
         }
 
-        EntityManager em = null;
-        EntityTransaction tx = null;
-        try {
-            em = JPAUtil.createEntityManager();
-            tx = em.getTransaction();
-            tx.begin();
-
+        return executeTransactional(em -> {
             Usuario actor = verificarActorPermitido(em, idActor, RolUsuario.ADMIN, RolUsuario.PROMOTOR, RolUsuario.CAJERO);
 
             Festival festival = festivalRepository.findById(em, idFestival)
@@ -338,17 +271,9 @@ public class PulseraNFCServiceImpl implements PulseraNFCService {
             pulsera.setSaldo(saldoActual.subtract(monto));
             pulsera = pulseraNFCRepository.save(em, pulsera);
 
-            tx.commit();
             log.info("Consumo de {} registrado en pulsera UID {} (Fest:{}). Nuevo saldo: {}", monto, codigoUid, idFestival, pulsera.getSaldo());
-
             return mapEntityToDto(pulsera);
-
-        } catch (Exception e) {
-            handleException(e, tx, "registrando consumo para UID " + codigoUid);
-            throw mapException(e);
-        } finally {
-            closeEntityManager(em);
-        }
+        }, "registrarConsumo " + codigoUid + " fest " + idFestival);
     }
 
     @Override
@@ -357,20 +282,15 @@ public class PulseraNFCServiceImpl implements PulseraNFCService {
             PulseraYaAsociadaException, EntradaNoNominadaException,
             IllegalStateException, FestivalNotFoundException, SecurityException {
 
+        String qrLog = (codigoQrEntrada != null ? codigoQrEntrada.substring(0, Math.min(15, codigoQrEntrada.length())) + "..." : "null");
         log.info("Service: Iniciando asociación de pulsera UID {} a entrada con QR {} (Contexto Fest. ID: {})",
-                codigoUidPulsera, (codigoQrEntrada != null ? codigoQrEntrada.substring(0, Math.min(15, codigoQrEntrada.length())) + "..." : "null"), idFestivalContexto);
+                codigoUidPulsera, qrLog, idFestivalContexto);
 
         if (codigoQrEntrada == null || codigoQrEntrada.isBlank() || codigoUidPulsera == null || codigoUidPulsera.isBlank()) {
             throw new IllegalArgumentException("El código QR de la entrada y el UID de la pulsera son requeridos.");
         }
 
-        EntityManager em = null;
-        EntityTransaction tx = null;
-        try {
-            em = JPAUtil.createEntityManager();
-            tx = em.getTransaction();
-            tx.begin();
-
+        return executeTransactional(em -> {
             Entrada entrada = entradaRepository.findByCodigoQr(em, codigoQrEntrada)
                     .orElseThrow(() -> new EntradaNotFoundException("Entrada no encontrada con el código QR proporcionado."));
             log.debug("Entrada Asignada ID {} encontrada para QR: {}", entrada.getIdEntrada(), codigoQrEntrada);
@@ -435,25 +355,13 @@ public class PulseraNFCServiceImpl implements PulseraNFCService {
             entradaRepository.save(em, entrada);
             log.info("Entrada ID {} (QR: {}) marcada como USADA y fecha_uso actualizada a {}", entrada.getIdEntrada(), codigoQrEntrada, entrada.getFechaUso());
 
-            tx.commit();
             log.info("Pulsera UID {} (ID: {}) asociada exitosamente a Entrada ID {} (QR: {}) del Festival ID {}. Fecha de uso de entrada actualizada.",
                     pulseraGuardada.getCodigoUid(), pulseraGuardada.getIdPulsera(),
                     entrada.getIdEntrada(), codigoQrEntrada,
                     festivalDeLaEntrada.getIdFestival());
 
             return mapEntityToDto(pulseraGuardada);
-
-        } catch (Exception e) {
-            handleException(e, tx, "asociar pulsera UID " + codigoUidPulsera + " a entrada con QR " + codigoQrEntrada);
-            if (e instanceof EntradaNotFoundException || e instanceof PulseraNFCNotFoundException
-                    || e instanceof PulseraYaAsociadaException || e instanceof EntradaNoNominadaException
-                    || e instanceof IllegalStateException || e instanceof FestivalNotFoundException || e instanceof SecurityException) {
-                throw e;
-            }
-            throw mapException(e);
-        } finally {
-            closeEntityManager(em);
-        }
+        }, "asociarPulseraViaQrEntrada " + codigoUidPulsera + " to QR " + qrLog);
     }
 
     private Usuario verificarActorPermitido(EntityManager em, Integer idUsuario, RolUsuario... rolesPermitidos) {
@@ -563,39 +471,6 @@ public class PulseraNFCServiceImpl implements PulseraNFCService {
             return;
         }
         throw new SecurityException("Rol no autorizado para listar pulseras de un festival.");
-    }
-
-    private void handleException(Exception e, EntityTransaction tx, String action) {
-        log.error("Error durante la acción '{}': {}", action, e.getMessage(), e);
-        rollbackTransaction(tx, action);
-    }
-
-    private void rollbackTransaction(EntityTransaction tx, String action) {
-        if (tx != null && tx.isActive()) {
-            try {
-                tx.rollback();
-                log.warn("Rollback de transacción de {} realizado.", action);
-            } catch (Exception rbEx) {
-                log.error("Error durante el rollback de {}: {}", action, rbEx.getMessage(), rbEx);
-            }
-        }
-    }
-
-    private void closeEntityManager(EntityManager em) {
-        if (em != null && em.isOpen()) {
-            em.close();
-        }
-    }
-
-    private RuntimeException mapException(Exception e) {
-        if (e instanceof PulseraNFCNotFoundException || e instanceof EntradaNotFoundException || e instanceof EntradaNoNominadaException
-                || e instanceof PulseraYaAsociadaException || e instanceof AsistenteNotFoundException || e instanceof FestivalNotFoundException
-                || e instanceof UsuarioNotFoundException || e instanceof FestivalNoPublicadoException || e instanceof StockInsuficienteException
-                || e instanceof SaldoInsuficienteException || e instanceof IllegalArgumentException || e instanceof SecurityException
-                || e instanceof IllegalStateException || e instanceof PersistenceException || e instanceof RuntimeException) {
-            return (RuntimeException) e;
-        }
-        return new RuntimeException("Error inesperado en la capa de servicio PulseraNFC: " + e.getMessage(), e);
     }
 
     private PulseraNFCDTO mapEntityToDto(PulseraNFC p) {

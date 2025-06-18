@@ -6,7 +6,6 @@ import com.daw2edudiego.beatpasstfg.dto.IniciarCompraResponseDTO;
 import com.daw2edudiego.beatpasstfg.exception.*;
 import com.daw2edudiego.beatpasstfg.model.*;
 import com.daw2edudiego.beatpasstfg.repository.*;
-import com.daw2edudiego.beatpasstfg.util.JPAUtil;
 import com.daw2edudiego.beatpasstfg.util.QRCodeUtil;
 
 import com.stripe.exception.StripeException;
@@ -15,9 +14,7 @@ import com.stripe.param.PaymentIntentCreateParams;
 import com.stripe.param.PaymentIntentRetrieveParams;
 
 import jakarta.persistence.EntityManager;
-import jakarta.persistence.EntityTransaction;
 import jakarta.persistence.LockModeType;
-import jakarta.persistence.PersistenceException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -33,7 +30,7 @@ import java.util.stream.Collectors;
 /**
  * Implementación de VentaService.
  */
-public class VentaServiceImpl implements VentaService {
+public class VentaServiceImpl extends AbstractService implements VentaService {
 
     private static final Logger log = LoggerFactory.getLogger(VentaServiceImpl.class);
 
@@ -55,6 +52,13 @@ public class VentaServiceImpl implements VentaService {
         this.emailService = new EmailServiceImpl();
     }
 
+    private record PurchaseConfirmationResult(
+            CompraDTO compraDTO,
+            List<EntradaDTO> entradasDTOs,
+            String festivalName) {
+
+    }
+
     @Override
     public CompraDTO confirmarVentaConPago(String emailComprador, String nombreComprador, String telefonoComprador, Integer idTipoEntrada, int cantidad, String paymentIntentId)
             throws TipoEntradaNotFoundException, FestivalNoPublicadoException,
@@ -65,83 +69,66 @@ public class VentaServiceImpl implements VentaService {
 
         validarParametrosConfirmacion(emailComprador, nombreComprador, idTipoEntrada, cantidad, paymentIntentId);
 
-        EntityManager em = null;
-        EntityTransaction tx = null;
+        Comprador compradorParaEmail = compradorService.obtenerOcrearCompradorPorEmail(emailComprador, nombreComprador, telefonoComprador);
 
-        Comprador compradorParaEmail;
-        Festival festivalParaEmail;
-        Compra compraPersistidaParaEmail = null;
-        List<EntradaDTO> entradasCompradasDTOsParaEmail = new ArrayList<>();
+        PaymentIntent paymentIntent = verificarPagoStripe(paymentIntentId, 0);
 
-        try {
-            // 1. Validaciones previas y obtención/creación de comprador
-            compradorParaEmail = compradorService.obtenerOcrearCompradorPorEmail(emailComprador, nombreComprador, telefonoComprador);
+        PurchaseConfirmationResult result = executeTransactional(em -> {
+            Comprador compradorEnTx = em.find(Comprador.class, compradorParaEmail.getIdComprador());
+            if (compradorEnTx == null) {
+                throw new RuntimeException("Comprador no encontrado en el contexto transaccional.");
+            }
 
-            em = JPAUtil.createEntityManager();
-            TipoEntrada tipoEntradaValidada = tipoEntradaRepository.findById(em, idTipoEntrada)
+            TipoEntrada tipoEntradaEnTx = tipoEntradaRepository.findById(em, idTipoEntrada, LockModeType.PESSIMISTIC_WRITE)
                     .orElseThrow(() -> new TipoEntradaNotFoundException("Tipo de entrada no encontrado con ID: " + idTipoEntrada));
 
-            festivalParaEmail = tipoEntradaValidada.getFestival();
-            if (festivalParaEmail == null) {
-                throw new IllegalStateException("Entrada ID " + idTipoEntrada + " sin festival asociado.");
+            Festival festivalEnTx = tipoEntradaEnTx.getFestival();
+            if (festivalEnTx == null) {
+                throw new IllegalStateException("Tipo de entrada ID " + idTipoEntrada + " sin festival asociado.");
             }
-            if (festivalParaEmail.getEstado() != EstadoFestival.PUBLICADO) {
-                throw new FestivalNoPublicadoException("Festival '" + festivalParaEmail.getNombre() + "' no está publicado.");
+            if (festivalEnTx.getEstado() != EstadoFestival.PUBLICADO) {
+                throw new FestivalNoPublicadoException("Festival '" + festivalEnTx.getNombre() + "' no está publicado.");
             }
 
-            BigDecimal totalEsperadoDecimal = tipoEntradaValidada.getPrecio().multiply(new BigDecimal(cantidad));
-            long totalEsperadoCentimos = totalEsperadoDecimal.multiply(new BigDecimal(100)).longValueExact();
-            closeEntityManager(em);
+            BigDecimal totalEsperadoDecimalTx = tipoEntradaEnTx.getPrecio().multiply(new BigDecimal(cantidad));
+            long totalEsperadoCentimosTx = totalEsperadoDecimalTx.multiply(new BigDecimal(100)).longValueExact();
 
-            // 2. Verificación del Pago con Stripe
-            PaymentIntent paymentIntent = verificarPagoStripe(paymentIntentId, totalEsperadoCentimos);
-
-            // 3. Lógica de negocio principal (Transacción JPA)
-            em = JPAUtil.createEntityManager();
-            tx = em.getTransaction();
-            tx.begin();
-
-            Comprador compradorEnTx = em.find(Comprador.class, compradorParaEmail.getIdComprador());
-
-            TipoEntrada tipoEntradaEnTx = em.find(TipoEntrada.class, idTipoEntrada, LockModeType.PESSIMISTIC_WRITE);
-            if (tipoEntradaEnTx == null) {
-                throw new TipoEntradaNotFoundException("Tipo de entrada no encontrado con ID: " + idTipoEntrada + " dentro de TX.");
+            if (paymentIntent.getAmount() == null || paymentIntent.getAmount() != totalEsperadoCentimosTx) {
+                throw new PagoInvalidoException("Monto del pago Stripe (" + paymentIntent.getAmount() + ") no coincide con el esperado (" + totalEsperadoCentimosTx + ").");
             }
+
             if (tipoEntradaEnTx.getStock() == null || tipoEntradaEnTx.getStock() < cantidad) {
                 throw new StockInsuficienteException("Stock (" + tipoEntradaEnTx.getStock() + ") insuficiente para entrada '" + tipoEntradaEnTx.getTipo() + "'.");
             }
 
-            compraPersistidaParaEmail = crearYGuardarCompra(em, compradorEnTx, totalEsperadoDecimal, paymentIntent);
-            CompraEntrada compraEntrada = crearYGuardarCompraEntrada(em, compraPersistidaParaEmail, tipoEntradaEnTx, cantidad);
+            Compra compra = crearYGuardarCompra(em, compradorEnTx, totalEsperadoDecimalTx, paymentIntent);
+            CompraEntrada compraEntrada = crearYGuardarCompraEntrada(em, compra, tipoEntradaEnTx, cantidad);
 
             List<Entrada> entradasGeneradasPersistidas = new ArrayList<>();
             generarYGuardarEntradasAsignadas(em, compraEntrada, cantidad, entradasGeneradasPersistidas);
             actualizarStockEntrada(em, tipoEntradaEnTx, cantidad);
 
-            for (Entrada ea : entradasGeneradasPersistidas) {
-                entradasCompradasDTOsParaEmail.add(mapEntradaToDTO(ea));
-            }
-            tx.commit();
-            log.info("Venta confirmada y TX completada. Compra ID: {}, PI: {}", compraPersistidaParaEmail.getIdCompra(), paymentIntentId);
+            List<EntradaDTO> entradasCompradasDTOs = entradasGeneradasPersistidas.stream()
+                    .map(this::mapEntradaToDTO)
+                    .collect(Collectors.toList());
 
-            // --- Envío de Email ---
-            emailService.enviarEmailEntradasCompradas(
-                    compradorParaEmail.getEmail(),
-                    compradorParaEmail.getNombre(),
-                    festivalParaEmail.getNombre(),
-                    entradasCompradasDTOsParaEmail
+            log.info("Venta confirmada and TX completed. Compra ID: {}, PI: {}", compra.getIdCompra(), paymentIntentId);
+
+            return new PurchaseConfirmationResult(
+                    mapCompraToDTO(compra, entradasGeneradasPersistidas),
+                    entradasCompradasDTOs,
+                    festivalEnTx.getNombre()
             );
+        }, "confirmarVentaConPago " + paymentIntentId);
 
-            return mapCompraToDTO(compraPersistidaParaEmail, entradasGeneradasPersistidas);
-        } catch (Exception e) {
-            handleException(e, tx, "confirmar venta con pago para PI " + paymentIntentId);
-            if (e instanceof TipoEntradaNotFoundException || e instanceof FestivalNoPublicadoException || e instanceof StockInsuficienteException || e instanceof PagoInvalidoException || e instanceof IllegalArgumentException) {
-                throw e;
-            }
-            throw new RuntimeException("Error inesperado durante la confirmación de la venta: " + e.getMessage(), e);
-        } finally {
-            closeEntityManager(em);
-        }
+        emailService.enviarEmailEntradasCompradas(
+                compradorParaEmail.getEmail(),
+                compradorParaEmail.getNombre(),
+                result.festivalName(),
+                result.entradasDTOs()
+        );
+
+        return result.compraDTO();
     }
 
     @Override
@@ -153,9 +140,7 @@ public class VentaServiceImpl implements VentaService {
             throw new IllegalArgumentException("ID entrada y cantidad > 0 son requeridos.");
         }
 
-        EntityManager em = null;
-        try {
-            em = JPAUtil.createEntityManager();
+        return executeRead(em -> {
             TipoEntrada tipoEntrada = tipoEntradaRepository.findById(em, idTipoEntrada)
                     .orElseThrow(() -> new TipoEntradaNotFoundException("Tipo de entrada no encontrado con ID: " + idTipoEntrada));
             validarFestivalParaCompra(tipoEntrada.getFestival());
@@ -167,19 +152,10 @@ public class VentaServiceImpl implements VentaService {
 
             PaymentIntent paymentIntent = crearPaymentIntentStripe(totalCentimos);
             return new IniciarCompraResponseDTO(paymentIntent.getClientSecret());
-
-        } catch (Exception e) {
-            log.error("Error en iniciarProcesoPago para entrada ID {}: {}", idTipoEntrada, e.getMessage(), e);
-            if (e instanceof TipoEntradaNotFoundException || e instanceof FestivalNoPublicadoException || e instanceof IllegalArgumentException) {
-                throw e;
-            }
-            throw mapException(e);
-        } finally {
-            closeEntityManager(em);
-        }
+        }, "iniciarProcesoPago " + idTipoEntrada);
     }
 
-    // --- Métodos Privados de Ayuda ---
+    // --- Métodos privados de ayuda ---
     private void validarParametrosConfirmacion(String email, String nombre, Integer idTipoEntrada, int cantidad, String paymentIntentId) {
         if (email == null || email.isBlank() || nombre == null || nombre.isBlank() || idTipoEntrada == null) {
             throw new IllegalArgumentException("Email, nombre, idTipoEntrada son requeridos.");
@@ -199,9 +175,6 @@ public class VentaServiceImpl implements VentaService {
             PaymentIntent paymentIntent = PaymentIntent.retrieve(paymentIntentId, params, null);
             if (!"succeeded".equals(paymentIntent.getStatus())) {
                 throw new PagoInvalidoException("Pago no completado (Estado Stripe: " + paymentIntent.getStatus() + ")");
-            }
-            if (paymentIntent.getAmount() == null || paymentIntent.getAmount() != totalEsperadoCentimos) {
-                throw new PagoInvalidoException("Monto del pago (" + paymentIntent.getAmount() + ") no coincide con esperado (" + totalEsperadoCentimos + ").");
             }
             if (!EXPECTED_CURRENCY.equalsIgnoreCase(paymentIntent.getCurrency())) {
                 throw new PagoInvalidoException("Moneda del pago (" + paymentIntent.getCurrency() + ") no coincide con esperada (" + EXPECTED_CURRENCY + ").");
@@ -279,42 +252,6 @@ public class VentaServiceImpl implements VentaService {
         }
     }
 
-    private void handleException(Exception e, EntityTransaction tx, String action) {
-        log.error("Error durante la acción '{}': {}", action, e.getMessage(), e);
-        rollbackTransaction(tx, action);
-    }
-
-    private void rollbackTransaction(EntityTransaction tx, String action) {
-        if (tx != null && tx.isActive()) {
-            try {
-                tx.rollback();
-                log.warn("Rollback de transacción de '{}' realizado.", action);
-            } catch (Exception rbEx) {
-                log.error("¡Error CRÍTICO durante el rollback de '{}'!: {}", action, rbEx.getMessage(), rbEx);
-            }
-        }
-    }
-
-    private void closeEntityManager(EntityManager em) {
-        if (em != null && em.isOpen()) {
-            try {
-                em.close();
-            } catch (Exception e) {
-                log.error("Error al cerrar EntityManager: {}", e.getMessage(), e);
-            }
-        }
-    }
-
-    private RuntimeException mapException(Exception e) {
-        if (e instanceof AsistenteNotFoundException || e instanceof TipoEntradaNotFoundException || e instanceof FestivalNotFoundException
-                || e instanceof FestivalNoPublicadoException || e instanceof StockInsuficienteException || e instanceof PagoInvalidoException
-                || e instanceof IllegalArgumentException || e instanceof SecurityException || e instanceof IllegalStateException
-                || e instanceof PersistenceException || e instanceof RuntimeException) {
-            return (RuntimeException) e;
-        }
-        return new RuntimeException("Error inesperado en la capa de servicio Venta: " + e.getMessage(), e);
-    }
-
     private CompraDTO mapCompraToDTO(Compra compra, List<Entrada> entradasGeneradas) {
         if (compra == null) {
             return null;
@@ -341,16 +278,11 @@ public class VentaServiceImpl implements VentaService {
             dto.setEntradasGeneradas(new ArrayList<>());
         }
 
-        try {
-            if (compra.getDetallesCompra() != null && !compra.getDetallesCompra().isEmpty()) {
-                dto.setResumenEntradas(compra.getDetallesCompra().stream()
-                        .map(detalle -> detalle.getCantidad() + " x " + (detalle.getTipoEntrada() != null ? detalle.getTipoEntrada().getTipo() : "?"))
-                        .collect(Collectors.toList()));
-            } else { // Asegurar que la lista se inicialice si no hay detalles
-                dto.setResumenEntradas(new ArrayList<>());
-            }
-        } catch (org.hibernate.LazyInitializationException e) {
-            log.warn("LazyInitializationException al acceder a detallesCompra para Compra ID {}. No se incluirá resumen.", compra.getIdCompra());
+        if (compra.getDetallesCompra() != null && !compra.getDetallesCompra().isEmpty()) {
+            dto.setResumenEntradas(compra.getDetallesCompra().stream()
+                    .map(detalle -> detalle.getCantidad() + " x " + (detalle.getTipoEntrada() != null ? detalle.getTipoEntrada().getTipo() : "?"))
+                    .collect(Collectors.toList()));
+        } else {
             dto.setResumenEntradas(new ArrayList<>());
         }
         return dto;

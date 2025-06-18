@@ -11,13 +11,8 @@ import com.daw2edudiego.beatpasstfg.repository.FestivalRepository;
 import com.daw2edudiego.beatpasstfg.repository.FestivalRepositoryImpl;
 import com.daw2edudiego.beatpasstfg.repository.UsuarioRepository;
 import com.daw2edudiego.beatpasstfg.repository.UsuarioRepositoryImpl;
-import com.daw2edudiego.beatpasstfg.util.JPAUtil;
 
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.EntityTransaction;
-import jakarta.persistence.PersistenceException;
 import java.time.LocalDate;
-import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -27,7 +22,7 @@ import org.slf4j.LoggerFactory;
 /**
  * Implementación de FestivalService.
  */
-public class FestivalServiceImpl implements FestivalService {
+public class FestivalServiceImpl extends AbstractService implements FestivalService {
 
     private static final Logger log = LoggerFactory.getLogger(FestivalServiceImpl.class);
 
@@ -49,13 +44,7 @@ public class FestivalServiceImpl implements FestivalService {
         }
         validarDatosBasicosFestivalDTO(festivalDTO);
 
-        EntityManager em = null;
-        EntityTransaction tx = null;
-        try {
-            em = JPAUtil.createEntityManager();
-            tx = em.getTransaction();
-            tx.begin();
-
+        return executeTransactional(em -> {
             Usuario promotor = usuarioRepository.findById(em, idPromotor)
                     .filter(u -> u.getRol() == RolUsuario.PROMOTOR)
                     .orElseThrow(() -> new UsuarioNotFoundException("Promotor no encontrado o inválido con ID: " + idPromotor));
@@ -67,17 +56,9 @@ public class FestivalServiceImpl implements FestivalService {
             }
 
             festival = festivalRepository.save(em, festival);
-            tx.commit();
-
             log.info("Service: Festival '{}' creado exitosamente con ID: {}", festival.getNombre(), festival.getIdFestival());
             return mapEntityToDto(festival);
-
-        } catch (Exception e) {
-            handleException(e, tx, "crear festival");
-            throw mapException(e);
-        } finally {
-            closeEntityManager(em);
-        }
+        }, "crearFestival");
     }
 
     @Override
@@ -86,16 +67,9 @@ public class FestivalServiceImpl implements FestivalService {
         if (id == null) {
             return Optional.empty();
         }
-        EntityManager em = null;
-        try {
-            em = JPAUtil.createEntityManager();
+        return executeRead(em -> {
             return festivalRepository.findById(em, id).map(this::mapEntityToDto);
-        } catch (Exception e) {
-            log.error("Service: Error al obtener festival por ID {}: {}", id, e.getMessage(), e);
-            return Optional.empty();
-        } finally {
-            closeEntityManager(em);
-        }
+        }, "obtenerFestivalPorId " + id);
     }
 
     @Override
@@ -107,13 +81,7 @@ public class FestivalServiceImpl implements FestivalService {
         }
         validarDatosBasicosFestivalDTO(festivalDTO);
 
-        EntityManager em = null;
-        EntityTransaction tx = null;
-        try {
-            em = JPAUtil.createEntityManager();
-            tx = em.getTransaction();
-            tx.begin();
-
+        return executeTransactional(em -> {
             Usuario actualizador = usuarioRepository.findById(em, idUsuarioActualizador)
                     .orElseThrow(() -> new UsuarioNotFoundException("Usuario actualizador no encontrado ID: " + idUsuarioActualizador));
 
@@ -132,17 +100,9 @@ public class FestivalServiceImpl implements FestivalService {
             // El estado NO se actualiza aquí
 
             festival = festivalRepository.save(em, festival);
-            tx.commit();
-
             log.info("Service: Festival ID: {} actualizado correctamente por Usuario ID: {}", id, idUsuarioActualizador);
             return mapEntityToDto(festival);
-
-        } catch (Exception e) {
-            handleException(e, tx, "actualizar festival ID " + id);
-            throw mapException(e);
-        } finally {
-            closeEntityManager(em);
-        }
+        }, "actualizarFestival " + id);
     }
 
     @Override
@@ -152,13 +112,7 @@ public class FestivalServiceImpl implements FestivalService {
             throw new IllegalArgumentException("ID festival e ID usuario son requeridos.");
         }
 
-        EntityManager em = null;
-        EntityTransaction tx = null;
-        try {
-            em = JPAUtil.createEntityManager();
-            tx = em.getTransaction();
-            tx.begin();
-
+        executeTransactional(em -> {
             Usuario eliminador = usuarioRepository.findById(em, idUsuarioEliminador)
                     .orElseThrow(() -> new UsuarioNotFoundException("Usuario eliminador no encontrado ID: " + idUsuarioEliminador));
 
@@ -170,40 +124,23 @@ public class FestivalServiceImpl implements FestivalService {
             boolean eliminado = festivalRepository.deleteById(em, id);
             if (!eliminado) {
                 log.warn("deleteById devolvió false después de encontrar el festival ID {}, posible inconsistencia.", id);
+                throw new RuntimeException("No se pudo completar la eliminación del festival ID: " + id);
             }
-            tx.commit();
-
             log.info("Service: Festival ID: {} eliminado correctamente por Usuario ID: {}", id, idUsuarioEliminador);
-
-        } catch (PersistenceException e) {
-            handleException(e, tx, "eliminar festival ID " + id);
-            log.error("Error de persistencia al eliminar festival ID {}. Causa probable: Datos asociados.", id);
-            throw new IllegalStateException("No se pudo eliminar el festival ID " + id + " debido a dependencias existentes.", e);
-        } catch (Exception e) {
-            handleException(e, tx, "eliminar festival ID " + id);
-            throw mapException(e);
-        } finally {
-            closeEntityManager(em);
-        }
+            return null;
+        }, "eliminarFestival " + id);
     }
 
     @Override
     public List<FestivalDTO> buscarFestivalesPublicados(LocalDate fechaDesde, LocalDate fechaHasta) {
         log.debug("Service: Buscando festivales publicados entre {} y {}", fechaDesde, fechaHasta);
-        EntityManager em = null;
-        try {
-            em = JPAUtil.createEntityManager();
+        return executeRead(em -> {
             List<Festival> festivales = festivalRepository.findActivosEntreFechas(em, fechaDesde, fechaHasta);
-            log.info("Service: Encontrados {} festivales publicados entre {} y {}", festivales.size(), fechaDesde, fechaHasta);
+            log.info("Service: Encontrados {} festivales publicados entre {} y {}.", festivales.size(), fechaDesde, fechaHasta);
             return festivales.stream()
                     .map(this::mapEntityToDto)
                     .collect(Collectors.toList());
-        } catch (Exception e) {
-            log.error("Service: Error buscando festivales publicados: {}", e.getMessage(), e);
-            return Collections.emptyList();
-        } finally {
-            closeEntityManager(em);
-        }
+        }, "buscarFestivalesPublicados");
     }
 
     @Override
@@ -212,20 +149,13 @@ public class FestivalServiceImpl implements FestivalService {
         if (idPromotor == null) {
             throw new IllegalArgumentException("El ID del promotor es requerido.");
         }
-        EntityManager em = null;
-        try {
-            em = JPAUtil.createEntityManager();
+        return executeRead(em -> {
             List<Festival> festivales = festivalRepository.findByPromotorId(em, idPromotor);
             log.info("Service: Encontrados {} festivales para promotor ID: {}", festivales.size(), idPromotor);
             return festivales.stream()
                     .map(this::mapEntityToDto)
                     .collect(Collectors.toList());
-        } catch (Exception e) {
-            log.error("Service: Error obteniendo festivales para promotor ID {}: {}", idPromotor, e.getMessage(), e);
-            return Collections.emptyList();
-        } finally {
-            closeEntityManager(em);
-        }
+        }, "obtenerFestivalesPorPromotor " + idPromotor);
     }
 
     @Override
@@ -235,13 +165,7 @@ public class FestivalServiceImpl implements FestivalService {
             throw new IllegalArgumentException("IDs de festival, nuevo estado y actor son requeridos.");
         }
 
-        EntityManager em = null;
-        EntityTransaction tx = null;
-        try {
-            em = JPAUtil.createEntityManager();
-            tx = em.getTransaction();
-            tx.begin();
-
+        return executeTransactional(em -> {
             Usuario actor = usuarioRepository.findById(em, idActor)
                     .orElseThrow(() -> new UsuarioNotFoundException("Usuario actor no encontrado con ID: " + idActor));
             if (actor.getRol() != RolUsuario.ADMIN) {
@@ -256,50 +180,32 @@ public class FestivalServiceImpl implements FestivalService {
 
             if (festival.getEstado() == nuevoEstado) {
                 log.info("Service: El festival ID {} ya está en estado {}. No se realiza cambio.", idFestival, nuevoEstado);
-                tx.commit();
                 return mapEntityToDto(festival);
             }
 
             festival.setEstado(nuevoEstado);
             festival = festivalRepository.save(em, festival);
-            tx.commit();
-
             log.info("Service: Estado de festival ID: {} cambiado a {} correctamente por Admin ID: {}", idFestival, nuevoEstado, idActor);
             return mapEntityToDto(festival);
-
-        } catch (Exception e) {
-            handleException(e, tx, "cambiar estado festival ID " + idFestival);
-            throw mapException(e);
-        } finally {
-            closeEntityManager(em);
-        }
+        }, "cambiarEstadoFestival " + idFestival + " to " + nuevoEstado);
     }
 
     @Override
     public List<FestivalDTO> obtenerTodosLosFestivales() {
         log.debug("Service: Obteniendo todos los festivales (Admin).");
-        EntityManager em = null;
-        try {
-            em = JPAUtil.createEntityManager();
+        return executeRead(em -> {
             List<Festival> festivales = festivalRepository.findAll(em);
             log.info("Service: Encontrados {} festivales en total.", festivales.size());
             return festivales.stream()
                     .map(this::mapEntityToDto)
                     .collect(Collectors.toList());
-        } catch (Exception e) {
-            log.error("Service: Error obteniendo todos los festivales: {}", e.getMessage(), e);
-            return Collections.emptyList();
-        } finally {
-            closeEntityManager(em);
-        }
+        }, "obtenerTodosLosFestivales");
     }
 
     @Override
     public List<FestivalDTO> obtenerFestivalesPorEstado(EstadoFestival estado) {
         log.debug("Service: Obteniendo festivales por estado: {} (Admin).", estado);
-        EntityManager em = null;
-        try {
-            em = JPAUtil.createEntityManager();
+        return executeRead(em -> {
             List<Festival> festivales;
             if (estado == null) {
                 festivales = festivalRepository.findAll(em);
@@ -310,12 +216,7 @@ public class FestivalServiceImpl implements FestivalService {
             return festivales.stream()
                     .map(this::mapEntityToDto)
                     .collect(Collectors.toList());
-        } catch (Exception e) {
-            log.error("Service: Error obteniendo festivales por estado {}: {}", estado, e.getMessage(), e);
-            return Collections.emptyList();
-        } finally {
-            closeEntityManager(em);
-        }
+        }, "obtenerFestivalesPorEstado " + (estado != null ? estado.name() : "ALL"));
     }
 
     // --- Métodos Privados de Ayuda ---
@@ -416,47 +317,4 @@ public class FestivalServiceImpl implements FestivalService {
         return entity;
     }
 
-    /**
-     * Manejador genérico de excepciones.
-     */
-    private void handleException(Exception e, EntityTransaction tx, String action) {
-        log.error("Error durante la acción '{}': {}", action, e.getMessage(), e);
-        rollbackTransaction(tx, action);
-    }
-
-    /**
-     * Realiza rollback si la transacción está activa.
-     */
-    private void rollbackTransaction(EntityTransaction tx, String action) {
-        if (tx != null && tx.isActive()) {
-            try {
-                tx.rollback();
-                log.warn("Rollback de transacción de {} realizado.", action);
-            } catch (Exception rbEx) {
-                log.error("Error durante el rollback de {}: {}", action, rbEx.getMessage(), rbEx);
-            }
-        }
-    }
-
-    /**
-     * Cierra el EntityManager.
-     */
-    private void closeEntityManager(EntityManager em) {
-        if (em != null && em.isOpen()) {
-            em.close();
-        }
-    }
-
-    /**
-     * Mapea excepciones técnicas a de negocio o Runtime.
-     */
-    private RuntimeException mapException(Exception e) {
-        if (e instanceof FestivalNotFoundException || e instanceof UsuarioNotFoundException
-                || e instanceof SecurityException || e instanceof IllegalStateException
-                || e instanceof IllegalArgumentException || e instanceof PersistenceException
-                || e instanceof RuntimeException) {
-            return (RuntimeException) e;
-        }
-        return new RuntimeException("Error inesperado en la capa de servicio Festival: " + e.getMessage(), e);
-    }
 }

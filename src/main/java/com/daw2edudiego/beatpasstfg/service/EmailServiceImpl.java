@@ -260,7 +260,7 @@ public class EmailServiceImpl implements EmailService {
     private void appendFooter(StringBuilder sb) {
         sb.append("<p>¡Disfruta del festival!</p>");
         sb.append("<p>Atentamente,<br>El equipo de Beatpass</p>");
-        sb.append("<div class='email-footer'><p>&copy; ").append(java.time.Year.now().getValue()).append(" Beatpass. Todos los derechos reservados.</p><p>Este es un correo electrónico generado automáticamente. Por favor, no respondas directamente a este mensaje.</p></div>");
+        sb.append("<div class='email-footer'><p>&copy; ").append(java.time.Year.now().getValue()).append(" Beatpass. Todos los derechos reservados.</p><p>Este es un correo electrónico generado automáticamente. Por favor, no respondas directamente a este mensaje.</p></div>"); //
     }
 
     private String escapeHtml(String text) {

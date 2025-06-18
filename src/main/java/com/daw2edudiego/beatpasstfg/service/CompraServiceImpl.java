@@ -3,16 +3,12 @@ package com.daw2edudiego.beatpasstfg.service;
 import com.daw2edudiego.beatpasstfg.dto.CompraDTO;
 import com.daw2edudiego.beatpasstfg.exception.FestivalNotFoundException;
 import com.daw2edudiego.beatpasstfg.exception.UsuarioNotFoundException;
-import com.daw2edudiego.beatpasstfg.model.Asistente;
 import com.daw2edudiego.beatpasstfg.model.Compra;
 import com.daw2edudiego.beatpasstfg.model.CompraEntrada;
 import com.daw2edudiego.beatpasstfg.model.Comprador;
 import com.daw2edudiego.beatpasstfg.model.Festival;
 import com.daw2edudiego.beatpasstfg.model.Usuario;
 import com.daw2edudiego.beatpasstfg.repository.*;
-import com.daw2edudiego.beatpasstfg.util.JPAUtil;
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.EntityTransaction;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -23,7 +19,7 @@ import java.util.stream.Collectors;
 /**
  * Implementación de CompraService.
  */
-public class CompraServiceImpl implements CompraService {
+public class CompraServiceImpl extends AbstractService implements CompraService {
 
     private static final Logger log = LoggerFactory.getLogger(CompraServiceImpl.class);
 
@@ -44,13 +40,7 @@ public class CompraServiceImpl implements CompraService {
             throw new IllegalArgumentException("ID de festival e ID de promotor son requeridos.");
         }
 
-        EntityManager em = null;
-        EntityTransaction tx = null;
-        try {
-            em = JPAUtil.createEntityManager();
-            tx = em.getTransaction();
-            tx.begin();
-
+        return executeRead(em -> {
             Usuario promotor = usuarioRepository.findById(em, idPromotor)
                     .orElseThrow(() -> new UsuarioNotFoundException("Promotor no encontrado con ID: " + idPromotor));
 
@@ -59,19 +49,11 @@ public class CompraServiceImpl implements CompraService {
             verificarPropiedadFestival(festival, idPromotor);
 
             List<Compra> compras = compraRepository.findByFestivalId(em, idFestival);
-            tx.commit();
-
             log.info("Encontradas {} compras para el festival ID {} (Promotor {})", compras.size(), idFestival, idPromotor);
             return compras.stream()
                     .map(this::mapCompraToDto)
                     .collect(Collectors.toList());
-
-        } catch (Exception e) {
-            handleException(e, tx, "obtener compras por festival " + idFestival);
-            throw mapException(e);
-        } finally {
-            closeEntityManager(em);
-        }
+        }, "obtenerComprasPorFestival " + idFestival);
     }
 
     // --- Métodos Privados de Ayuda ---
@@ -124,48 +106,5 @@ public class CompraServiceImpl implements CompraService {
                     idPromotor, festival.getIdFestival());
             throw new SecurityException("El usuario no tiene permiso para acceder a los recursos de este festival.");
         }
-    }
-
-    /**
-     * Manejador genérico de excepciones.
-     */
-    private void handleException(Exception e, EntityTransaction tx, String action) {
-        log.error("Error durante la acción '{}': {}", action, e.getMessage(), e);
-        rollbackTransaction(tx, action);
-    }
-
-    /**
-     * Realiza rollback si la transacción está activa.
-     */
-    private void rollbackTransaction(EntityTransaction tx, String action) {
-        if (tx != null && tx.isActive()) {
-            try {
-                tx.rollback();
-                log.warn("Rollback de transacción de {} realizado.", action);
-            } catch (Exception rbEx) {
-                log.error("Error durante el rollback de {}: {}", action, rbEx.getMessage(), rbEx);
-            }
-        }
-    }
-
-    /**
-     * Cierra el EntityManager.
-     */
-    private void closeEntityManager(EntityManager em) {
-        if (em != null && em.isOpen()) {
-            em.close();
-        }
-    }
-
-    /**
-     * Mapea excepciones técnicas a de negocio o Runtime.
-     */
-    private RuntimeException mapException(Exception e) {
-        if (e instanceof FestivalNotFoundException || e instanceof UsuarioNotFoundException
-                || e instanceof SecurityException || e instanceof IllegalArgumentException
-                || e instanceof IllegalStateException || e instanceof RuntimeException) {
-            return (RuntimeException) e;
-        }
-        return new RuntimeException("Error inesperado en la capa de servicio Compra: " + e.getMessage(), e);
     }
 }
