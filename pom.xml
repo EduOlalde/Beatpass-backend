@@ -34,6 +34,7 @@
         <maven.war.plugin.version>3.3.2</maven.war.plugin.version>
         <hikaricp.version>5.1.0</hikaricp.version>
         <stripe.version>25.11.0</stripe.version>
+        <org.mapstruct.version>1.5.5.Final</org.mapstruct.version>
     </properties>
 
     <dependencies>
@@ -199,7 +200,12 @@
             <artifactId>jai-imageio-core</artifactId>
             <version>1.4.0</version> 
         </dependency>
-    
+
+        <dependency>
+            <groupId>org.mapstruct</groupId>
+            <artifactId>mapstruct</artifactId>
+            <version>${org.mapstruct.version}</version>
+        </dependency>
     </dependencies>
 
     <build>
@@ -212,6 +218,13 @@
                 <configuration>
                     <source>${maven.compiler.source}</source>
                     <target>${maven.compiler.target}</target>
+                    <annotationProcessorPaths>
+                        <path>
+                            <groupId>org.mapstruct</groupId>
+                            <artifactId>mapstruct-processor</artifactId>
+                            <version>${org.mapstruct.version}</version>
+                        </path>
+                    </annotationProcessorPaths>
                 </configuration>
             </plugin>
             <plugin>

@@ -11,9 +11,9 @@ import com.daw2edudiego.beatpasstfg.repository.UsuarioRepository;
 import com.daw2edudiego.beatpasstfg.repository.UsuarioRepositoryImpl;
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import com.daw2edudiego.beatpasstfg.mapper.UsuarioMapper;
 
 /**
  * Implementación de UsuarioService.
@@ -22,9 +22,11 @@ public class UsuarioServiceImpl extends AbstractService implements UsuarioServic
 
     private static final Logger log = LoggerFactory.getLogger(UsuarioServiceImpl.class);
     private final UsuarioRepository usuarioRepository;
+    private final UsuarioMapper usuarioMapper;
 
     public UsuarioServiceImpl() {
         this.usuarioRepository = new UsuarioRepositoryImpl();
+        this.usuarioMapper = UsuarioMapper.INSTANCE;
     }
 
     @Override
@@ -37,17 +39,14 @@ public class UsuarioServiceImpl extends AbstractService implements UsuarioServic
                 throw new EmailExistenteException("El email '" + ucDTO.getEmail() + "' ya está registrado.");
             }
 
-            Usuario usuario = new Usuario();
-            usuario.setNombre(ucDTO.getNombre().trim());
-            usuario.setEmail(ucDTO.getEmail().trim().toLowerCase());
-            usuario.setRol(ucDTO.getRol());
-            usuario.setEstado(true);
+            Usuario usuario = usuarioMapper.usuarioCreacionDTOToUsuario(ucDTO);
+            usuario.setEstado(true); // Propiedades no mapeadas directamente, se setean aquí
             usuario.setCambioPasswordRequerido(true);
             usuario.setPassword(com.daw2edudiego.beatpasstfg.util.PasswordUtil.hashPassword(ucDTO.getPassword()));
 
             usuario = usuarioRepository.save(em, usuario);
             log.info("Usuario creado exitosamente con ID: {} y email: {}", usuario.getIdUsuario(), usuario.getEmail());
-            return mapEntityToDto(usuario);
+            return usuarioMapper.usuarioToUsuarioDTO(usuario);
         }, "crear usuario con email " + (ucDTO != null ? ucDTO.getEmail() : "null"));
     }
 
@@ -58,7 +57,7 @@ public class UsuarioServiceImpl extends AbstractService implements UsuarioServic
             return Optional.empty();
         }
         return executeRead(em -> {
-            return usuarioRepository.findById(em, id).map(this::mapEntityToDto);
+            return usuarioRepository.findById(em, id).map(usuarioMapper::usuarioToUsuarioDTO);
         }, "obtener usuario (DTO) por ID " + id);
     }
 
@@ -69,7 +68,7 @@ public class UsuarioServiceImpl extends AbstractService implements UsuarioServic
             return Optional.empty();
         }
         return executeRead(em -> {
-            return usuarioRepository.findByEmail(em, email).map(this::mapEntityToDto);
+            return usuarioRepository.findByEmail(em, email).map(usuarioMapper::usuarioToUsuarioDTO);
         }, "obtener usuario (DTO) por email " + email);
     }
 
@@ -93,7 +92,7 @@ public class UsuarioServiceImpl extends AbstractService implements UsuarioServic
         return executeRead(em -> {
             List<Usuario> usuarios = usuarioRepository.findByRol(em, rol);
             log.info("Encontrados {} usuarios con rol {}", usuarios.size(), rol);
-            return usuarios.stream().map(this::mapEntityToDto).collect(Collectors.toList());
+            return usuarioMapper.toUsuarioDTOList(usuarios);
         }, "obtener usuarios por rol " + rol);
     }
 
@@ -110,13 +109,13 @@ public class UsuarioServiceImpl extends AbstractService implements UsuarioServic
 
             if (usuario.getEstado().equals(nuevoEstado)) {
                 log.info("El estado del usuario ID {} ya es {}. No se requiere actualización.", id, nuevoEstado);
-                return mapEntityToDto(usuario);
+                return usuarioMapper.usuarioToUsuarioDTO(usuario);
             }
 
             usuario.setEstado(nuevoEstado);
             usuario = usuarioRepository.save(em, usuario);
             log.info("Estado de usuario ID: {} actualizado a {} correctamente.", id, nuevoEstado);
-            return mapEntityToDto(usuario);
+            return usuarioMapper.usuarioToUsuarioDTO(usuario);
         }, "actualizar estado usuario ID " + id);
     }
 
@@ -130,7 +129,6 @@ public class UsuarioServiceImpl extends AbstractService implements UsuarioServic
         executeTransactional(em -> {
             boolean eliminado = usuarioRepository.deleteById(em, id);
             if (!eliminado) {
-                // deleteById ya lanza UsuarioNotFoundException si no lo encuentra
                 log.warn("deleteById devolvió false para usuario ID {} sin lanzar excepción.", id);
                 throw new RuntimeException("No se pudo completar la eliminación del usuario ID: " + id);
             }
@@ -190,13 +188,16 @@ public class UsuarioServiceImpl extends AbstractService implements UsuarioServic
 
             if (usuario.getNombre().equals(nuevoNombre.trim())) {
                 log.info("El nombre del usuario ID {} ya es '{}'. No se requiere actualización.", id, nuevoNombre);
-                return mapEntityToDto(usuario);
+                return usuarioMapper.usuarioToUsuarioDTO(usuario);
             }
 
-            usuario.setNombre(nuevoNombre.trim());
+            UsuarioDTO tempDto = new UsuarioDTO();
+            tempDto.setNombre(nuevoNombre.trim());
+            usuarioMapper.updateUsuarioFromDto(tempDto, usuario);
+
             usuario = usuarioRepository.save(em, usuario);
             log.info("Nombre de usuario ID: {} actualizado a '{}' correctamente.", id, nuevoNombre);
-            return mapEntityToDto(usuario);
+            return usuarioMapper.usuarioToUsuarioDTO(usuario);
         }, "actualizar nombre usuario ID " + id);
     }
 
@@ -241,24 +242,5 @@ public class UsuarioServiceImpl extends AbstractService implements UsuarioServic
         if (nueva.length() < 8) {
             throw new IllegalArgumentException("La nueva contraseña debe tener al menos 8 caracteres.");
         }
-    }
-
-    /**
-     * Mapea entidad Usuario a DTO.
-     */
-    private UsuarioDTO mapEntityToDto(Usuario u) {
-        if (u == null) {
-            return null;
-        }
-        UsuarioDTO dto = new UsuarioDTO();
-        dto.setIdUsuario(u.getIdUsuario());
-        dto.setNombre(u.getNombre());
-        dto.setEmail(u.getEmail());
-        dto.setRol(u.getRol());
-        dto.setEstado(u.getEstado());
-        dto.setCambioPasswordRequerido(u.getCambioPasswordRequerido());
-        dto.setFechaCreacion(u.getFechaCreacion());
-        dto.setFechaModificacion(u.getFechaModificacion());
-        return dto;
     }
 }

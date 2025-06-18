@@ -11,11 +11,11 @@ import com.daw2edudiego.beatpasstfg.repository.FestivalRepository;
 import com.daw2edudiego.beatpasstfg.repository.FestivalRepositoryImpl;
 import com.daw2edudiego.beatpasstfg.repository.UsuarioRepository;
 import com.daw2edudiego.beatpasstfg.repository.UsuarioRepositoryImpl;
+import com.daw2edudiego.beatpasstfg.mapper.TipoEntradaMapper;
 
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import com.daw2edudiego.beatpasstfg.repository.TipoEntradaRepository;
@@ -30,11 +30,13 @@ public class TipoEntradaServiceImpl extends AbstractService implements TipoEntra
     private final TipoEntradaRepository tipoEntradaRepository;
     private final FestivalRepository festivalRepository;
     private final UsuarioRepository usuarioRepository;
+    private final TipoEntradaMapper tipoEntradaMapper;
 
     public TipoEntradaServiceImpl() {
         this.tipoEntradaRepository = new TipoEntradaRepositoryImpl();
         this.festivalRepository = new FestivalRepositoryImpl();
         this.usuarioRepository = new UsuarioRepositoryImpl();
+        this.tipoEntradaMapper = TipoEntradaMapper.INSTANCE;
     }
 
     @Override
@@ -56,12 +58,12 @@ public class TipoEntradaServiceImpl extends AbstractService implements TipoEntra
                     .orElseThrow(() -> new FestivalNotFoundException("Festival no encontrado con ID: " + idFestival));
             verificarPropiedadFestival(festival, idPromotor);
 
-            TipoEntrada nuevaEntrada = mapDtoToEntity(tipoEntradaDTO);
+            TipoEntrada nuevaEntrada = tipoEntradaMapper.tipoEntradaDTOToTipoEntrada(tipoEntradaDTO);
             nuevaEntrada.setFestival(festival);
 
             TipoEntrada entradaGuardada = tipoEntradaRepository.save(em, nuevaEntrada);
             log.info("Nuevo tipo de entrada ID {} creado para festival ID {}", entradaGuardada.getIdTipoEntrada(), idFestival);
-            return mapEntityToDto(entradaGuardada);
+            return tipoEntradaMapper.tipoEntradaToTipoEntradaDTO(entradaGuardada);
         }, "crearTipoEntrada for festival " + idFestival);
     }
 
@@ -82,9 +84,7 @@ public class TipoEntradaServiceImpl extends AbstractService implements TipoEntra
 
             List<TipoEntrada> tiposEntrada = tipoEntradaRepository.findByFestivalId(em, idFestival);
             log.info("Encontrados {} tipos de entrada para el festival ID {} (Promotor {})", tiposEntrada.size(), idFestival, idPromotor);
-            return tiposEntrada.stream()
-                    .map(this::mapEntityToDto)
-                    .collect(Collectors.toList());
+            return tipoEntradaMapper.toTipoEntradaDTOList(tiposEntrada);
         }, "obtenerTipoEntradasPorFestival " + idFestival);
     }
 
@@ -106,9 +106,7 @@ public class TipoEntradaServiceImpl extends AbstractService implements TipoEntra
 
             List<TipoEntrada> tiposEntrada = tipoEntradaRepository.findByFestivalId(em, idFestival);
             log.info("Encontrados {} tipos de entrada para el festival público ID {}", tiposEntrada.size(), idFestival);
-            return tiposEntrada.stream()
-                    .map(this::mapEntityToDto)
-                    .collect(Collectors.toList());
+            return tipoEntradaMapper.toTipoEntradaDTOList(tiposEntrada);
         }, "obtenerTiposEntradaPublicasPorFestival " + idFestival);
     }
 
@@ -132,16 +130,11 @@ public class TipoEntradaServiceImpl extends AbstractService implements TipoEntra
 
             verificarPropiedadFestival(entrada.getFestival(), idPromotor);
 
-            // Actualización de los campos
-            entrada.setTipo(tipoEntradaDTO.getTipo().trim());
-            entrada.setDescripcion(tipoEntradaDTO.getDescripcion() != null ? tipoEntradaDTO.getDescripcion().trim() : null);
-            entrada.setPrecio(tipoEntradaDTO.getPrecio());
-            entrada.setStock(tipoEntradaDTO.getStock());
-            entrada.setRequiereNominacion(tipoEntradaDTO.getRequiereNominacion());
+            tipoEntradaMapper.updateTipoEntradaFromDto(tipoEntradaDTO, entrada);
 
             TipoEntrada entradaActualizada = tipoEntradaRepository.save(em, entrada);
             log.info("Tipo de entrada ID {} actualizado exitosamente.", idEntrada);
-            return mapEntityToDto(entradaActualizada);
+            return tipoEntradaMapper.tipoEntradaToTipoEntradaDTO(entradaActualizada);
         }, "actualizarTipoEntrada " + idEntrada);
     }
 
@@ -188,7 +181,7 @@ public class TipoEntradaServiceImpl extends AbstractService implements TipoEntra
 
             TipoEntrada entrada = entradaOpt.get();
             verificarPropiedadFestival(entrada.getFestival(), idPromotor);
-            return Optional.of(mapEntityToDto(entrada));
+            return Optional.of(tipoEntradaMapper.tipoEntradaToTipoEntradaDTO(entrada));
         }, "obtenerTipoEntradaPorId " + idEntrada);
     }
 

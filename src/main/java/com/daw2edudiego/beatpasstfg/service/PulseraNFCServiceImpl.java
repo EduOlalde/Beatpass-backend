@@ -4,6 +4,7 @@ import com.daw2edudiego.beatpasstfg.dto.PulseraNFCDTO;
 import com.daw2edudiego.beatpasstfg.exception.*;
 import com.daw2edudiego.beatpasstfg.model.*;
 import com.daw2edudiego.beatpasstfg.repository.*;
+import com.daw2edudiego.beatpasstfg.mapper.PulseraNFCMapper;
 
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.LockModeType;
@@ -14,7 +15,6 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 /**
  * Implementación de PulseraNFCService.
@@ -29,6 +29,7 @@ public class PulseraNFCServiceImpl extends AbstractService implements PulseraNFC
     private final FestivalRepository festivalRepository;
     private final RecargaRepository recargaRepository;
     private final ConsumoRepository consumoRepository;
+    private final PulseraNFCMapper pulseraNFCMapper;
 
     public PulseraNFCServiceImpl() {
         this.pulseraNFCRepository = new PulseraNFCRepositoryImpl();
@@ -37,6 +38,7 @@ public class PulseraNFCServiceImpl extends AbstractService implements PulseraNFC
         this.festivalRepository = new FestivalRepositoryImpl();
         this.recargaRepository = new RecargaRepositoryImpl();
         this.consumoRepository = new ConsumoRepositoryImpl();
+        this.pulseraNFCMapper = PulseraNFCMapper.INSTANCE;
     }
 
     @Override
@@ -109,7 +111,7 @@ public class PulseraNFCServiceImpl extends AbstractService implements PulseraNFC
             log.info("Pulsera UID {} (ID: {}) asociada correctamente a Entrada ID {} del Festival ID {}. Fecha de uso de entrada actualizada.",
                     pulsera.getCodigoUid(), pulsera.getIdPulsera(), idEntrada, festival.getIdFestival());
 
-            return mapEntityToDto(pulsera);
+            return pulseraNFCMapper.pulseraNFCToPulseraNFCDTO(pulsera);
         }, "asociarPulseraEntrada " + codigoUid + " to " + idEntrada);
     }
 
@@ -126,7 +128,7 @@ public class PulseraNFCServiceImpl extends AbstractService implements PulseraNFC
             }
             PulseraNFC pulsera = pulseraOpt.get();
             verificarPermisoLecturaPulsera(em, pulsera, idActor);
-            return Optional.of(mapEntityToDto(pulsera));
+            return Optional.of(pulseraNFCMapper.pulseraNFCToPulseraNFCDTO(pulsera));
         }, "obtenerPulseraPorId " + idPulsera);
     }
 
@@ -143,7 +145,7 @@ public class PulseraNFCServiceImpl extends AbstractService implements PulseraNFC
             }
             PulseraNFC pulsera = pulseraOpt.get();
             verificarPermisoLecturaPulsera(em, pulsera, idActor);
-            return Optional.of(mapEntityToDto(pulsera));
+            return Optional.of(pulseraNFCMapper.pulseraNFCToPulseraNFCDTO(pulsera));
         }, "obtenerPulseraPorCodigoUid " + codigoUid);
     }
 
@@ -166,7 +168,7 @@ public class PulseraNFCServiceImpl extends AbstractService implements PulseraNFC
                     .orElseThrow(() -> new UsuarioNotFoundException("Usuario actor no encontrado: " + idActor));
             verificarPermisoListadoPulserasFestival(em, idFestival, actor);
             List<PulseraNFC> pulseras = pulseraNFCRepository.findByFestivalId(em, idFestival);
-            return pulseras.stream().map(this::mapEntityToDto).collect(Collectors.toList());
+            return pulseraNFCMapper.toPulseraNFCDTOList(pulseras);
         }, "obtenerPulserasPorFestival " + idFestival);
     }
 
@@ -213,7 +215,7 @@ public class PulseraNFCServiceImpl extends AbstractService implements PulseraNFC
             pulsera = pulseraNFCRepository.save(em, pulsera);
 
             log.info("Recarga de {} realizada en pulsera UID {} (Fest:{}). Nuevo saldo: {}", monto, codigoUid, idFestival, pulsera.getSaldo());
-            return mapEntityToDto(pulsera);
+            return pulseraNFCMapper.pulseraNFCToPulseraNFCDTO(pulsera);
         }, "registrarRecarga " + codigoUid + " fest " + idFestival);
     }
 
@@ -272,7 +274,7 @@ public class PulseraNFCServiceImpl extends AbstractService implements PulseraNFC
             pulsera = pulseraNFCRepository.save(em, pulsera);
 
             log.info("Consumo de {} registrado en pulsera UID {} (Fest:{}). Nuevo saldo: {}", monto, codigoUid, idFestival, pulsera.getSaldo());
-            return mapEntityToDto(pulsera);
+            return pulseraNFCMapper.pulseraNFCToPulseraNFCDTO(pulsera);
         }, "registrarConsumo " + codigoUid + " fest " + idFestival);
     }
 
@@ -360,13 +362,13 @@ public class PulseraNFCServiceImpl extends AbstractService implements PulseraNFC
                     entrada.getIdEntrada(), codigoQrEntrada,
                     festivalDeLaEntrada.getIdFestival());
 
-            return mapEntityToDto(pulseraGuardada);
+            return pulseraNFCMapper.pulseraNFCToPulseraNFCDTO(pulseraGuardada);
         }, "asociarPulseraViaQrEntrada " + codigoUidPulsera + " to QR " + qrLog);
     }
 
     private Usuario verificarActorPermitido(EntityManager em, Integer idUsuario, RolUsuario... rolesPermitidos) {
         Usuario actor = usuarioRepository.findById(em, idUsuario)
-                .orElseThrow(() -> new UsuarioNotFoundException("Usuario actor no encontrado con ID: " + idUsuario));
+                .orElseThrow(() -> new UsuarioNotFoundException("Usuario actor no encontrado: " + idUsuario));
         boolean permitido = false;
         for (RolUsuario rol : rolesPermitidos) {
             if (actor.getRol() == rol) {
@@ -471,34 +473,5 @@ public class PulseraNFCServiceImpl extends AbstractService implements PulseraNFC
             return;
         }
         throw new SecurityException("Rol no autorizado para listar pulseras de un festival.");
-    }
-
-    private PulseraNFCDTO mapEntityToDto(PulseraNFC p) {
-        if (p == null) {
-            return null;
-        }
-        PulseraNFCDTO dto = new PulseraNFCDTO();
-        dto.setIdPulsera(p.getIdPulsera());
-        dto.setCodigoUid(p.getCodigoUid());
-        dto.setSaldo(p.getSaldo());
-        dto.setActiva(p.getActiva());
-        dto.setFechaAlta(p.getFechaAlta());
-        dto.setUltimaModificacion(p.getUltimaModificacion());
-
-        if (p.getFestival() != null) {
-            dto.setIdFestival(p.getFestival().getIdFestival());
-            dto.setNombreFestival(p.getFestival().getNombre());
-        }
-        if (p.getEntrada() != null) {
-            Entrada ea = p.getEntrada();
-            dto.setIdEntrada(ea.getIdEntrada());
-            if (ea.getAsistente() != null) {
-                Asistente as = ea.getAsistente();
-                dto.setIdAsistente(as.getIdAsistente());
-                dto.setNombreAsistente(as.getNombre());
-                dto.setEmailAsistente(as.getEmail());
-            }
-        }
-        return dto;
     }
 }

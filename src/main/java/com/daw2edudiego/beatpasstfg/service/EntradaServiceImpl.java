@@ -4,17 +4,14 @@ import com.daw2edudiego.beatpasstfg.dto.EntradaDTO;
 import com.daw2edudiego.beatpasstfg.exception.*;
 import com.daw2edudiego.beatpasstfg.model.*;
 import com.daw2edudiego.beatpasstfg.repository.*;
-import com.daw2edudiego.beatpasstfg.util.QRCodeUtil;
 import jakarta.persistence.LockModeType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import com.daw2edudiego.beatpasstfg.mapper.EntradaMapper;
 
 import java.time.LocalDateTime;
-import java.time.ZoneId;
-import java.util.Date;
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 /**
  * Implementación de EntradaService.
@@ -29,6 +26,7 @@ public class EntradaServiceImpl extends AbstractService implements EntradaServic
     private final TipoEntradaRepository tipoEntradaRepository;
     private final AsistenteService asistenteService;
     private final EmailService emailService;
+    private final EntradaMapper entradaMapper;
 
     public EntradaServiceImpl() {
         this.entradaRepository = new EntradaRepositoryImpl();
@@ -37,6 +35,7 @@ public class EntradaServiceImpl extends AbstractService implements EntradaServic
         this.tipoEntradaRepository = new TipoEntradaRepositoryImpl();
         this.asistenteService = new AsistenteServiceImpl();
         this.emailService = new EmailServiceImpl();
+        this.entradaMapper = EntradaMapper.INSTANCE;
     }
 
     @Override
@@ -81,7 +80,7 @@ public class EntradaServiceImpl extends AbstractService implements EntradaServic
             entradaAActualizar.setFechaAsignacion(LocalDateTime.now());
 
             Entrada entradaPersistida = entradaRepository.save(em, entradaAActualizar);
-            return mapEntityToDto(entradaPersistida);
+            return entradaMapper.entradaToEntradaDTO(entradaPersistida);
         }, "nominarEntrada (por ID) " + idEntrada);
 
         // --- Envío de Email al Nominado ---
@@ -127,7 +126,7 @@ public class EntradaServiceImpl extends AbstractService implements EntradaServic
             entradaAActualizar.setFechaAsignacion(LocalDateTime.now());
 
             Entrada entradaPersistida = entradaRepository.save(em, entradaAActualizar);
-            return mapEntityToDto(entradaPersistida);
+            return entradaMapper.entradaToEntradaDTO(entradaPersistida);
         }, "nominarEntradaPorQr " + codigoQr);
 
         // --- Envío de Email al Nominado ---
@@ -180,9 +179,7 @@ public class EntradaServiceImpl extends AbstractService implements EntradaServic
             List<Entrada> entradas = entradaRepository.findByFestivalId(em, idFestival);
 
             log.info("Service - obtenerEntradasAsignadasPorFestival: Encontradas {} entradas para festival ID {}", entradas.size(), idFestival);
-            return entradas.stream()
-                    .map(this::mapEntityToDto)
-                    .collect(Collectors.toList());
+            return entradaMapper.toEntradaDTOList(entradas);
         }, "obtenerEntradasPorFestival " + idFestival);
     }
 
@@ -243,7 +240,7 @@ public class EntradaServiceImpl extends AbstractService implements EntradaServic
                     .orElseThrow(() -> new UsuarioNotFoundException("Promotor no encontrado con ID: " + idPromotor));
             verificarPropiedadFestival(festival, idPromotor);
 
-            return Optional.of(mapEntityToDto(entrada));
+            return Optional.of(entradaMapper.entradaToEntradaDTO(entrada));
         }, "obtenerEntradaPorId " + idEntrada);
     }
 
@@ -263,7 +260,7 @@ public class EntradaServiceImpl extends AbstractService implements EntradaServic
                 return Optional.empty();
             }
 
-            return entradaOpt.map(this::mapEntityToDto);
+            return entradaOpt.map(entradaMapper::entradaToEntradaDTO);
         }, "obtenerParaNominacionPublicaPorQr " + codigoQr);
     }
 
@@ -300,76 +297,5 @@ public class EntradaServiceImpl extends AbstractService implements EntradaServic
                     idPromotor, festival.getIdFestival(), festival.getPromotor() != null ? festival.getPromotor().getIdUsuario() : "DESCONOCIDO");
             throw new SecurityException("El usuario no tiene permiso para acceder o modificar los recursos de este festival.");
         }
-    }
-
-    // The closeEntityManager, rollbackTransaction, handleTransactionException, mapServiceException methods are now in AbstractService.
-    // Remove them from here.
-    private EntradaDTO mapEntityToDto(Entrada ea) {
-        if (ea == null) {
-            log.warn("mapEntityToDto recibió una Entrada nula.");
-            return null;
-        }
-        EntradaDTO dto = new EntradaDTO();
-        dto.setIdEntrada(ea.getIdEntrada());
-        dto.setCodigoQr(ea.getCodigoQr());
-        dto.setEstado(ea.getEstado());
-
-        if (ea.getFechaAsignacion() != null) {
-            dto.setFechaAsignacion(Date.from(ea.getFechaAsignacion().atZone(ZoneId.systemDefault()).toInstant()));
-        }
-        if (ea.getFechaUso() != null) {
-            dto.setFechaUso(Date.from(ea.getFechaUso().atZone(ZoneId.systemDefault()).toInstant()));
-        }
-
-        // Información de la compra y entrada original
-        if (ea.getCompraEntrada() != null) {
-            dto.setIdCompraEntrada(ea.getCompraEntrada().getIdCompraEntrada());
-            if (ea.getCompraEntrada().getTipoEntrada() != null) {
-                TipoEntrada tipoEntradaOriginal = ea.getCompraEntrada().getTipoEntrada();
-                dto.setIdEntradaOriginal(tipoEntradaOriginal.getIdTipoEntrada());
-                dto.setTipoEntradaOriginal(tipoEntradaOriginal.getTipo());
-                dto.setRequiereNominacion(tipoEntradaOriginal.getRequiereNominacion());
-                if (tipoEntradaOriginal.getFestival() != null) {
-                    dto.setIdFestival(tipoEntradaOriginal.getFestival().getIdFestival());
-                    dto.setNombreFestival(tipoEntradaOriginal.getFestival().getNombre());
-                } else {
-                    log.warn("La entrada original ID {} (asociada a Entrada ID {}) no tiene un festival vinculado.", tipoEntradaOriginal.getIdTipoEntrada(), ea.getIdEntrada());
-                }
-            } else {
-                log.warn("La CompraEntrada ID {} (asociada a Entrada ID {}) no tiene una entrada original vinculada.", ea.getCompraEntrada().getIdCompraEntrada(), ea.getIdEntrada());
-            }
-        } else {
-            log.warn("Entrada ID {} no tiene una CompraEntrada vinculada. Esto podría ser normal para entradas creadas manualmente (no compradas).", ea.getIdEntrada());
-        }
-
-        // Información del asistente nominado (si existe)
-        if (ea.getAsistente() != null) {
-            dto.setIdAsistente(ea.getAsistente().getIdAsistente());
-            dto.setNombreAsistente(ea.getAsistente().getNombre());
-            dto.setEmailAsistente(ea.getAsistente().getEmail());
-        } else {
-            // Es normal que el asistente sea null si la entrada aún no ha sido nominada
-            log.trace("Entrada ID {} no tiene un asistente nominado en el momento del mapeo a DTO (mapEntityToDto).", ea.getIdEntrada());
-        }
-
-        // Información de la pulsera (si está asociada)
-        if (ea.getPulseraAsociada() != null) {
-            dto.setIdPulseraAsociada(ea.getPulseraAsociada().getIdPulsera());
-            dto.setCodigoUidPulsera(ea.getPulseraAsociada().getCodigoUid());
-        }
-
-        // Generar imagen QR para el DTO (si aplica y el código QR existe)
-        if (ea.getCodigoQr() != null && !ea.getCodigoQr().isBlank()) {
-            String imageDataUrl = QRCodeUtil.generarQrComoBase64(ea.getCodigoQr(), 100, 100);
-            if (imageDataUrl != null) {
-                dto.setQrCodeImageDataUrl(imageDataUrl);
-            } else {
-                log.warn("No se pudo generar la imagen QR para el DTO de la entrada ID {}", ea.getIdEntrada());
-            }
-        } else {
-            log.warn("El código QR es nulo o vacío para la Entrada ID {} al intentar generar imagen para DTO.", ea.getIdEntrada());
-        }
-        log.trace("Mapeo de Entidad a DTO para Entrada ID {}: DTO resultante: {}", ea.getIdEntrada(), dto);
-        return dto;
     }
 }
