@@ -11,11 +11,11 @@ import com.daw2edudiego.beatpasstfg.repository.FestivalRepository;
 import com.daw2edudiego.beatpasstfg.repository.FestivalRepositoryImpl;
 import com.daw2edudiego.beatpasstfg.repository.UsuarioRepository;
 import com.daw2edudiego.beatpasstfg.repository.UsuarioRepositoryImpl;
+import com.daw2edudiego.beatpasstfg.mapper.FestivalMapper;
 
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -28,10 +28,12 @@ public class FestivalServiceImpl extends AbstractService implements FestivalServ
 
     private final FestivalRepository festivalRepository;
     private final UsuarioRepository usuarioRepository;
+    private final FestivalMapper festivalMapper;
 
     public FestivalServiceImpl() {
         this.festivalRepository = new FestivalRepositoryImpl();
         this.usuarioRepository = new UsuarioRepositoryImpl();
+        this.festivalMapper = FestivalMapper.INSTANCE;
     }
 
     @Override
@@ -49,7 +51,7 @@ public class FestivalServiceImpl extends AbstractService implements FestivalServ
                     .filter(u -> u.getRol() == RolUsuario.PROMOTOR)
                     .orElseThrow(() -> new UsuarioNotFoundException("Promotor no encontrado o inválido con ID: " + idPromotor));
 
-            Festival festival = mapDtoToEntity(festivalDTO);
+            Festival festival = festivalMapper.festivalDTOToFestival(festivalDTO);
             festival.setPromotor(promotor);
             if (festival.getEstado() == null) {
                 festival.setEstado(EstadoFestival.BORRADOR);
@@ -57,7 +59,7 @@ public class FestivalServiceImpl extends AbstractService implements FestivalServ
 
             festival = festivalRepository.save(em, festival);
             log.info("Service: Festival '{}' creado exitosamente con ID: {}", festival.getNombre(), festival.getIdFestival());
-            return mapEntityToDto(festival);
+            return festivalMapper.festivalToFestivalDTO(festival);
         }, "crearFestival");
     }
 
@@ -68,7 +70,7 @@ public class FestivalServiceImpl extends AbstractService implements FestivalServ
             return Optional.empty();
         }
         return executeRead(em -> {
-            return festivalRepository.findById(em, id).map(this::mapEntityToDto);
+            return festivalRepository.findById(em, id).map(festivalMapper::festivalToFestivalDTO);
         }, "obtenerFestivalPorId " + id);
     }
 
@@ -90,18 +92,12 @@ public class FestivalServiceImpl extends AbstractService implements FestivalServ
 
             verificarPermisoModificacion(festival, actualizador);
 
-            festival.setNombre(festivalDTO.getNombre().trim());
-            festival.setDescripcion(festivalDTO.getDescripcion() != null ? festivalDTO.getDescripcion().trim() : null);
-            festival.setFechaInicio(festivalDTO.getFechaInicio());
-            festival.setFechaFin(festivalDTO.getFechaFin());
-            festival.setUbicacion(festivalDTO.getUbicacion() != null ? festivalDTO.getUbicacion().trim() : null);
-            festival.setAforo(festivalDTO.getAforo());
-            festival.setImagenUrl(festivalDTO.getImagenUrl() != null ? festivalDTO.getImagenUrl().trim() : null);
-            // El estado NO se actualiza aquí
+            festivalMapper.updateFestivalFromDto(festivalDTO, festival);
+            // El estado NO se actualiza aquí (se ignora en el mapper y se gestiona por el método cambiarEstadoFestival)
 
             festival = festivalRepository.save(em, festival);
             log.info("Service: Festival ID: {} actualizado correctamente por Usuario ID: {}", id, idUsuarioActualizador);
-            return mapEntityToDto(festival);
+            return festivalMapper.festivalToFestivalDTO(festival);
         }, "actualizarFestival " + id);
     }
 
@@ -137,9 +133,7 @@ public class FestivalServiceImpl extends AbstractService implements FestivalServ
         return executeRead(em -> {
             List<Festival> festivales = festivalRepository.findActivosEntreFechas(em, fechaDesde, fechaHasta);
             log.info("Service: Encontrados {} festivales publicados entre {} y {}.", festivales.size(), fechaDesde, fechaHasta);
-            return festivales.stream()
-                    .map(this::mapEntityToDto)
-                    .collect(Collectors.toList());
+            return festivalMapper.toFestivalDTOList(festivales);
         }, "buscarFestivalesPublicados");
     }
 
@@ -152,9 +146,7 @@ public class FestivalServiceImpl extends AbstractService implements FestivalServ
         return executeRead(em -> {
             List<Festival> festivales = festivalRepository.findByPromotorId(em, idPromotor);
             log.info("Service: Encontrados {} festivales para promotor ID: {}", festivales.size(), idPromotor);
-            return festivales.stream()
-                    .map(this::mapEntityToDto)
-                    .collect(Collectors.toList());
+            return festivalMapper.toFestivalDTOList(festivales);
         }, "obtenerFestivalesPorPromotor " + idPromotor);
     }
 
@@ -180,13 +172,13 @@ public class FestivalServiceImpl extends AbstractService implements FestivalServ
 
             if (festival.getEstado() == nuevoEstado) {
                 log.info("Service: El festival ID {} ya está en estado {}. No se realiza cambio.", idFestival, nuevoEstado);
-                return mapEntityToDto(festival);
+                return festivalMapper.festivalToFestivalDTO(festival);
             }
 
             festival.setEstado(nuevoEstado);
             festival = festivalRepository.save(em, festival);
             log.info("Service: Estado de festival ID: {} cambiado a {} correctamente por Admin ID: {}", idFestival, nuevoEstado, idActor);
-            return mapEntityToDto(festival);
+            return festivalMapper.festivalToFestivalDTO(festival);
         }, "cambiarEstadoFestival " + idFestival + " to " + nuevoEstado);
     }
 
@@ -196,9 +188,7 @@ public class FestivalServiceImpl extends AbstractService implements FestivalServ
         return executeRead(em -> {
             List<Festival> festivales = festivalRepository.findAll(em);
             log.info("Service: Encontrados {} festivales en total.", festivales.size());
-            return festivales.stream()
-                    .map(this::mapEntityToDto)
-                    .collect(Collectors.toList());
+            return festivalMapper.toFestivalDTOList(festivales);
         }, "obtenerTodosLosFestivales");
     }
 
@@ -213,9 +203,7 @@ public class FestivalServiceImpl extends AbstractService implements FestivalServ
                 festivales = festivalRepository.findByEstado(em, estado);
             }
             log.info("Service: Encontrados {} festivales para estado {}.", festivales.size(), estado == null ? "TODOS" : estado);
-            return festivales.stream()
-                    .map(this::mapEntityToDto)
-                    .collect(Collectors.toList());
+            return festivalMapper.toFestivalDTOList(festivales);
         }, "obtenerFestivalesPorEstado " + (estado != null ? estado.name() : "ALL"));
     }
 
@@ -273,48 +261,4 @@ public class FestivalServiceImpl extends AbstractService implements FestivalServ
                 throw new IllegalStateException("Estado actual desconocido: " + estadoActual);
         }
     }
-
-    /**
-     * Mapea entidad Festival a DTO.
-     */
-    private FestivalDTO mapEntityToDto(Festival f) {
-        if (f == null) {
-            return null;
-        }
-        FestivalDTO dto = new FestivalDTO();
-        dto.setIdFestival(f.getIdFestival());
-        dto.setNombre(f.getNombre());
-        dto.setDescripcion(f.getDescripcion());
-        dto.setFechaInicio(f.getFechaInicio());
-        dto.setFechaFin(f.getFechaFin());
-        dto.setUbicacion(f.getUbicacion());
-        dto.setAforo(f.getAforo());
-        dto.setImagenUrl(f.getImagenUrl());
-        dto.setEstado(f.getEstado());
-        if (f.getPromotor() != null) {
-            dto.setIdPromotor(f.getPromotor().getIdUsuario());
-            dto.setNombrePromotor(f.getPromotor().getNombre());
-        }
-        return dto;
-    }
-
-    /**
-     * Mapea DTO a entidad Festival (sin ID ni promotor).
-     */
-    private Festival mapDtoToEntity(FestivalDTO dto) {
-        if (dto == null) {
-            return null;
-        }
-        Festival entity = new Festival();
-        entity.setNombre(dto.getNombre().trim());
-        entity.setDescripcion(dto.getDescripcion() != null ? dto.getDescripcion().trim() : null);
-        entity.setFechaInicio(dto.getFechaInicio());
-        entity.setFechaFin(dto.getFechaFin());
-        entity.setUbicacion(dto.getUbicacion() != null ? dto.getUbicacion().trim() : null);
-        entity.setAforo(dto.getAforo());
-        entity.setImagenUrl(dto.getImagenUrl() != null ? dto.getImagenUrl().trim() : null);
-        entity.setEstado(dto.getEstado());
-        return entity;
-    }
-
 }

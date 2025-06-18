@@ -17,13 +17,14 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.LockModeType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import com.daw2edudiego.beatpasstfg.mapper.CompraMapper;
+import com.daw2edudiego.beatpasstfg.mapper.EntradaMapper;
 
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -40,6 +41,8 @@ public class VentaServiceImpl extends AbstractService implements VentaService {
     private final CompraEntradaRepository compraEntradaRepository;
     private final EntradaRepository entradaRepository;
     private final EmailService emailService;
+    private final CompraMapper compraMapper;
+    private final EntradaMapper entradaMapper;
 
     private static final String EXPECTED_CURRENCY = "eur";
 
@@ -50,6 +53,8 @@ public class VentaServiceImpl extends AbstractService implements VentaService {
         this.compraEntradaRepository = new CompraEntradaRepositoryImpl();
         this.entradaRepository = new EntradaRepositoryImpl();
         this.emailService = new EmailServiceImpl();
+        this.compraMapper = CompraMapper.INSTANCE;
+        this.entradaMapper = EntradaMapper.INSTANCE;
     }
 
     private record PurchaseConfirmationResult(
@@ -109,13 +114,16 @@ public class VentaServiceImpl extends AbstractService implements VentaService {
             actualizarStockEntrada(em, tipoEntradaEnTx, cantidad);
 
             List<EntradaDTO> entradasCompradasDTOs = entradasGeneradasPersistidas.stream()
-                    .map(this::mapEntradaToDTO)
+                    .map(entradaMapper::entradaToEntradaDTO)
                     .collect(Collectors.toList());
+
+            CompraDTO finalCompraDTO = compraMapper.compraToCompraDTO(compra);
+            finalCompraDTO.setEntradasGeneradas(entradasCompradasDTOs);
 
             log.info("Venta confirmada and TX completed. Compra ID: {}, PI: {}", compra.getIdCompra(), paymentIntentId);
 
             return new PurchaseConfirmationResult(
-                    mapCompraToDTO(compra, entradasGeneradasPersistidas),
+                    finalCompraDTO,
                     entradasCompradasDTOs,
                     festivalEnTx.getNombre()
             );
@@ -250,91 +258,5 @@ public class VentaServiceImpl extends AbstractService implements VentaService {
         } catch (StripeException e) {
             throw new RuntimeException("Error al iniciar pago con Stripe: " + e.getMessage(), e);
         }
-    }
-
-    private CompraDTO mapCompraToDTO(Compra compra, List<Entrada> entradasGeneradas) {
-        if (compra == null) {
-            return null;
-        }
-        CompraDTO dto = new CompraDTO();
-        dto.setIdCompra(compra.getIdCompra());
-        dto.setFechaCompra(compra.getFechaCompra());
-        dto.setTotal(compra.getTotal());
-        dto.setStripePaymentIntentId(compra.getStripePaymentIntentId());
-        dto.setEstadoPago(compra.getEstadoPago());
-        dto.setFechaPagoConfirmado(compra.getFechaPagoConfirmado());
-
-        if (compra.getComprador() != null) {
-            dto.setIdComprador(compra.getComprador().getIdComprador());
-            dto.setEmailComprador(compra.getComprador().getEmail());
-            dto.setNombreComprador(compra.getComprador().getNombre());
-        }
-
-        if (entradasGeneradas != null && !entradasGeneradas.isEmpty()) {
-            dto.setEntradasGeneradas(entradasGeneradas.stream()
-                    .map(this::mapEntradaToDTO)
-                    .collect(Collectors.toList()));
-        } else {
-            dto.setEntradasGeneradas(new ArrayList<>());
-        }
-
-        if (compra.getDetallesCompra() != null && !compra.getDetallesCompra().isEmpty()) {
-            dto.setResumenEntradas(compra.getDetallesCompra().stream()
-                    .map(detalle -> detalle.getCantidad() + " x " + (detalle.getTipoEntrada() != null ? detalle.getTipoEntrada().getTipo() : "?"))
-                    .collect(Collectors.toList()));
-        } else {
-            dto.setResumenEntradas(new ArrayList<>());
-        }
-        return dto;
-    }
-
-    private EntradaDTO mapEntradaToDTO(Entrada ea) {
-        if (ea == null) {
-            return null;
-        }
-        EntradaDTO dto = new EntradaDTO();
-        dto.setIdEntrada(ea.getIdEntrada());
-        dto.setCodigoQr(ea.getCodigoQr());
-        dto.setEstado(ea.getEstado());
-        if (ea.getFechaAsignacion() != null) {
-            dto.setFechaAsignacion(Date.from(ea.getFechaAsignacion().atZone(ZoneId.systemDefault()).toInstant()));
-        }
-        if (ea.getFechaUso() != null) {
-            dto.setFechaUso(Date.from(ea.getFechaUso().atZone(ZoneId.systemDefault()).toInstant()));
-        }
-
-        if (ea.getCompraEntrada() != null) {
-            dto.setIdCompraEntrada(ea.getCompraEntrada().getIdCompraEntrada());
-            if (ea.getCompraEntrada().getTipoEntrada() != null) {
-                TipoEntrada tipoEntradaOriginal = ea.getCompraEntrada().getTipoEntrada();
-                dto.setIdEntradaOriginal(tipoEntradaOriginal.getIdTipoEntrada());
-                dto.setTipoEntradaOriginal(tipoEntradaOriginal.getTipo());
-                dto.setRequiereNominacion(tipoEntradaOriginal.getRequiereNominacion());
-
-                if (tipoEntradaOriginal.getFestival() != null) {
-                    dto.setIdFestival(tipoEntradaOriginal.getFestival().getIdFestival());
-                    dto.setNombreFestival(tipoEntradaOriginal.getFestival().getNombre());
-                }
-            }
-        }
-        if (ea.getAsistente() != null) {
-            dto.setIdAsistente(ea.getAsistente().getIdAsistente());
-            dto.setNombreAsistente(ea.getAsistente().getNombre());
-            dto.setEmailAsistente(ea.getAsistente().getEmail());
-        }
-        if (ea.getPulseraAsociada() != null) {
-            dto.setIdPulseraAsociada(ea.getPulseraAsociada().getIdPulsera());
-            dto.setCodigoUidPulsera(ea.getPulseraAsociada().getCodigoUid());
-        }
-
-        if (ea.getCodigoQr() != null && !ea.getCodigoQr().isBlank()) {
-            String imageDataUrl = QRCodeUtil.generarQrComoBase64(ea.getCodigoQr(), 100, 100);
-            if (imageDataUrl != null) {
-                dto.setQrCodeImageDataUrl(imageDataUrl);
-            } else {
-                log.warn("No se pudo generar imagen QR para entrada {}", ea.getIdEntrada());
-            }
-        }
-        return dto;
     }
 }

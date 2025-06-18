@@ -10,18 +10,20 @@ import jakarta.persistence.TypedQuery;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import com.daw2edudiego.beatpasstfg.mapper.CompradorMapper;
 
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 public class CompradorServiceImpl extends AbstractService implements CompradorService {
 
     private static final Logger log = LoggerFactory.getLogger(CompradorServiceImpl.class);
 
     private final CompradorRepository compradorRepository;
+    private final CompradorMapper compradorMapper; 
 
     public CompradorServiceImpl() {
         this.compradorRepository = new CompradorRepositoryImpl();
+        this.compradorMapper = CompradorMapper.INSTANCE; 
     }
 
     @Override
@@ -74,22 +76,7 @@ public class CompradorServiceImpl extends AbstractService implements CompradorSe
                 compradores = query.getResultList();
             }
             log.info("Encontrados {} compradores para el término '{}'", compradores.size(), searchTerm);
-            return compradores.stream()
-                    .map(this::mapEntityToDto)
-                    .collect(Collectors.toList());
+            return compradorMapper.toCompradorDTOList(compradores); 
         }, "buscarCompradores " + searchTerm);
-    }
-
-    private CompradorDTO mapEntityToDto(Comprador c) {
-        if (c == null) {
-            return null;
-        }
-        CompradorDTO dto = new CompradorDTO();
-        dto.setIdComprador(c.getIdComprador());
-        dto.setNombre(c.getNombre());
-        dto.setEmail(c.getEmail());
-        dto.setTelefono(c.getTelefono());
-        dto.setFechaCreacion(c.getFechaCreacion());
-        return dto;
     }
 }

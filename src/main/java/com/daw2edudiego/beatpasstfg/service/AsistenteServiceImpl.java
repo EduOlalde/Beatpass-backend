@@ -14,6 +14,7 @@ import com.daw2edudiego.beatpasstfg.util.JPAUtil;
 import jakarta.persistence.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import com.daw2edudiego.beatpasstfg.mapper.AsistenteMapper;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -27,10 +28,12 @@ public class AsistenteServiceImpl extends AbstractService implements AsistenteSe
 
     private final AsistenteRepository asistenteRepository;
     private final FestivalRepository festivalRepository;
+    private final AsistenteMapper asistenteMapper; //
 
     public AsistenteServiceImpl() {
         this.asistenteRepository = new AsistenteRepositoryImpl();
         this.festivalRepository = new FestivalRepositoryImpl();
+        this.asistenteMapper = AsistenteMapper.INSTANCE;
     }
 
     @Override
@@ -40,7 +43,7 @@ public class AsistenteServiceImpl extends AbstractService implements AsistenteSe
             List<Asistente> asistentes = asistenteRepository.findAll(em);
             log.info("Encontrados {} asistentes en total.", asistentes.size());
             return asistentes.stream()
-                    .map(a -> mapEntityToDto(a, em))
+                    .map(a -> mapEntityToDtoWithPulseraInfo(a, em))
                     .collect(Collectors.toList());
         }, "obtenerTodosLosAsistentes");
     }
@@ -53,7 +56,7 @@ public class AsistenteServiceImpl extends AbstractService implements AsistenteSe
         }
         return executeRead(em -> {
             return asistenteRepository.findById(em, idAsistente)
-                    .map(a -> mapEntityToDto(a, em));
+                    .map(a -> mapEntityToDtoWithPulseraInfo(a, em));
         }, "obtenerAsistentePorId " + idAsistente);
     }
 
@@ -107,7 +110,7 @@ public class AsistenteServiceImpl extends AbstractService implements AsistenteSe
             List<Asistente> asistentes = query.getResultList();
             log.info("Encontrados {} asistentes para el término '{}'", asistentes.size(), searchTerm);
             return asistentes.stream()
-                    .map(a -> mapEntityToDto(a, em))
+                    .map(a -> mapEntityToDtoWithPulseraInfo(a, em))
                     .collect(Collectors.toList());
         }, "buscarAsistentes " + searchTerm);
     }
@@ -129,12 +132,11 @@ public class AsistenteServiceImpl extends AbstractService implements AsistenteSe
             Asistente asistente = asistenteRepository.findById(em, idAsistente)
                     .orElseThrow(() -> new AsistenteNotFoundException("Asistente no encontrado con ID: " + idAsistente));
 
-            asistente.setNombre(asistenteDTO.getNombre().trim());
-            asistente.setTelefono(asistenteDTO.getTelefono() != null ? asistenteDTO.getTelefono().trim() : null);
+            asistenteMapper.updateAsistenteFromDto(asistenteDTO, asistente);
 
             asistente = asistenteRepository.save(em, asistente);
             log.info("Asistente ID {} actualizado correctamente.", idAsistente);
-            return mapEntityToDto(asistente, em);
+            return mapEntityToDtoWithPulseraInfo(asistente, em);
         }, "actualizarAsistente " + idAsistente);
     }
 
@@ -151,16 +153,11 @@ public class AsistenteServiceImpl extends AbstractService implements AsistenteSe
             verificarPropiedadFestival(festival, idPromotor);
 
             List<Asistente> asistentes = asistenteRepository.findAsistentesByFestivalId(em, idFestival);
-            log.info("Encontrados {} asistentes base para el festival ID {}", asistentes.size(), idFestival);
+            log.info("Encontrados {} asistentes únicos para el festival ID {}", asistentes.size(), idFestival);
 
             List<AsistenteDTO> resultadoDTOs = new ArrayList<>();
             for (Asistente asistente : asistentes) {
-                AsistenteDTO dto = new AsistenteDTO();
-                dto.setIdAsistente(asistente.getIdAsistente());
-                dto.setNombre(asistente.getNombre());
-                dto.setEmail(asistente.getEmail());
-                dto.setTelefono(asistente.getTelefono());
-                dto.setFechaCreacion(asistente.getFechaCreacion());
+                AsistenteDTO dto = asistenteMapper.asistenteToAsistenteDTO(asistente);
 
                 String jpqlPulsera = "SELECT p.codigoUid FROM PulseraNFC p JOIN p.entrada ea "
                         + "WHERE ea.asistente = :asistente AND ea.compraEntrada.tipoEntrada.festival = :festival "
@@ -201,22 +198,22 @@ public class AsistenteServiceImpl extends AbstractService implements AsistenteSe
 
             log.info("Encontrados {} asistentes para el término '{}'", asistentes.size(), searchTerm);
             return asistentes.stream()
-                    .map(a -> mapEntityToDto(a, em))
+                    .map(a -> mapEntityToDtoWithPulseraInfo(a, em))
                     .collect(Collectors.toList());
         }, "obtenerTodosLosAsistentesConFiltro " + searchTerm);
     }
 
     // --- Métodos Privados de Ayuda ---
-    private AsistenteDTO mapEntityToDto(Asistente a, EntityManager em) {
+    /**
+     * Método auxiliar para el mapeo de `festivalPulseraInfo`, que requiere una
+     * consulta JPA adicional que MapStruct no puede generar automáticamente en
+     * el mapeo directo de la entidad.
+     */
+    private AsistenteDTO mapEntityToDtoWithPulseraInfo(Asistente a, EntityManager em) {
         if (a == null) {
             return null;
         }
-        AsistenteDTO dto = new AsistenteDTO();
-        dto.setIdAsistente(a.getIdAsistente());
-        dto.setNombre(a.getNombre());
-        dto.setEmail(a.getEmail());
-        dto.setTelefono(a.getTelefono());
-        dto.setFechaCreacion(a.getFechaCreacion());
+        AsistenteDTO dto = asistenteMapper.asistenteToAsistenteDTO(a);
 
         Map<String, String> festivalPulseraMap = new LinkedHashMap<>();
         if (em != null && a.getIdAsistente() != null) {
