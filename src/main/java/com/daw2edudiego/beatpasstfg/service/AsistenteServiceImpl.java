@@ -28,7 +28,7 @@ public class AsistenteServiceImpl extends AbstractService implements AsistenteSe
 
     private final AsistenteRepository asistenteRepository;
     private final FestivalRepository festivalRepository;
-    private final AsistenteMapper asistenteMapper; //
+    private final AsistenteMapper asistenteMapper;
 
     public AsistenteServiceImpl() {
         this.asistenteRepository = new AsistenteRepositoryImpl();
@@ -41,10 +41,10 @@ public class AsistenteServiceImpl extends AbstractService implements AsistenteSe
         log.debug("Service: Obteniendo todos los asistentes.");
         return executeRead(em -> {
             List<Asistente> asistentes = asistenteRepository.findAll(em);
+            List<AsistenteDTO> asistenteDTOs = asistenteMapper.toAsistenteDTOList(asistentes);
+            fillFestivalPulseraInfoForAsistentes(em, asistenteDTOs);
             log.info("Encontrados {} asistentes en total.", asistentes.size());
-            return asistentes.stream()
-                    .map(a -> mapEntityToDtoWithPulseraInfo(a, em))
-                    .collect(Collectors.toList());
+            return asistenteDTOs;
         }, "obtenerTodosLosAsistentes");
     }
 
@@ -55,8 +55,13 @@ public class AsistenteServiceImpl extends AbstractService implements AsistenteSe
             return Optional.empty();
         }
         return executeRead(em -> {
-            return asistenteRepository.findById(em, idAsistente)
-                    .map(a -> mapEntityToDtoWithPulseraInfo(a, em));
+            Optional<Asistente> asistenteOpt = asistenteRepository.findById(em, idAsistente);
+            if (asistenteOpt.isPresent()) {
+                AsistenteDTO dto = asistenteMapper.asistenteToAsistenteDTO(asistenteOpt.get());
+                fillFestivalPulseraInfoForAsistentes(em, List.of(dto));
+                return Optional.of(dto);
+            }
+            return Optional.empty();
         }, "obtenerAsistentePorId " + idAsistente);
     }
 
@@ -71,6 +76,7 @@ public class AsistenteServiceImpl extends AbstractService implements AsistenteSe
         try {
             emLookup = JPAUtil.createEntityManager();
             Optional<Asistente> existenteOpt = asistenteRepository.findByEmail(emLookup, email);
+
             if (existenteOpt.isPresent()) {
                 log.debug("Asistente encontrado con email {}", email);
                 return existenteOpt.get();
@@ -94,7 +100,7 @@ public class AsistenteServiceImpl extends AbstractService implements AsistenteSe
             nuevoAsistente = asistenteRepository.save(em, nuevoAsistente);
             log.info("Nuevo asistente creado con ID {}", nuevoAsistente.getIdAsistente());
             return nuevoAsistente;
-        }, "crearAsistentePorEmail " + email);
+        }, "obtenerOcrearAsistentePorEmail " + email);
     }
 
     @Override
@@ -108,10 +114,10 @@ public class AsistenteServiceImpl extends AbstractService implements AsistenteSe
             TypedQuery<Asistente> query = em.createQuery(jpql, Asistente.class);
             query.setParameter("term", "%" + searchTerm.toLowerCase() + "%");
             List<Asistente> asistentes = query.getResultList();
+            List<AsistenteDTO> asistenteDTOs = asistenteMapper.toAsistenteDTOList(asistentes);
+            fillFestivalPulseraInfoForAsistentes(em, asistenteDTOs);
             log.info("Encontrados {} asistentes para el término '{}'", asistentes.size(), searchTerm);
-            return asistentes.stream()
-                    .map(a -> mapEntityToDtoWithPulseraInfo(a, em))
-                    .collect(Collectors.toList());
+            return asistenteDTOs;
         }, "buscarAsistentes " + searchTerm);
     }
 
@@ -125,7 +131,7 @@ public class AsistenteServiceImpl extends AbstractService implements AsistenteSe
             throw new IllegalArgumentException("El nombre del asistente no puede estar vacío.");
         }
         if (asistenteDTO.getEmail() != null) {
-            log.warn("Se ignorará el intento de actualizar el email del asistente ID {}.", idAsistente);
+            log.warn("Se ignorará el intento de actualizar el email del asistente ID {}. El email no es actualizable.", idAsistente);
         }
 
         return executeTransactional(em -> {
@@ -135,8 +141,10 @@ public class AsistenteServiceImpl extends AbstractService implements AsistenteSe
             asistenteMapper.updateAsistenteFromDto(asistenteDTO, asistente);
 
             asistente = asistenteRepository.save(em, asistente);
+            AsistenteDTO updatedDto = asistenteMapper.asistenteToAsistenteDTO(asistente);
+            fillFestivalPulseraInfoForAsistentes(em, List.of(updatedDto));
             log.info("Asistente ID {} actualizado correctamente.", idAsistente);
-            return mapEntityToDtoWithPulseraInfo(asistente, em);
+            return updatedDto;
         }, "actualizarAsistente " + idAsistente);
     }
 
@@ -153,32 +161,10 @@ public class AsistenteServiceImpl extends AbstractService implements AsistenteSe
             verificarPropiedadFestival(festival, idPromotor);
 
             List<Asistente> asistentes = asistenteRepository.findAsistentesByFestivalId(em, idFestival);
+            List<AsistenteDTO> asistenteDTOs = asistenteMapper.toAsistenteDTOList(asistentes);
+            fillFestivalPulseraInfoForAsistentes(em, asistenteDTOs, idFestival);
             log.info("Encontrados {} asistentes únicos para el festival ID {}", asistentes.size(), idFestival);
-
-            List<AsistenteDTO> resultadoDTOs = new ArrayList<>();
-            for (Asistente asistente : asistentes) {
-                AsistenteDTO dto = asistenteMapper.asistenteToAsistenteDTO(asistente);
-
-                String jpqlPulsera = "SELECT p.codigoUid FROM PulseraNFC p JOIN p.entrada ea "
-                        + "WHERE ea.asistente = :asistente AND ea.compraEntrada.tipoEntrada.festival = :festival "
-                        + "ORDER BY p.idPulsera DESC";
-
-                TypedQuery<String> queryPulsera = em.createQuery(jpqlPulsera, String.class);
-                queryPulsera.setParameter("asistente", asistente);
-                queryPulsera.setParameter("festival", festival);
-                queryPulsera.setMaxResults(1);
-
-                Map<String, String> festivalPulseraMap = new LinkedHashMap<>();
-                try {
-                    String codigoUid = queryPulsera.getSingleResult();
-                    festivalPulseraMap.put(festival.getNombre(), codigoUid);
-                } catch (NoResultException e) {
-                    festivalPulseraMap.put(festival.getNombre(), null);
-                }
-                dto.setFestivalPulseraInfo(festivalPulseraMap);
-                resultadoDTOs.add(dto);
-            }
-            return resultadoDTOs;
+            return asistenteDTOs;
         }, "obtenerAsistentesPorFestival " + idFestival);
     }
 
@@ -196,45 +182,68 @@ public class AsistenteServiceImpl extends AbstractService implements AsistenteSe
                 asistentes = query.getResultList();
             }
 
+            List<AsistenteDTO> asistenteDTOs = asistenteMapper.toAsistenteDTOList(asistentes);
+            fillFestivalPulseraInfoForAsistentes(em, asistenteDTOs);
             log.info("Encontrados {} asistentes para el término '{}'", asistentes.size(), searchTerm);
-            return asistentes.stream()
-                    .map(a -> mapEntityToDtoWithPulseraInfo(a, em))
-                    .collect(Collectors.toList());
+            return asistenteDTOs;
         }, "obtenerTodosLosAsistentesConFiltro " + searchTerm);
     }
 
     // --- Métodos Privados de Ayuda ---
-    /**
-     * Método auxiliar para el mapeo de `festivalPulseraInfo`, que requiere una
-     * consulta JPA adicional que MapStruct no puede generar automáticamente en
-     * el mapeo directo de la entidad.
-     */
-    private AsistenteDTO mapEntityToDtoWithPulseraInfo(Asistente a, EntityManager em) {
-        if (a == null) {
-            return null;
-        }
-        AsistenteDTO dto = asistenteMapper.asistenteToAsistenteDTO(a);
+    // Método auxiliar para rellenar festivalPulseraInfo para una lista de AsistenteDTOs
+    private void fillFestivalPulseraInfoForAsistentes(EntityManager em, List<AsistenteDTO> asistenteDTOs) {
+        fillFestivalPulseraInfoForAsistentes(em, asistenteDTOs, null); // Llama a la versión sobrecargada sin filtro de festival
+    }
 
-        Map<String, String> festivalPulseraMap = new LinkedHashMap<>();
-        if (em != null && a.getIdAsistente() != null) {
-            try {
-                String jpql = "SELECT e.festival.nombre, p.codigoUid "
-                        + "FROM Entrada ea JOIN ea.compraEntrada ce JOIN ce.tipoEntrada e LEFT JOIN ea.pulseraAsociada p "
-                        + "WHERE ea.asistente = :asistente AND ea.estado = :estadoActiva "
-                        + "ORDER BY e.festival.nombre";
-                TypedQuery<Tuple> query = em.createQuery(jpql, Tuple.class);
-                query.setParameter("asistente", a);
-                query.setParameter("estadoActiva", EstadoEntrada.ACTIVA);
-                List<Tuple> results = query.getResultList();
-                for (Tuple tuple : results) {
-                    festivalPulseraMap.put(tuple.get(0, String.class), tuple.get(1, String.class));
-                }
-            } catch (Exception e) {
-                log.error("Error al obtener mapa festival-pulsera para asistente ID {}: {}", a.getIdAsistente(), e.getMessage());
-            }
+    // Sobrecarga para permitir filtrar por un festival específico
+    private void fillFestivalPulseraInfoForAsistentes(EntityManager em, List<AsistenteDTO> asistenteDTOs, Integer festivalIdFilter) {
+        if (asistenteDTOs.isEmpty()) {
+            return;
         }
-        dto.setFestivalPulseraInfo(festivalPulseraMap);
-        return dto;
+
+        Set<Integer> asistenteIds = asistenteDTOs.stream()
+                .map(AsistenteDTO::getIdAsistente)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+
+        if (asistenteIds.isEmpty()) {
+            return;
+        }
+
+        String jpql = "SELECT ea.asistente.idAsistente, te.festival.nombre, p.codigoUid "
+                + "FROM Entrada ea JOIN ea.compraEntrada ce JOIN ce.tipoEntrada te LEFT JOIN ea.pulseraAsociada p "
+                + "WHERE ea.asistente.idAsistente IN :asistenteIds AND ea.estado = :estadoActiva ";
+
+        if (festivalIdFilter != null) {
+            jpql += "AND te.festival.idFestival = :festivalIdFilter ";
+        }
+
+        jpql += "ORDER BY ea.asistente.idAsistente, te.festival.nombre";
+
+        TypedQuery<Object[]> query = em.createQuery(jpql, Object[].class);
+        query.setParameter("asistenteIds", asistenteIds);
+        query.setParameter("estadoActiva", EstadoEntrada.ACTIVA);
+        if (festivalIdFilter != null) {
+            query.setParameter("festivalIdFilter", festivalIdFilter);
+        }
+
+        List<Object[]> results = query.getResultList();
+
+        // Mapear los resultados a un mapa temporal para un acceso rápido por asistenteId
+        Map<Integer, Map<String, String>> tempPulseraInfo = new HashMap<>();
+        for (Object[] row : results) {
+            Integer asistenteId = (Integer) row[0];
+            String festivalName = (String) row[1];
+            String codigoUid = (String) row[2]; // Puede ser null si no hay pulsera asociada
+
+            tempPulseraInfo
+                    .computeIfAbsent(asistenteId, k -> new LinkedHashMap<>())
+                    .put(festivalName, codigoUid);
+        }
+
+        for (AsistenteDTO dto : asistenteDTOs) {
+            dto.setFestivalPulseraInfo(tempPulseraInfo.getOrDefault(dto.getIdAsistente(), new LinkedHashMap<>()));
+        }
     }
 
     private void verificarPropiedadFestival(Festival festival, Integer idPromotor) {
