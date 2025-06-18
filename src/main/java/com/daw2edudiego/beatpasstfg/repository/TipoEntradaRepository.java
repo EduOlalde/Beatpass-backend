@@ -2,6 +2,7 @@ package com.daw2edudiego.beatpasstfg.repository;
 
 import com.daw2edudiego.beatpasstfg.model.TipoEntrada;
 import jakarta.persistence.EntityManager;
+import jakarta.persistence.LockModeType; 
 import java.util.List;
 import java.util.Optional;
 
@@ -28,6 +29,17 @@ public interface TipoEntradaRepository {
      * @return Un Optional con la TipoEntrada si se encuentra, o vacío.
      */
     Optional<TipoEntrada> findById(EntityManager em, Integer id);
+
+    /**
+     * Busca un tipo de entrada por su ID con un modo de bloqueo específico.
+     *
+     * @param em El EntityManager activo.
+     * @param id El ID a buscar.
+     * @param lockMode El modo de bloqueo a aplicar (ej:
+     * LockModeType.PESSIMISTIC_WRITE).
+     * @return Un Optional con la TipoEntrada si se encuentra, o vacío.
+     */
+    Optional<TipoEntrada> findById(EntityManager em, Integer id, LockModeType lockMode); // New method
 
     /**
      * Busca todos los tipos de entrada asociados a un Festival específico.

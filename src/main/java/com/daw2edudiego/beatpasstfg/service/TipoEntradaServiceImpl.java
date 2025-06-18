@@ -11,12 +11,8 @@ import com.daw2edudiego.beatpasstfg.repository.FestivalRepository;
 import com.daw2edudiego.beatpasstfg.repository.FestivalRepositoryImpl;
 import com.daw2edudiego.beatpasstfg.repository.UsuarioRepository;
 import com.daw2edudiego.beatpasstfg.repository.UsuarioRepositoryImpl;
-import com.daw2edudiego.beatpasstfg.util.JPAUtil;
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.EntityTransaction;
-import jakarta.persistence.PersistenceException;
+
 import java.math.BigDecimal;
-import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -27,7 +23,7 @@ import com.daw2edudiego.beatpasstfg.repository.TipoEntradaRepository;
 /**
  * Implementación de TipoEntradaService.
  */
-public class TipoEntradaServiceImpl implements TipoEntradaService {
+public class TipoEntradaServiceImpl extends AbstractService implements TipoEntradaService {
 
     private static final Logger log = LoggerFactory.getLogger(TipoEntradaServiceImpl.class);
 
@@ -52,13 +48,7 @@ public class TipoEntradaServiceImpl implements TipoEntradaService {
         }
         validarDatosEntradaDTO(tipoEntradaDTO);
 
-        EntityManager em = null;
-        EntityTransaction tx = null;
-        try {
-            em = JPAUtil.createEntityManager();
-            tx = em.getTransaction();
-            tx.begin();
-
+        return executeTransactional(em -> {
             Usuario promotor = usuarioRepository.findById(em, idPromotor)
                     .orElseThrow(() -> new UsuarioNotFoundException("Promotor no encontrado con ID: " + idPromotor));
 
@@ -70,17 +60,9 @@ public class TipoEntradaServiceImpl implements TipoEntradaService {
             nuevaEntrada.setFestival(festival);
 
             TipoEntrada entradaGuardada = tipoEntradaRepository.save(em, nuevaEntrada);
-            tx.commit();
-
             log.info("Nuevo tipo de entrada ID {} creado para festival ID {}", entradaGuardada.getIdTipoEntrada(), idFestival);
             return mapEntityToDto(entradaGuardada);
-
-        } catch (Exception e) {
-            handleException(e, tx, "crear entrada para festival " + idFestival);
-            throw mapException(e);
-        } finally {
-            closeEntityManager(em);
-        }
+        }, "crearTipoEntrada for festival " + idFestival);
     }
 
     @Override
@@ -90,13 +72,7 @@ public class TipoEntradaServiceImpl implements TipoEntradaService {
             throw new IllegalArgumentException("ID festival e ID promotor son requeridos.");
         }
 
-        EntityManager em = null;
-        EntityTransaction tx = null;
-        try {
-            em = JPAUtil.createEntityManager();
-            tx = em.getTransaction();
-            tx.begin();
-
+        return executeRead(em -> {
             Usuario promotor = usuarioRepository.findById(em, idPromotor)
                     .orElseThrow(() -> new UsuarioNotFoundException("Promotor no encontrado con ID: " + idPromotor));
 
@@ -105,19 +81,11 @@ public class TipoEntradaServiceImpl implements TipoEntradaService {
             verificarPropiedadFestival(festival, idPromotor);
 
             List<TipoEntrada> tiposEntrada = tipoEntradaRepository.findByFestivalId(em, idFestival);
-            tx.commit();
-
             log.info("Encontrados {} tipos de entrada para el festival ID {} (Promotor {})", tiposEntrada.size(), idFestival, idPromotor);
             return tiposEntrada.stream()
                     .map(this::mapEntityToDto)
                     .collect(Collectors.toList());
-
-        } catch (Exception e) {
-            handleException(e, tx, "obtener tipos de entrada por festival " + idFestival);
-            throw mapException(e);
-        } finally {
-            closeEntityManager(em);
-        }
+        }, "obtenerTipoEntradasPorFestival " + idFestival);
     }
 
     @Override
@@ -127,13 +95,7 @@ public class TipoEntradaServiceImpl implements TipoEntradaService {
             throw new IllegalArgumentException("ID de festival es requerido.");
         }
 
-        EntityManager em = null;
-        EntityTransaction tx = null;
-        try {
-            em = JPAUtil.createEntityManager();
-            tx = em.getTransaction();
-            tx.begin();
-
+        return executeRead(em -> {
             Festival festival = festivalRepository.findById(em, idFestival)
                     .orElseThrow(() -> new FestivalNotFoundException("Festival no encontrado con ID: " + idFestival));
 
@@ -143,23 +105,11 @@ public class TipoEntradaServiceImpl implements TipoEntradaService {
             }
 
             List<TipoEntrada> tiposEntrada = tipoEntradaRepository.findByFestivalId(em, idFestival);
-            tx.commit();
-
             log.info("Encontrados {} tipos de entrada para el festival público ID {}", tiposEntrada.size(), idFestival);
             return tiposEntrada.stream()
                     .map(this::mapEntityToDto)
                     .collect(Collectors.toList());
-
-        } catch (FestivalNotFoundException | FestivalNoPublicadoException e) {
-            rollbackTransaction(tx, "obtener tipos de entrada públicas festival " + idFestival);
-            throw e;
-        } catch (Exception e) {
-            handleException(e, tx, "obtener tipos de entrada públicas festival " + idFestival);
-            log.error("Error inesperado obteniendo tipos de entrada públicas para festival ID {}: {}", idFestival, e.getMessage());
-            return Collections.emptyList();
-        } finally {
-            closeEntityManager(em);
-        }
+        }, "obtenerTiposEntradaPublicasPorFestival " + idFestival);
     }
 
     @Override
@@ -173,13 +123,7 @@ public class TipoEntradaServiceImpl implements TipoEntradaService {
         }
         validarDatosEntradaDTO(tipoEntradaDTO);
 
-        EntityManager em = null;
-        EntityTransaction tx = null;
-        try {
-            em = JPAUtil.createEntityManager();
-            tx = em.getTransaction();
-            tx.begin();
-
+        return executeTransactional(em -> {
             Usuario promotor = usuarioRepository.findById(em, idPromotor)
                     .orElseThrow(() -> new UsuarioNotFoundException("Promotor no encontrado con ID: " + idPromotor));
 
@@ -196,17 +140,9 @@ public class TipoEntradaServiceImpl implements TipoEntradaService {
             entrada.setRequiereNominacion(tipoEntradaDTO.getRequiereNominacion());
 
             TipoEntrada entradaActualizada = tipoEntradaRepository.save(em, entrada);
-            tx.commit();
-
             log.info("Tipo de entrada ID {} actualizado exitosamente.", idEntrada);
             return mapEntityToDto(entradaActualizada);
-
-        } catch (Exception e) {
-            handleException(e, tx, "actualizar entrada " + idEntrada);
-            throw mapException(e);
-        } finally {
-            closeEntityManager(em);
-        }
+        }, "actualizarTipoEntrada " + idEntrada);
     }
 
     @Override
@@ -216,13 +152,7 @@ public class TipoEntradaServiceImpl implements TipoEntradaService {
             throw new IllegalArgumentException("ID entrada e ID promotor son requeridos.");
         }
 
-        EntityManager em = null;
-        EntityTransaction tx = null;
-        try {
-            em = JPAUtil.createEntityManager();
-            tx = em.getTransaction();
-            tx.begin();
-
+        executeTransactional(em -> {
             Usuario promotor = usuarioRepository.findById(em, idPromotor)
                     .orElseThrow(() -> new UsuarioNotFoundException("Promotor no encontrado con ID: " + idPromotor));
 
@@ -236,20 +166,9 @@ public class TipoEntradaServiceImpl implements TipoEntradaService {
                 log.warn("La entrada ID {} fue encontrada pero no pudo ser eliminada.", idEntrada);
                 throw new TipoEntradaNotFoundException("No se pudo eliminar la entrada ID " + idEntrada + ".");
             }
-            tx.commit();
-
             log.info("Tipo de entrada ID {} eliminado exitosamente.", idEntrada);
-
-        } catch (PersistenceException e) {
-            handleException(e, tx, "eliminar entrada " + idEntrada);
-            log.error("Error de persistencia eliminando entrada ID {}. ¿Ventas asociadas?", idEntrada);
-            throw new RuntimeException("No se puede eliminar el tipo de entrada ID " + idEntrada + " porque tiene ventas asociadas.", e);
-        } catch (Exception e) {
-            handleException(e, tx, "eliminar entrada " + idEntrada);
-            throw mapException(e);
-        } finally {
-            closeEntityManager(em);
-        }
+            return null;
+        }, "eliminarTipoEntrada " + idEntrada);
     }
 
     @Override
@@ -259,37 +178,18 @@ public class TipoEntradaServiceImpl implements TipoEntradaService {
             throw new IllegalArgumentException("IDs de entrada y promotor son requeridos.");
         }
 
-        EntityManager em = null;
-        EntityTransaction tx = null;
-        try {
-            em = JPAUtil.createEntityManager();
-            tx = em.getTransaction();
-            tx.begin();
-
+        return executeRead(em -> {
             Optional<TipoEntrada> entradaOpt = tipoEntradaRepository.findById(em, idEntrada);
 
             if (entradaOpt.isEmpty()) {
-                tx.commit();
                 log.warn("Entrada no encontrada con ID {}", idEntrada);
                 return Optional.empty();
             }
 
             TipoEntrada entrada = entradaOpt.get();
             verificarPropiedadFestival(entrada.getFestival(), idPromotor);
-            tx.commit();
-
             return Optional.of(mapEntityToDto(entrada));
-
-        } catch (Exception e) {
-            handleException(e, tx, "obtener entrada por ID " + idEntrada);
-            if (e instanceof TipoEntradaNotFoundException || e instanceof SecurityException || e instanceof UsuarioNotFoundException) {
-                log.warn("No se pudo obtener entrada ID {} para promotor ID {}: {}", idEntrada, idPromotor, e.getMessage());
-                return Optional.empty();
-            }
-            throw mapException(e);
-        } finally {
-            closeEntityManager(em);
-        }
+        }, "obtenerTipoEntradaPorId " + idEntrada);
     }
 
     // --- Métodos Privados de Ayuda ---
@@ -360,47 +260,4 @@ public class TipoEntradaServiceImpl implements TipoEntradaService {
         }
     }
 
-    /**
-     * Manejador genérico de excepciones.
-     */
-    private void handleException(Exception e, EntityTransaction tx, String action) {
-        log.error("Error durante la acción '{}': {}", action, e.getMessage(), e);
-        rollbackTransaction(tx, action);
-    }
-
-    /**
-     * Realiza rollback si la transacción está activa.
-     */
-    private void rollbackTransaction(EntityTransaction tx, String action) {
-        if (tx != null && tx.isActive()) {
-            try {
-                tx.rollback();
-                log.warn("Rollback de transacción de {} realizado.", action);
-            } catch (Exception rbEx) {
-                log.error("Error durante el rollback de {}: {}", action, rbEx.getMessage(), rbEx);
-            }
-        }
-    }
-
-    /**
-     * Cierra el EntityManager.
-     */
-    private void closeEntityManager(EntityManager em) {
-        if (em != null && em.isOpen()) {
-            em.close();
-        }
-    }
-
-    /**
-     * Mapea excepciones técnicas a de negocio o Runtime.
-     */
-    private RuntimeException mapException(Exception e) {
-        if (e instanceof AsistenteNotFoundException || e instanceof TipoEntradaNotFoundException || e instanceof FestivalNotFoundException
-                || e instanceof UsuarioNotFoundException || e instanceof FestivalNoPublicadoException || e instanceof StockInsuficienteException
-                || e instanceof EntradaNotFoundException || e instanceof IllegalArgumentException || e instanceof SecurityException
-                || e instanceof IllegalStateException || e instanceof PersistenceException || e instanceof RuntimeException) {
-            return (RuntimeException) e;
-        }
-        return new RuntimeException("Error inesperado en la capa de servicio: " + e.getMessage(), e);
-    }
 }

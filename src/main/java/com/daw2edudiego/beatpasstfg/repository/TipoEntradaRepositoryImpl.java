@@ -2,6 +2,7 @@ package com.daw2edudiego.beatpasstfg.repository;
 
 import com.daw2edudiego.beatpasstfg.model.TipoEntrada;
 import jakarta.persistence.EntityManager;
+import jakarta.persistence.LockModeType; // Import LockModeType
 import jakarta.persistence.PersistenceException;
 import jakarta.persistence.TypedQuery;
 import java.util.Collections;
@@ -51,13 +52,23 @@ public class TipoEntradaRepositoryImpl implements TipoEntradaRepository {
 
     @Override
     public Optional<TipoEntrada> findById(EntityManager em, Integer id) {
-        log.debug("Buscando Entrada con ID: {}", id);
+        return findById(em, id, null); 
+    }
+
+    @Override
+    public Optional<TipoEntrada> findById(EntityManager em, Integer id, LockModeType lockMode) { 
+        log.debug("Buscando Entrada con ID: {} (LockMode: {})", id, lockMode);
         if (id == null) {
             log.warn("Intento de buscar Entrada con ID nulo.");
             return Optional.empty();
         }
         try {
-            TipoEntrada tipoEntrada = em.find(TipoEntrada.class, id);
+            TipoEntrada tipoEntrada;
+            if (lockMode != null) {
+                tipoEntrada = em.find(TipoEntrada.class, id, lockMode);
+            } else {
+                tipoEntrada = em.find(TipoEntrada.class, id);
+            }
             return Optional.ofNullable(tipoEntrada);
         } catch (IllegalArgumentException e) {
             log.error("Argumento ilegal al buscar Entrada por ID {}: {}", id, e.getMessage());

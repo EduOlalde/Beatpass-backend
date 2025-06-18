@@ -4,25 +4,22 @@ import com.daw2edudiego.beatpasstfg.dto.EntradaDTO;
 import com.daw2edudiego.beatpasstfg.exception.*;
 import com.daw2edudiego.beatpasstfg.model.*;
 import com.daw2edudiego.beatpasstfg.repository.*;
-import com.daw2edudiego.beatpasstfg.util.JPAUtil;
 import com.daw2edudiego.beatpasstfg.util.QRCodeUtil;
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.EntityTransaction;
 import jakarta.persistence.LockModeType;
-import jakarta.persistence.PersistenceException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Implementación de EntradaService.
  */
-public class EntradaServiceImpl implements EntradaService {
+public class EntradaServiceImpl extends AbstractService implements EntradaService {
 
     private static final Logger log = LoggerFactory.getLogger(EntradaServiceImpl.class);
 
@@ -52,17 +49,8 @@ public class EntradaServiceImpl implements EntradaService {
             throw new IllegalArgumentException("IDs de entrada, email de asistente nominado y promotor son requeridos.");
         }
 
-        EntityManager em = null;
-        EntityTransaction tx = null;
-        Entrada entradaPersistida = null;
-        Asistente asistenteNominadoPersistido = null;
-        EntradaDTO entradaNominadaDTO = null;
-
-        try {
-            em = JPAUtil.createEntityManager();
-            tx = em.getTransaction();
-            tx.begin();
-
+        // Use executeTransactional for the entire nomination process
+        EntradaDTO entradaNominadaDTO = executeTransactional(em -> {
             log.debug("Service - nominarEntrada (por ID): Buscando promotor ID {}", idPromotor);
             usuarioRepository.findById(em, idPromotor)
                     .orElseThrow(() -> new UsuarioNotFoundException("Promotor no encontrado con ID: " + idPromotor));
@@ -86,36 +74,20 @@ public class EntradaServiceImpl implements EntradaService {
             }
 
             log.debug("Service - nominarEntrada (por ID): Obteniendo o creando asistente con email {}", emailAsistenteNominado);
-            asistenteNominadoPersistido = asistenteService.obtenerOcrearAsistentePorEmail(emailAsistenteNominado, nombreAsistenteNominado, telefonoAsistente);
+            Asistente asistenteNominadoPersistido = asistenteService.obtenerOcrearAsistentePorEmail(emailAsistenteNominado, nombreAsistenteNominado, telefonoAsistente);
 
             log.debug("Service - nominarEntrada (por ID): Actualizando entrada ID {} con asistente ID {}", idEntrada, asistenteNominadoPersistido.getIdAsistente());
             entradaAActualizar.setAsistente(asistenteNominadoPersistido);
-            entradaAActualizar.setFechaAsignacion(LocalDateTime.now()); // <<-- CORREGIDO: Usamos LocalDateTime aquí porque el campo de la ENTIDAD es LocalDateTime
+            entradaAActualizar.setFechaAsignacion(LocalDateTime.now());
 
-            entradaPersistida = entradaRepository.save(em, entradaAActualizar);
-            entradaNominadaDTO = mapEntityToDto(entradaPersistida); // Mapear antes de commit para el email
+            Entrada entradaPersistida = entradaRepository.save(em, entradaAActualizar);
+            return mapEntityToDto(entradaPersistida);
+        }, "nominarEntrada (por ID) " + idEntrada);
 
-            tx.commit();
-            log.info("Service - nominarEntrada (por ID): COMMIT EXITOSO. Entrada ID {} nominada en BD. Asistente: {} ({}), Promotor: {}",
-                    idEntrada, asistenteNominadoPersistido.getNombre(), asistenteNominadoPersistido.getEmail(), idPromotor);
+        // --- Envío de Email al Nominado ---
+        enviarEmailNominacionSiProcede(asistenteService.obtenerOcrearAsistentePorEmail(emailAsistenteNominado, nombreAsistenteNominado, telefonoAsistente), entradaNominadaDTO, "nominarEntrada (por ID)");
 
-            // --- Envío de Email al Nominado ---
-            enviarEmailNominacionSiProcede(asistenteNominadoPersistido, entradaNominadaDTO, "nominarEntrada (por ID)");
-
-            return entradaNominadaDTO;
-
-        } catch (Exception e) {
-            log.error("Service - nominarEntrada (por ID): Excepción general en el proceso de nominación para entrada ID {}. Error: {}", idEntrada, e.getMessage(), e);
-            handleTransactionException(e, tx, "nominar entrada ID " + idEntrada);
-            if (e instanceof EntradaNotFoundException || e instanceof UsuarioNotFoundException
-                    || e instanceof SecurityException || e instanceof IllegalStateException
-                    || e instanceof IllegalArgumentException) {
-                throw e;
-            }
-            throw new RuntimeException("Error inesperado durante la nominación de la entrada ID " + idEntrada + ": " + e.getMessage(), e);
-        } finally {
-            closeEntityManager(em);
-        }
+        return entradaNominadaDTO;
     }
 
     @Override
@@ -128,22 +100,12 @@ public class EntradaServiceImpl implements EntradaService {
             throw new IllegalArgumentException("Código QR, email y nombre del asistente nominado son requeridos.");
         }
 
-        EntityManager em = null;
-        EntityTransaction tx = null;
-        Entrada entradaPersistida = null;
-        Asistente asistenteNominadoPersistido = null;
-        EntradaDTO entradaNominadaDTO = null;
-
-        try {
-            em = JPAUtil.createEntityManager();
-            tx = em.getTransaction();
-            tx.begin();
-
+        EntradaDTO entradaNominadaDTO = executeTransactional(em -> {
             log.debug("Service - nominarEntradaPorQr: Buscando entrada por código QR: {}", codigoQr);
             Entrada entradaAActualizar = entradaRepository.findByCodigoQr(em, codigoQr)
                     .orElseThrow(() -> new EntradaNotFoundException("Entrada no encontrada con código QR: " + codigoQr));
 
-            Integer idEntrada = entradaAActualizar.getIdEntrada(); // Para logs
+            Integer idEntrada = entradaAActualizar.getIdEntrada();
 
             if (entradaAActualizar.getAsistente() != null) {
                 log.warn("Service - nominarEntradaPorQr: Intento de nominar entrada ID {} (QR: {}) que ya está nominada a {}",
@@ -157,35 +119,21 @@ public class EntradaServiceImpl implements EntradaService {
             }
 
             log.debug("Service - nominarEntradaPorQr: Obteniendo o creando asistente con email {}", emailAsistenteNominado);
-            asistenteNominadoPersistido = asistenteService.obtenerOcrearAsistentePorEmail(emailAsistenteNominado, nombreAsistenteNominado, telefonoAsistenteNominado);
+            Asistente asistenteNominadoPersistido = asistenteService.obtenerOcrearAsistentePorEmail(emailAsistenteNominado, nombreAsistenteNominado, telefonoAsistenteNominado);
 
             log.debug("Service - nominarEntradaPorQr: Actualizando entrada ID {} (QR: {}) con asistente ID {}",
                     idEntrada, codigoQr, asistenteNominadoPersistido.getIdAsistente());
             entradaAActualizar.setAsistente(asistenteNominadoPersistido);
-            entradaAActualizar.setFechaAsignacion(LocalDateTime.now()); // <<-- CORREGIDO: Usamos LocalDateTime aquí porque el campo de la ENTIDAD es LocalDateTime
+            entradaAActualizar.setFechaAsignacion(LocalDateTime.now());
 
-            entradaPersistida = entradaRepository.save(em, entradaAActualizar);
-            entradaNominadaDTO = mapEntityToDto(entradaPersistida); // Mapear antes de commit para el email
+            Entrada entradaPersistida = entradaRepository.save(em, entradaAActualizar);
+            return mapEntityToDto(entradaPersistida);
+        }, "nominarEntradaPorQr " + codigoQr);
 
-            tx.commit();
-            log.info("Service - nominarEntradaPorQr: COMMIT EXITOSO. Entrada ID {} (QR: {}) nominada en BD. Asistente: {} ({})",
-                    idEntrada, codigoQr, asistenteNominadoPersistido.getNombre(), asistenteNominadoPersistido.getEmail());
+        // --- Envío de Email al Nominado ---
+        enviarEmailNominacionSiProcede(asistenteService.obtenerOcrearAsistentePorEmail(emailAsistenteNominado, nombreAsistenteNominado, telefonoAsistenteNominado), entradaNominadaDTO, "nominarEntradaPorQr");
 
-            // --- Envío de Email al Nominado ---
-            enviarEmailNominacionSiProcede(asistenteNominadoPersistido, entradaNominadaDTO, "nominarEntradaPorQr");
-
-            return entradaNominadaDTO;
-
-        } catch (Exception e) {
-            log.error("Service - nominarEntradaPorQr: Excepción general en el proceso de nominación para entrada con QR {}. Error: {}", codigoQr, e.getMessage(), e);
-            handleTransactionException(e, tx, "nominar entrada por QR " + codigoQr);
-            if (e instanceof EntradaNotFoundException || e instanceof IllegalStateException || e instanceof IllegalArgumentException) {
-                throw e;
-            }
-            throw new RuntimeException("Error inesperado durante la nominación de la entrada con QR " + codigoQr + ": " + e.getMessage(), e);
-        } finally {
-            closeEntityManager(em);
-        }
+        return entradaNominadaDTO;
     }
 
     private void enviarEmailNominacionSiProcede(Asistente asistente, EntradaDTO entradaDTO, String metodoOrigen) {
@@ -222,10 +170,7 @@ public class EntradaServiceImpl implements EntradaService {
             throw new IllegalArgumentException("ID de festival e ID de promotor son requeridos.");
         }
 
-        EntityManager em = null;
-        try {
-            em = JPAUtil.createEntityManager();
-
+        return executeRead(em -> {
             usuarioRepository.findById(em, idPromotor)
                     .orElseThrow(() -> new UsuarioNotFoundException("Promotor no encontrado con ID: " + idPromotor));
             Festival festival = festivalRepository.findById(em, idFestival)
@@ -236,17 +181,9 @@ public class EntradaServiceImpl implements EntradaService {
 
             log.info("Service - obtenerEntradasAsignadasPorFestival: Encontradas {} entradas para festival ID {}", entradas.size(), idFestival);
             return entradas.stream()
-                    .map(this::mapEntityToDto) // Reutiliza el mapeador
+                    .map(this::mapEntityToDto)
                     .collect(Collectors.toList());
-        } catch (Exception e) {
-            log.error("Service - obtenerEntradasAsignadasPorFestival: Error para festival ID {} y promotor ID {}: {}", idFestival, idPromotor, e.getMessage(), e);
-            if (e instanceof FestivalNotFoundException || e instanceof UsuarioNotFoundException || e instanceof SecurityException) {
-                throw e;
-            }
-            throw mapServiceException(e);
-        } finally {
-            closeEntityManager(em);
-        }
+        }, "obtenerEntradasPorFestival " + idFestival);
     }
 
     @Override
@@ -256,13 +193,7 @@ public class EntradaServiceImpl implements EntradaService {
             throw new IllegalArgumentException("ID de entrada e ID de promotor son requeridos.");
         }
 
-        EntityManager em = null;
-        EntityTransaction tx = null;
-        try {
-            em = JPAUtil.createEntityManager();
-            tx = em.getTransaction();
-            tx.begin();
-
+        executeTransactional(em -> {
             usuarioRepository.findById(em, idPromotor)
                     .orElseThrow(() -> new UsuarioNotFoundException("Promotor no encontrado con ID: " + idPromotor));
 
@@ -286,22 +217,8 @@ public class EntradaServiceImpl implements EntradaService {
             tipoEntradaRepository.save(em, entradaOriginal);
             log.debug("Service - cancelarEntrada: Stock incrementado para Entrada Original ID {}. Nuevo stock: {}",
                     entradaOriginal.getIdTipoEntrada(), entradaOriginal.getStock());
-
-            tx.commit();
-            log.info("Service - cancelarEntrada: Entrada ID {} cancelada y commit realizado. Promotor ID {}", idEntrada, idPromotor);
-
-        } catch (Exception e) {
-            log.error("Service - cancelarEntrada: Error para Entrada ID {}. Error: {}", idEntrada, e.getMessage(), e);
-            handleTransactionException(e, tx, "cancelar entrada ID " + idEntrada);
-            if (e instanceof EntradaNotFoundException || e instanceof UsuarioNotFoundException
-                    || e instanceof SecurityException || e instanceof IllegalStateException
-                    || e instanceof IllegalArgumentException) {
-                throw e;
-            }
-            throw mapServiceException(e);
-        } finally {
-            closeEntityManager(em);
-        }
+            return null;
+        }, "cancelarEntrada " + idEntrada);
     }
 
     @Override
@@ -311,10 +228,7 @@ public class EntradaServiceImpl implements EntradaService {
             throw new IllegalArgumentException("IDs de entrada y promotor son requeridos.");
         }
 
-        EntityManager em = null;
-        try {
-            em = JPAUtil.createEntityManager();
-
+        return executeRead(em -> {
             Optional<Entrada> entradaOpt = entradaRepository.findById(em, idEntrada);
 
             if (entradaOpt.isEmpty()) {
@@ -330,17 +244,7 @@ public class EntradaServiceImpl implements EntradaService {
             verificarPropiedadFestival(festival, idPromotor);
 
             return Optional.of(mapEntityToDto(entrada));
-
-        } catch (Exception e) {
-            // Loguear como warning, ya que puede ser un intento de acceso a una entrada no existente o sin permisos
-            log.warn("Service - obtenerEntradaPorId: No se pudo obtener entrada ID {} para promotor ID {}: {}", idEntrada, idPromotor, e.getMessage());
-            if (e instanceof EntradaNotFoundException || e instanceof UsuarioNotFoundException || e instanceof SecurityException) {
-                return Optional.empty(); // Devuelve vacío en casos esperados de "no encontrado" o "sin permiso"
-            }
-            throw mapServiceException(e); // Relanza otras excepciones inesperadas
-        } finally {
-            closeEntityManager(em);
-        }
+        }, "obtenerEntradaPorId " + idEntrada);
     }
 
     @Override
@@ -351,9 +255,7 @@ public class EntradaServiceImpl implements EntradaService {
             return Optional.empty();
         }
 
-        EntityManager em = null;
-        try {
-            em = JPAUtil.createEntityManager();
+        return executeRead(em -> {
             Optional<Entrada> entradaOpt = entradaRepository.findByCodigoQr(em, codigoQr);
 
             if (entradaOpt.isEmpty()) {
@@ -362,15 +264,7 @@ public class EntradaServiceImpl implements EntradaService {
             }
 
             return entradaOpt.map(this::mapEntityToDto);
-
-        } catch (Exception e) {
-            log.error("Service - obtenerParaNominacionPublicaPorQr: Error al buscar entrada por QR {}: {}", codigoQr, e.getMessage(), e);
-            // No relanzar la excepción aquí, simplemente devolver Optional.empty()
-            // para que el controlador maneje la no existencia.
-            return Optional.empty();
-        } finally {
-            closeEntityManager(em);
-        }
+        }, "obtenerParaNominacionPublicaPorQr " + codigoQr);
     }
 
     // --- Métodos Privados de Ayuda ---
@@ -398,7 +292,7 @@ public class EntradaServiceImpl implements EntradaService {
         if (festival == null) {
             throw new FestivalNotFoundException("El festival asociado no puede ser nulo para la verificación de propiedad.");
         }
-        if (idPromotor == null) { // Aunque ya validado en el método público, defensa en profundidad
+        if (idPromotor == null) {
             throw new UsuarioNotFoundException("El ID del promotor no puede ser nulo para la verificación de propiedad.");
         }
         if (festival.getPromotor() == null || !festival.getPromotor().getIdUsuario().equals(idPromotor)) {
@@ -408,50 +302,12 @@ public class EntradaServiceImpl implements EntradaService {
         }
     }
 
-    private void rollbackTransaction(EntityTransaction tx, String actionContext) {
-        if (tx != null && tx.isActive()) {
-            try {
-                tx.rollback();
-                log.warn("Rollback de transacción de '{}' realizado.", actionContext);
-            } catch (Exception rbEx) {
-                log.error("Error crítico durante el rollback de la transacción '{}': {}", actionContext, rbEx.getMessage(), rbEx);
-            }
-        }
-    }
-
-    private void handleTransactionException(Exception e, EntityTransaction tx, String actionContext) {
-        // El log de error específico de la acción ya se hace en el bloque catch principal del método de servicio
-        rollbackTransaction(tx, actionContext);
-    }
-
-    private void closeEntityManager(EntityManager em) {
-        if (em != null && em.isOpen()) {
-            try {
-                em.close();
-            } catch (Exception e_close) {
-                log.error("Error al cerrar EntityManager después de la acción: {}", e_close.getMessage(), e_close);
-            }
-        }
-    }
-
-    private RuntimeException mapServiceException(Exception e) {
-        // Mapea excepciones JPA u otras a excepciones de negocio o Runtime si es necesario,
-        // o simplemente las relanza si ya son del tipo adecuado.
-        if (e instanceof IllegalArgumentException || e instanceof IllegalStateException || e instanceof SecurityException || e instanceof PersistenceException) {
-            return (RuntimeException) e;
-        }
-        // Excepciones personalizadas que ya son RuntimeException
-        if (e instanceof EntradaNotFoundException || e instanceof UsuarioNotFoundException || e instanceof FestivalNotFoundException) {
-            return (RuntimeException) e;
-        }
-        // Para cualquier otra excepción no esperada, envolverla
-        return new RuntimeException("Error inesperado en el servicio de Entrada: " + e.getMessage(), e);
-    }
-
+    // The closeEntityManager, rollbackTransaction, handleTransactionException, mapServiceException methods are now in AbstractService.
+    // Remove them from here.
     private EntradaDTO mapEntityToDto(Entrada ea) {
         if (ea == null) {
             log.warn("mapEntityToDto recibió una Entrada nula.");
-            return null; // O lanzar IllegalArgumentException si una entidad nula no es esperada aquí
+            return null;
         }
         EntradaDTO dto = new EntradaDTO();
         dto.setIdEntrada(ea.getIdEntrada());
@@ -472,7 +328,7 @@ public class EntradaServiceImpl implements EntradaService {
                 TipoEntrada tipoEntradaOriginal = ea.getCompraEntrada().getTipoEntrada();
                 dto.setIdEntradaOriginal(tipoEntradaOriginal.getIdTipoEntrada());
                 dto.setTipoEntradaOriginal(tipoEntradaOriginal.getTipo());
-                dto.setRequiereNominacion(tipoEntradaOriginal.getRequiereNominacion()); 
+                dto.setRequiereNominacion(tipoEntradaOriginal.getRequiereNominacion());
                 if (tipoEntradaOriginal.getFestival() != null) {
                     dto.setIdFestival(tipoEntradaOriginal.getFestival().getIdFestival());
                     dto.setNombreFestival(tipoEntradaOriginal.getFestival().getNombre());
@@ -504,8 +360,6 @@ public class EntradaServiceImpl implements EntradaService {
 
         // Generar imagen QR para el DTO (si aplica y el código QR existe)
         if (ea.getCodigoQr() != null && !ea.getCodigoQr().isBlank()) {
-            // Considerar si la generación de la imagen QR debe estar aquí o en una capa de presentación/utilidad específica para DTOs.
-            // Por ahora, se mantiene como estaba.
             String imageDataUrl = QRCodeUtil.generarQrComoBase64(ea.getCodigoQr(), 100, 100);
             if (imageDataUrl != null) {
                 dto.setQrCodeImageDataUrl(imageDataUrl);
