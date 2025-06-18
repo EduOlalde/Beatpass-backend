@@ -3,7 +3,6 @@ package com.daw2edudiego.beatpasstfg.service;
 import com.daw2edudiego.beatpasstfg.util.JPAUtil;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityTransaction;
-import jakarta.persistence.PersistenceException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -35,10 +34,12 @@ public abstract class AbstractService {
         EntityManager em = null;
         try {
             em = JPAUtil.createEntityManager();
-            log.debug("Ejecutando operación de lectura: {}", operationName);
-            return operation.apply(em);
+            log.debug("INICIO - Operación de lectura: {}", operationName);
+            R result = operation.apply(em);
+            log.debug("FIN - Operación de lectura '{}' completada.", operationName);
+            return result;
         } catch (Exception e) {
-            log.error("Error durante la operación de lectura '{}': {}", operationName, e.getMessage(), e);
+            log.error("ERROR - durante la operación de lectura '{}': {}", operationName, e.getMessage(), e);
             throw mapException(e);
         } finally {
             closeEntityManager(em);
@@ -65,10 +66,10 @@ public abstract class AbstractService {
             em = JPAUtil.createEntityManager();
             tx = em.getTransaction();
             tx.begin();
-            log.debug("Iniciando transacción para operación de escritura: {}", operationName);
+            log.info("INICIO TX - Operación transaccional: {}", operationName);
             R result = operation.apply(em);
             tx.commit();
-            log.info("Transacción de escritura '{}' completada (commit).", operationName);
+            log.info("FIN TX - Operación transaccional '{}' completada (COMMIT).", operationName);
             return result;
         } catch (Exception e) {
             handleException(e, tx, operationName);
@@ -88,7 +89,7 @@ public abstract class AbstractService {
      * error.
      */
     protected void handleException(Exception e, EntityTransaction tx, String operationName) {
-        log.error("Error durante la acción '{}': {}", operationName, e.getMessage(), e);
+        log.debug("Manejando excepción durante la acción '{}'. Intentando rollback.", operationName);
         rollbackTransaction(tx, operationName);
     }
 
@@ -102,9 +103,9 @@ public abstract class AbstractService {
         if (tx != null && tx.isActive()) {
             try {
                 tx.rollback();
-                log.warn("Rollback de transacción de '{}' realizado.", operationName);
+                log.warn("ROLLBACK TX - Transacción de '{}' revertida.", operationName);
             } catch (Exception rbEx) {
-                log.error("Error crítico durante el rollback de la transacción '{}': {}", operationName, rbEx.getMessage(), rbEx);
+                log.error("ERROR CRÍTICO - durante el rollback de la transacción '{}': {}", operationName, rbEx.getMessage(), rbEx);
             }
         }
     }
@@ -118,8 +119,9 @@ public abstract class AbstractService {
         if (em != null && em.isOpen()) {
             try {
                 em.close();
+                log.trace("EntityManager cerrado.");
             } catch (Exception e_close) {
-                log.error("Error al cerrar EntityManager: {}", e_close.getMessage(), e_close);
+                log.error("ERROR - al cerrar EntityManager: {}", e_close.getMessage(), e_close);
             }
         }
     }
@@ -133,19 +135,9 @@ public abstract class AbstractService {
      * @return Una RuntimeException adecuada.
      */
     protected RuntimeException mapException(Exception e) {
-        // Aquí puedes añadir lógica para mapear excepciones JPA específicas
-        // a tus excepciones de negocio personalizadas si aún no lo has hecho.
-        // Por ejemplo:
-        if (e instanceof PersistenceException) {
-            // Podrías inspeccionar la causa raíz para lanzar algo más específico
-            // if (e.getCause() instanceof ConstraintViolationException) { ... }
-            return new RuntimeException("Error de persistencia: " + e.getMessage(), e);
-        }
-        // Si ya es una RuntimeException (incluyendo tus excepciones personalizadas como NotFound, etc.)
         if (e instanceof RuntimeException) {
             return (RuntimeException) e;
         }
-        // Para cualquier otra excepción inesperada
         return new RuntimeException("Error inesperado en la capa de servicio: " + e.getMessage(), e);
     }
 }
