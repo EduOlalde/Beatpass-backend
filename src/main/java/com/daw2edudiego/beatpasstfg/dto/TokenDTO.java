@@ -1,7 +1,7 @@
 package com.daw2edudiego.beatpasstfg.dto;
 
 import jakarta.validation.constraints.NotBlank;
-import com.fasterxml.jackson.annotation.JsonInclude; // Importar esto
+import com.fasterxml.jackson.annotation.JsonInclude;
 
 /**
  * DTO simple para encapsular y devolver un token JWT.
@@ -48,7 +48,6 @@ public class TokenDTO {
         this.token = token;
     }
 
-    // Nuevos Getters y Setters
     public Integer getUserId() {
         return userId;
     }
