@@ -14,6 +14,7 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.UriInfo;
 import jakarta.validation.Valid;
+import java.util.Optional;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -112,5 +113,32 @@ public class PublicVentaResource {
 
         log.info("Compra confirmada. Compra ID: {}, PI: {}", compraConfirmada.getIdCompra(), confirmarCompraRequest.getPaymentIntentId());
         return Response.ok(compraConfirmada).build();
+    }
+
+    /**
+     * Endpoint público GET para obtener los detalles de una entrada por su
+     * código QR.
+     *
+     * @param codigoQr Código QR de la entrada.
+     * @return 200 OK con EntradaDTO, 400 Bad Request, 404 Not Found.
+     */
+    @GET
+    @Path("/entrada-qr/{codigoQr}") // NUEVA RUTA para obtener detalles de entrada por QR
+    public Response obtenerEntradaPorQr(@PathParam("codigoQr") String codigoQr) {
+        String qrLog = (codigoQr != null && codigoQr.length() > 10) ? codigoQr.substring(0, 10) + "..." : codigoQr;
+        log.info("GET /public/venta/entrada-qr/{} recibido", qrLog);
+
+        if (codigoQr == null || codigoQr.isBlank()) {
+            throw new BadRequestException("Código QR de entrada obligatorio.");
+        }
+
+        Optional<EntradaDTO> entradaOpt = entradaService.obtenerParaNominacionPublicaPorQr(codigoQr); // Reutiliza este servicio
+
+        return entradaOpt
+                .map(dto -> Response.ok(dto).build())
+                .orElseThrow(() -> {
+                    log.warn("Entrada no encontrada con QR: {}", qrLog);
+                    return new NotFoundException("Entrada no encontrada con el código QR proporcionado o no válida para nominación pública.");
+                });
     }
 }

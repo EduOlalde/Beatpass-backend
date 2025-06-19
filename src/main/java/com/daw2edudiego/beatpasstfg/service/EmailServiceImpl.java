@@ -165,9 +165,11 @@ public class EmailServiceImpl implements EmailService {
         if (appBaseUrl != null && !appBaseUrl.isEmpty() && !appBaseUrl.endsWith("/")) {
             appBaseUrl += "/";
         } else if (appBaseUrl == null || appBaseUrl.isEmpty()) {
-            log.error("APP_BASE_URL no está configurada. Usando fallback que podría ser incorrecto: http://localhost:8080/BeatpassTFG/");
-            appBaseUrl = "http://localhost:8080/BeatpassTFG/";
+            log.error("APP_BASE_URL no está configurada. Usando fallback que podría ser incorrecto: http://localhost:3000/");
+            appBaseUrl = "http://localhost:3000/";
         }
+
+        String nominationLinkPrefix = appBaseUrl + "public/nominar-entrada/";
 
         sb.append("<!DOCTYPE html><html lang='es'><head><meta charset='UTF-8'><title>Tus Entradas para ").append(escapeHtml(nombreFestival)).append("</title>");
         appendBasicStyles(sb);
@@ -188,7 +190,7 @@ public class EmailServiceImpl implements EmailService {
 
             if (Boolean.TRUE.equals(entrada.getRequiereNominacion())) {
                 hayEntradasNominativas = true;
-                String nominationLink = appBaseUrl + "api/public/venta/nominar-entrada/" + entrada.getCodigoQr();
+                String nominationLink = nominationLinkPrefix + entrada.getCodigoQr();
                 sb.append("<span class='highlight'>Esta entrada requiere ser nominada.</span> Utiliza el siguiente botón para asignar un asistente:");
                 sb.append(" <a href='").append(nominationLink).append("' class='button' style='font-size:0.8em; padding: 5px 10px; margin-left:10px;'>Nominar esta entrada</a>");
             } else {
