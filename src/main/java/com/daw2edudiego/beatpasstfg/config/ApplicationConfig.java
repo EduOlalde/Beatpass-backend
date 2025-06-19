@@ -2,6 +2,7 @@ package com.daw2edudiego.beatpasstfg.config;
 
 import com.daw2edudiego.beatpasstfg.mapper.GenericExceptionMapper;
 import com.daw2edudiego.beatpasstfg.security.AuthenticationFilter;
+import com.daw2edudiego.beatpasstfg.security.CorsFilter;
 import com.daw2edudiego.beatpasstfg.web.*;
 
 import jakarta.ws.rs.ApplicationPath;
@@ -59,6 +60,7 @@ public class ApplicationConfig extends Application {
         // Filtros, Interceptores, Mapeadores de Excepciones, etc.
         resources.add(AuthenticationFilter.class);
         resources.add(GenericExceptionMapper.class);
+        resources.add(CorsFilter.class);
 
         return resources;
     }
