@@ -1,40 +1,34 @@
 package com.daw2edudiego.beatpasstfg.web;
 
 import com.daw2edudiego.beatpasstfg.dto.*;
-import com.daw2edudiego.beatpasstfg.exception.*;
 import com.daw2edudiego.beatpasstfg.model.EstadoFestival;
 import com.daw2edudiego.beatpasstfg.model.RolUsuario;
 import com.daw2edudiego.beatpasstfg.service.*;
+import jakarta.validation.Valid;
 
-import jakarta.servlet.RequestDispatcher;
-import jakarta.servlet.ServletException;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
-import jakarta.servlet.http.HttpSession;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+import jakarta.ws.rs.core.SecurityContext;
 import jakarta.ws.rs.core.UriInfo;
+import java.net.URI;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
-import java.net.URI;
-import java.time.LocalDate;
-import java.time.format.DateTimeParseException;
-import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
-import java.util.Optional;
-import java.util.stream.Collectors;
+import java.util.Map;
 
 /**
  * Recurso JAX-RS para el panel de Administración (/api/admin). Gestiona
- * Usuarios, Festivales, Asistentes y Pulseras. Requiere rol ADMIN en sesión
- * HTTP. Devuelve principalmente HTML (JSPs).
+ * Usuarios, Festivales, Asistentes y Pulseras. Requiere rol ADMIN en JWT (via
+ * SecurityContext). Ahora devuelve JSON.
  */
 @Path("/admin")
+@Produces(MediaType.APPLICATION_JSON)
+@Consumes(MediaType.APPLICATION_JSON)
 public class AdminResource {
 
     private static final Logger log = LoggerFactory.getLogger(AdminResource.class);
@@ -48,9 +42,7 @@ public class AdminResource {
     @Context
     private UriInfo uriInfo;
     @Context
-    private HttpServletRequest request;
-    @Context
-    private HttpServletResponse response;
+    private SecurityContext securityContext;
 
     public AdminResource() {
         this.usuarioService = new UsuarioServiceImpl();
@@ -62,365 +54,210 @@ public class AdminResource {
 
     // --- Gestión de Usuarios ---
     @GET
-    @Path("/admins/listar")
-    @Produces(MediaType.TEXT_HTML)
-    public Response listarAdmins() throws ServletException, IOException {
-        return listarUsuariosPorRol(RolUsuario.ADMIN, "admins", "Gestionar Administradores");
+    @Path("/admins")
+    public Response listarAdmins() {
+        return listarUsuariosPorRol(RolUsuario.ADMIN);
     }
 
     @GET
-    @Path("/promotores/listar")
-    @Produces(MediaType.TEXT_HTML)
-    public Response listarPromotores() throws ServletException, IOException {
-        return listarUsuariosPorRol(RolUsuario.PROMOTOR, "promotores", "Gestionar Promotores");
+    @Path("/promotores")
+    public Response listarPromotores() {
+        return listarUsuariosPorRol(RolUsuario.PROMOTOR);
     }
 
     @GET
-    @Path("/cajeros/listar")
-    @Produces(MediaType.TEXT_HTML)
-    public Response listarCajeros() throws ServletException, IOException {
-        return listarUsuariosPorRol(RolUsuario.CAJERO, "cajeros", "Gestionar Cajeros");
+    @Path("/cajeros")
+    public Response listarCajeros() {
+        return listarUsuariosPorRol(RolUsuario.CAJERO);
     }
 
-    private Response listarUsuariosPorRol(RolUsuario rol, String activePage, String titulo) throws ServletException, IOException {
+    private Response listarUsuariosPorRol(RolUsuario rol) {
         log.debug("GET /admin/usuarios/listar para rol: {}", rol);
-        Integer idAdmin = verificarAccesoAdmin(request);
+        Integer idAdmin = verificarAccesoAdmin();
         List<UsuarioDTO> listaUsuarios = usuarioService.obtenerUsuariosPorRol(rol);
-
-        request.setAttribute("usuarios", listaUsuarios);
-        request.setAttribute("rolListado", rol.name());
-        request.setAttribute("tituloPagina", titulo);
-        request.setAttribute("activePage", activePage);
-        mostrarMensajeFlash(request);
-
-        forwardToJsp("/WEB-INF/jsp/admin/admin-usuarios-lista.jsp");
-        return Response.ok().build();
+        return Response.ok(listaUsuarios).build();
     }
 
+    /**
+     * Endpoint GET para obtener los datos de un usuario por ID (para edición o
+     * detalle).
+     *
+     * @param idUsuario ID del usuario.
+     * @return 200 OK con UsuarioDTO.
+     */
     @GET
-    @Path("/usuarios/crear")
-    @Produces(MediaType.TEXT_HTML)
-    public Response mostrarFormularioCrearUsuario() throws ServletException, IOException {
-        log.debug("GET /admin/usuarios/crear");
-        Integer idAdmin = verificarAccesoAdmin(request);
-
-        request.setAttribute("usuario", new UsuarioCreacionDTO());
-        request.setAttribute("esNuevo", true);
-        request.setAttribute("rolesPosibles", RolUsuario.values());
-        request.setAttribute("idAdminAutenticado", idAdmin);
-
-        forwardToJsp("/WEB-INF/jsp/admin/admin-usuario-detalle.jsp");
-        return Response.ok().build();
-    }
-
-    @GET
-    @Path("/usuarios/{idUsuario}/editar")
-    @Produces(MediaType.TEXT_HTML)
-    public Response mostrarFormularioEditarUsuario(@PathParam("idUsuario") Integer idUsuario) throws ServletException, IOException {
-        log.debug("GET /admin/usuarios/{}/editar", idUsuario);
-        Integer idAdmin = verificarAccesoAdmin(request);
+    @Path("/usuarios/{idUsuario}")
+    public Response obtenerUsuarioPorId(@PathParam("idUsuario") Integer idUsuario) {
+        log.debug("GET /admin/usuarios/{}", idUsuario);
+        Integer idAdmin = verificarAccesoAdmin();
         if (idUsuario == null) {
             throw new BadRequestException("ID Usuario no válido.");
         }
 
-        try {
-            UsuarioDTO usuario = usuarioService.obtenerUsuarioPorId(idUsuario)
-                    .orElseThrow(() -> new NotFoundException("Usuario no encontrado con ID: " + idUsuario));
-
-            request.setAttribute("usuario", usuario);
-            request.setAttribute("idAdminAutenticado", idAdmin);
-            request.setAttribute("esNuevo", false);
-            mostrarMensajeFlash(request);
-
-            forwardToJsp("/WEB-INF/jsp/admin/admin-usuario-detalle.jsp");
-            return Response.ok().build();
-
-        } catch (NotFoundException e) {
-            throw e;
-        } catch (Exception e) {
-            log.error("Error al mostrar formulario editar usuario ID {}: {}", idUsuario, e.getMessage(), e);
-            throw new InternalServerErrorException("Error al cargar datos del usuario para editar.", e);
-        }
+        UsuarioDTO usuario = usuarioService.obtenerUsuarioPorId(idUsuario)
+                .orElseThrow(() -> new NotFoundException("Usuario no encontrado con ID: " + idUsuario));
+        return Response.ok(usuario).build();
     }
 
+    /**
+     * Endpoint GET para listar clientes (compradores o asistentes).
+     *
+     * @param tab Pestaña activa ('compradores' o 'asistentes').
+     * @param searchTerm Término de búsqueda.
+     * @return 200 OK con un Map que contiene las listas de
+     * compradores/asistentes.
+     */
     @GET
     @Path("/clientes")
-    @Produces(MediaType.TEXT_HTML)
-    public Response listarClientes(@QueryParam("tab") String tab, @QueryParam("buscar") String searchTerm) throws ServletException, IOException {
-        Integer idAdmin = verificarAccesoAdmin(request);
-        String activeTab = "compradores".equalsIgnoreCase(tab) ? "compradores" : "asistentes"; // Default a asistentes
+    public Response listarClientes(@QueryParam("tab") String tab, @QueryParam("buscar") String searchTerm) {
+        verificarAccesoAdmin();
+        String activeTab = "compradores".equalsIgnoreCase(tab) ? "compradores" : "asistentes";
+
+        Map<String, List<?>> data = new HashMap<>();
 
         if ("compradores".equals(activeTab)) {
-            request.setAttribute("pageTitle", "Gestionar Clientes - Compradores");
-            request.setAttribute("compradores", compradorService.buscarCompradores(searchTerm));
+            List<CompradorDTO> compradores = compradorService.buscarCompradores(searchTerm);
+            data.put("compradores", compradores);
         } else {
-            request.setAttribute("pageTitle", "Gestionar Clientes - Asistentes");
-            request.setAttribute("asistentes", asistenteService.obtenerTodosLosAsistentesConFiltro(searchTerm));
+            List<AsistenteDTO> asistentes = asistenteService.obtenerTodosLosAsistentesConFiltro(searchTerm);
+            data.put("asistentes", asistentes);
         }
-
-        request.setAttribute("activeTab", activeTab);
-        request.setAttribute("idAdminAutenticado", idAdmin);
-        request.setAttribute("searchTerm", searchTerm);
-        mostrarMensajeFlash(request);
-
-        forwardToJsp("/WEB-INF/jsp/admin/admin-clientes.jsp");
-        return Response.ok().build();
+        return Response.ok(data).build();
     }
 
+    /**
+     * Endpoint POST para crear un nuevo usuario.
+     *
+     * @param usuarioCreacionDTO DTO con los datos del nuevo usuario.
+     * @return 201 Created con el UsuarioDTO creado.
+     */
     @POST
-    @Path("/usuarios/guardar")
-    @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
-    public Response guardarUsuario(
-            @FormParam("idUsuario") Integer idUsuario,
-            @FormParam("nombre") String nombre,
-            @FormParam("email") String email,
-            @FormParam("password") String password,
-            @FormParam("rol") String rolStr
-    ) throws ServletException, IOException {
+    @Path("/usuarios")
+    public Response crearUsuario(@Valid UsuarioCreacionDTO usuarioCreacionDTO) {
+        verificarAccesoAdmin();
+        log.info("POST /admin/usuarios (CREACIÓN Admin) para email: {}", usuarioCreacionDTO.getEmail());
 
-        Integer idAdmin = verificarAccesoAdmin(request);
-        boolean esActualizacion = (idUsuario != null && idUsuario > 0);
-        log.info("POST /admin/usuarios/guardar. Modo: {}", esActualizacion ? "ACTUALIZACIÓN (ID: " + idUsuario + ")" : "CREACIÓN");
-
-        if (esActualizacion) {
-            // Lógica de Actualización (solo nombre)
-            String mensajeFlash = null;
-            String errorFlash = null;
-            UsuarioDTO dtoParaForm = null;
-            URI redirectUri = getListUriForRole(RolUsuario.PROMOTOR); // Default redirect
-
-            try {
-                if (nombre == null || nombre.isBlank()) {
-                    throw new IllegalArgumentException("El nombre del usuario es obligatorio.");
-                }
-                UsuarioDTO actualizado = usuarioService.actualizarNombreUsuario(idUsuario, nombre);
-                mensajeFlash = "Usuario '" + actualizado.getNombre() + "' (ID: " + idUsuario + ") actualizado.";
-                redirectUri = getListUriForRole(actualizado.getRol()); // Redirect a la lista correcta
-
-            } catch (IllegalArgumentException | UsuarioNotFoundException e) {
-                errorFlash = "Error al actualizar: " + e.getMessage();
-                Optional<UsuarioDTO> originalOpt = usuarioService.obtenerUsuarioPorId(idUsuario);
-                if (originalOpt.isPresent()) {
-                    dtoParaForm = originalOpt.get();
-                    dtoParaForm.setNombre(nombre); // Mantener el intento fallido
-                    forwardToUsuarioEditFormWithError(dtoParaForm, idAdmin, errorFlash);
-                    return Response.ok().build(); // Mostrar form con error
-                } else {
-                    errorFlash = "Usuario no encontrado (ID: " + idUsuario + ") al intentar mostrar error.";
-                }
-            } catch (Exception e) {
-                errorFlash = "Error interno inesperado al actualizar.";
-                log.error("Error interno al actualizar usuario ID {}: {}", idUsuario, e.getMessage(), e);
-            }
-            setFlashMessage(request, mensajeFlash != null ? "mensaje" : "error", mensajeFlash != null ? mensajeFlash : errorFlash);
-            return Response.seeOther(redirectUri).build();
-
-        } else {
-            // Lógica de Creación
-            UsuarioCreacionDTO dto = new UsuarioCreacionDTO();
-            dto.setNombre(nombre);
-            dto.setEmail(email);
-            dto.setPassword(password);
-            RolUsuario rol = null;
-
-            try {
-                if (rolStr == null || rolStr.isBlank()) {
-                    throw new IllegalArgumentException("El rol es obligatorio.");
-                }
-                rol = RolUsuario.valueOf(rolStr.toUpperCase());
-                dto.setRol(rol);
-                if (nombre == null || nombre.isBlank() || email == null || email.isBlank() || password == null || password.isEmpty()) {
-                    throw new IllegalArgumentException("Nombre, email y contraseña son obligatorios.");
-                }
-                if (password.length() < 8) {
-                    throw new IllegalArgumentException("La contraseña debe tener al menos 8 caracteres.");
-                }
-
-                UsuarioDTO creado = usuarioService.crearUsuario(dto);
-                setFlashMessage(request, "mensaje", "Usuario '" + creado.getNombre() + "' (Rol: " + rol + ") creado.");
-                URI listUri = getListUriForRole(rol);
-                return Response.seeOther(listUri).build();
-
-            } catch (EmailExistenteException | IllegalArgumentException e) {
-                log.warn("Error de negocio/validación al crear usuario: {}", e.getMessage());
-                forwardToUsuarioCreateFormWithError(dto, idAdmin, e.getMessage());
-                return Response.ok().build(); // Mostrar form con error
-            } catch (Exception e) {
-                log.error("Error interno inesperado al crear usuario: {}", e.getMessage(), e);
-                throw new InternalServerErrorException("Error interno al crear el usuario.", e);
-            }
-        }
+        UsuarioDTO creado = usuarioService.crearUsuario(usuarioCreacionDTO);
+        URI location = uriInfo.getAbsolutePathBuilder().path(creado.getIdUsuario().toString()).build();
+        return Response.created(location).entity(creado).build();
     }
 
-    @POST
-    @Path("/usuarios/cambiar-estado")
-    @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
+    /**
+     * Endpoint PUT para actualizar el nombre de un usuario existente.
+     *
+     * @param idUsuario ID del usuario a actualizar.
+     * @param updateRequest DTO con el nuevo nombre (y quizás otros campos si se
+     * expande).
+     * @return 200 OK con el UsuarioDTO actualizado.
+     */
+    @PUT
+    @Path("/usuarios/{idUsuario}")
+    public Response actualizarNombreUsuario(
+            @PathParam("idUsuario") Integer idUsuario,
+            @Valid UsuarioUpdateDTO updateRequest) {
+
+        verificarAccesoAdmin();
+        if (idUsuario == null) {
+            throw new BadRequestException("ID Usuario no válido.");
+        }
+        if (updateRequest.getNombre() == null || updateRequest.getNombre().isBlank()) {
+            throw new BadRequestException("El nombre del usuario no puede ser vacío.");
+        }
+
+        UsuarioDTO actualizado = usuarioService.actualizarNombreUsuario(idUsuario, updateRequest.getNombre());
+        return Response.ok(actualizado).build();
+    }
+
+    /**
+     * Endpoint PUT para cambiar el estado (activo/inactivo) de un usuario.
+     *
+     * @param idUsuario ID del usuario.
+     * @param estadoUpdate DTO con el nuevo estado.
+     * @return 200 OK con el UsuarioDTO actualizado.
+     */
+    @PUT
+    @Path("/usuarios/{idUsuario}/estado")
     public Response cambiarEstadoUsuario(
-            @FormParam("idUsuario") Integer idUsuario,
-            @FormParam("nuevoEstado") Boolean nuevoEstado) {
+            @PathParam("idUsuario") Integer idUsuario,
+            EstadoUpdateDTO estadoUpdate) {
 
-        log.info("POST /admin/usuarios/cambiar-estado para ID: {} a {}", idUsuario, nuevoEstado);
-        Integer idAdmin = verificarAccesoAdmin(request);
-        if (idUsuario == null || nuevoEstado == null) {
+        log.info("PUT /admin/usuarios/{}/estado a {}", idUsuario, estadoUpdate.getNuevoEstado());
+        verificarAccesoAdmin();
+        if (idUsuario == null || estadoUpdate.getNuevoEstado() == null || estadoUpdate.getNuevoEstado().isBlank()) {
             throw new BadRequestException("Faltan parámetros requeridos (idUsuario, nuevoEstado).");
         }
 
-        String mensajeFlash = null;
-        String errorFlash = null;
-        UsuarioDTO actualizado = null;
-
+        boolean nuevoEstadoBoolean;
         try {
-            actualizado = usuarioService.actualizarEstadoUsuario(idUsuario, nuevoEstado);
-            mensajeFlash = "Estado del usuario '" + actualizado.getNombre() + "' actualizado a " + (nuevoEstado ? "ACTIVO" : "INACTIVO") + ".";
-        } catch (UsuarioNotFoundException e) {
-            errorFlash = e.getMessage();
+            nuevoEstadoBoolean = Boolean.parseBoolean(estadoUpdate.getNuevoEstado());
         } catch (Exception e) {
-            log.error("Error interno al cambiar estado del usuario ID {}: {}", idUsuario, e.getMessage(), e);
-            errorFlash = "Error interno al cambiar el estado.";
+            throw new BadRequestException("Valor de 'nuevoEstado' inválido. Debe ser 'true' o 'false'.", e);
         }
 
-        setFlashMessage(request, mensajeFlash != null ? "mensaje" : "error", mensajeFlash != null ? mensajeFlash : errorFlash);
-        URI listUri = (actualizado != null) ? getListUriForRole(actualizado.getRol()) : getListUriForRole(RolUsuario.PROMOTOR); // Fallback
-        return Response.seeOther(listUri).build();
+        UsuarioDTO actualizado = usuarioService.actualizarEstadoUsuario(idUsuario, nuevoEstadoBoolean); // Pasa el boolean
+        return Response.ok(actualizado).build();
+    }
+
+    /**
+     * Endpoint DELETE para eliminar un usuario.
+     *
+     * @param idUsuario ID del usuario a eliminar.
+     * @return 204 No Content.
+     */
+    @DELETE
+    @Path("/usuarios/{idUsuario}")
+    public Response eliminarUsuario(@PathParam("idUsuario") Integer idUsuario) {
+        verificarAccesoAdmin();
+        if (idUsuario == null) {
+            throw new BadRequestException("ID Usuario no válido.");
+        }
+        Integer idAdminAutenticado = obtenerIdUsuarioAutenticado();
+        if (idUsuario.equals(idAdminAutenticado)) {
+            throw new BadRequestException("Un administrador no puede eliminarse a sí mismo.");
+        }
+
+        usuarioService.eliminarUsuario(idUsuario);
+        return Response.noContent().build();
     }
 
     // --- Gestión de Festivales ---
-    @GET
-    @Path("/promotores/{idPromotor}/festivales")
-    @Produces(MediaType.TEXT_HTML)
-    public Response listarFestivalesDePromotor(@PathParam("idPromotor") Integer idPromotor) throws ServletException, IOException {
-        log.debug("GET /admin/promotores/{}/festivales", idPromotor);
-        Integer idAdmin = verificarAccesoAdmin(request);
-        if (idPromotor == null) {
-            throw new BadRequestException("ID de Promotor no proporcionado.");
-        }
-
-        try {
-            UsuarioDTO promotor = usuarioService.obtenerUsuarioPorId(idPromotor)
-                    .filter(u -> u.getRol() == RolUsuario.PROMOTOR)
-                    .orElseThrow(() -> new NotFoundException("Promotor no encontrado con ID: " + idPromotor));
-            List<FestivalDTO> listaFestivales = festivalService.obtenerFestivalesPorPromotor(idPromotor);
-
-            request.setAttribute("promotor", promotor);
-            request.setAttribute("festivales", listaFestivales);
-            request.setAttribute("idAdminAutenticado", idAdmin);
-            mostrarMensajeFlash(request);
-
-            forwardToJsp("/WEB-INF/jsp/admin/admin-promotor-festivales.jsp");
-            return Response.ok().build();
-
-        } catch (NotFoundException e) {
-            throw e;
-        } catch (Exception e) {
-            log.error("Error al obtener festivales para promotor ID {}: {}", idPromotor, e.getMessage(), e);
-            throw new InternalServerErrorException("Error interno al cargar los festivales del promotor.", e);
-        }
-    }
-
-    @GET
-    @Path("/dashboard")
-    @Produces(MediaType.TEXT_HTML)
-    public Response mostrarDashboard() {
-        log.debug("GET /admin/dashboard");
-        verificarAccesoAdmin(request);
-        log.info("Dashboard Admin no implementado, redirigiendo a lista de promotores.");
-        return Response.seeOther(getListUriForRole(RolUsuario.PROMOTOR)).build();
-    }
-
-    @GET
-    @Path("/festivales/crear")
-    @Produces(MediaType.TEXT_HTML)
-    public Response mostrarFormularioCrearFestival() throws ServletException, IOException {
-        log.debug("GET /admin/festivales/crear");
-        Integer idAdmin = verificarAccesoAdmin(request);
-
-        List<UsuarioDTO> promotoresActivos = usuarioService.obtenerUsuariosPorRol(RolUsuario.PROMOTOR)
-                .stream().filter(UsuarioDTO::getEstado).collect(Collectors.toList());
-
-        request.setAttribute("festival", new FestivalDTO());
-        request.setAttribute("promotores", promotoresActivos);
-        request.setAttribute("esNuevo", true);
-        request.setAttribute("idAdminAutenticado", idAdmin);
-
-        forwardToJsp("/WEB-INF/jsp/admin/admin-festival-detalle.jsp");
-        return Response.ok().build();
-    }
-
+    /**
+     * Endpoint POST para crear un festival (desde admin, asignando promotor).
+     *
+     * @param festivalCreacionRequest DTO con los datos del festival y el ID del
+     * promotor.
+     * @return 201 Created con el FestivalDTO creado.
+     */
     @POST
-    @Path("/festivales/guardar")
-    @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
-    public Response guardarFestivalAdmin(
-            @FormParam("nombre") String nombre, @FormParam("descripcion") String descripcion,
-            @FormParam("fechaInicio") String fechaInicioStr, @FormParam("fechaFin") String fechaFinStr,
-            @FormParam("ubicacion") String ubicacion, @FormParam("aforo") String aforoStr,
-            @FormParam("imagenUrl") String imagenUrl, @FormParam("idPromotorSeleccionado") Integer idPromotorSeleccionado
-    ) throws ServletException, IOException {
+    @Path("/festivales")
+    public Response crearFestivalAdmin(
+            @Valid AdminFestivalCreacionDTO festivalCreacionRequest) {
 
-        log.info("POST /admin/festivales/guardar (CREACIÓN Admin) para promotor ID: {}", idPromotorSeleccionado);
-        Integer idAdmin = verificarAccesoAdmin(request);
+        verificarAccesoAdmin();
+        log.info("POST /admin/festivales (CREACIÓN Admin) para promotor ID: {}", festivalCreacionRequest.getIdPromotorSeleccionado());
 
-        FestivalDTO dto = new FestivalDTO();
-        dto.setNombre(nombre);
-        dto.setDescripcion(descripcion);
-        dto.setUbicacion(ubicacion);
-        dto.setImagenUrl(imagenUrl);
-        dto.setIdPromotor(idPromotorSeleccionado);
+        FestivalDTO festivalDTO = new FestivalDTO();
+        festivalDTO.setNombre(festivalCreacionRequest.getNombre());
+        festivalDTO.setDescripcion(festivalCreacionRequest.getDescripcion());
+        festivalDTO.setFechaInicio(festivalCreacionRequest.getFechaInicio());
+        festivalDTO.setFechaFin(festivalCreacionRequest.getFechaFin());
+        festivalDTO.setUbicacion(festivalCreacionRequest.getUbicacion());
+        festivalDTO.setAforo(festivalCreacionRequest.getAforo());
+        festivalDTO.setImagenUrl(festivalCreacionRequest.getImagenUrl());
 
-        try {
-            if (idPromotorSeleccionado == null) {
-                throw new IllegalArgumentException("Debe seleccionar un promotor.");
-            }
-            if (nombre == null || nombre.isBlank()) {
-                throw new IllegalArgumentException("Nombre es obligatorio.");
-            }
-            if (fechaInicioStr == null || fechaFinStr == null || fechaInicioStr.isBlank() || fechaFinStr.isBlank()) {
-                throw new IllegalArgumentException("Fechas de inicio y fin son obligatorias.");
-            }
-            dto.setFechaInicio(LocalDate.parse(fechaInicioStr));
-            dto.setFechaFin(LocalDate.parse(fechaFinStr));
-            if (dto.getFechaFin().isBefore(dto.getFechaInicio())) {
-                throw new IllegalArgumentException("Fecha fin no puede ser anterior a fecha inicio.");
-            }
-            if (aforoStr != null && !aforoStr.isBlank()) {
-                dto.setAforo(Integer.parseInt(aforoStr));
-                if (dto.getAforo() <= 0) {
-                    throw new IllegalArgumentException("Aforo debe ser positivo.");
-                }
-            }
-
-            FestivalDTO creado = festivalService.crearFestival(dto, idPromotorSeleccionado);
-            setFlashMessage(request, "mensaje", "Festival '" + creado.getNombre() + "' creado y asignado (estado BORRADOR).");
-            URI listUri = uriInfo.getBaseUriBuilder().path(AdminResource.class).path(AdminResource.class, "listarTodosFestivales").build();
-            return Response.seeOther(listUri).build();
-
-        } catch (NumberFormatException e) {
-            log.warn("Error de formato numérico al crear festival por admin: {}", e.getMessage());
-            forwardToFestivalFormWithError(dto, idAdmin, "Formato de número inválido (ej: en Aforo).");
-            return Response.ok().build();
-        } catch (DateTimeParseException e) {
-            log.warn("Error de formato de fecha al crear festival por admin: {}", e.getMessage());
-            forwardToFestivalFormWithError(dto, idAdmin, "Formato de fecha inválido (use WebView-MM-dd).");
-            return Response.ok().build();
-        } catch (IllegalArgumentException | UsuarioNotFoundException e) {
-            log.warn("Error de validación/negocio al crear festival por admin: {}", e.getMessage());
-            forwardToFestivalFormWithError(dto, idAdmin, "Datos inválidos: " + e.getMessage());
-            return Response.ok().build();
-        } catch (Exception e) {
-            log.error("Error interno inesperado al crear festival por admin: {}", e.getMessage(), e);
-            throw new InternalServerErrorException("Error interno al crear el festival.", e);
-        }
+        FestivalDTO creado = festivalService.crearFestival(festivalDTO, festivalCreacionRequest.getIdPromotorSeleccionado());
+        URI location = uriInfo.getAbsolutePathBuilder().path(creado.getIdFestival().toString()).build();
+        return Response.created(location).entity(creado).build();
     }
 
     @GET
-    @Path("/festivales/listar-todos")
-    @Produces(MediaType.TEXT_HTML)
-    public Response listarTodosFestivales(@QueryParam("estado") String estadoFilter) throws ServletException, IOException {
-        log.debug("GET /admin/festivales/listar-todos. Filtro estado: '{}'", estadoFilter);
-        Integer idAdmin = verificarAccesoAdmin(request);
+    @Path("/festivales")
+    public Response listarTodosFestivales(@QueryParam("estado") String estadoFilter) {
+        log.debug("GET /admin/festivales. Filtro estado: '{}'", estadoFilter);
+        verificarAccesoAdmin();
 
         List<FestivalDTO> listaFestivales;
         EstadoFestival estadoEnum = null;
-        String errorFiltro = null;
 
         try {
             if (estadoFilter != null && !estadoFilter.isBlank()) {
@@ -428,392 +265,155 @@ public class AdminResource {
             }
             listaFestivales = festivalService.obtenerFestivalesPorEstado(estadoEnum);
         } catch (IllegalArgumentException e) {
-            errorFiltro = "Estado de filtro inválido: '" + estadoFilter + "'. Mostrando todos.";
-            listaFestivales = festivalService.obtenerTodosLosFestivales();
+            throw new BadRequestException("Estado de filtro inválido: '" + estadoFilter + "'.", e);
         } catch (Exception e) {
             log.error("Error obteniendo lista de festivales para admin: {}", e.getMessage(), e);
-            request.setAttribute("error", "Error crítico al cargar la lista.");
-            listaFestivales = Collections.emptyList();
+            throw new InternalServerErrorException("Error crítico al cargar la lista de festivales.", e);
         }
 
-        request.setAttribute("festivales", listaFestivales);
-        request.setAttribute("idAdminAutenticado", idAdmin);
-        request.setAttribute("estadoFiltro", estadoFilter);
-        request.setAttribute("estadosPosibles", EstadoFestival.values());
-        if (errorFiltro != null) {
-            request.setAttribute("error", errorFiltro);
-        }
-        mostrarMensajeFlash(request);
-
-        forwardToJsp("/WEB-INF/jsp/admin/admin-festivales.jsp");
-        return Response.ok().build();
+        return Response.ok(listaFestivales).build();
     }
 
-    @POST
-    @Path("/festivales/confirmar")
-    @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
-    public Response confirmarFestival(@FormParam("idFestival") Integer idFestival) {
-        log.info("POST /admin/festivales/confirmar para ID: {}", idFestival);
-        Integer idAdmin = verificarAccesoAdmin(request);
+    /**
+     * Endpoint PUT para confirmar un festival (cambiar a PUBLICADO).
+     *
+     * @param idFestival ID del festival.
+     * @return 200 OK con el FestivalDTO actualizado.
+     */
+    @PUT
+    @Path("/festivales/{idFestival}/confirmar")
+    public Response confirmarFestival(@PathParam("idFestival") Integer idFestival) {
+        log.info("PUT /admin/festivales/{}/confirmar", idFestival);
+        Integer idAdmin = verificarAccesoAdmin();
         if (idFestival == null) {
             throw new BadRequestException("Falta idFestival.");
         }
 
-        String mensajeFlash = null;
-        String errorFlash = null;
-
-        try {
-            FestivalDTO confirmado = festivalService.cambiarEstadoFestival(idFestival, EstadoFestival.PUBLICADO, idAdmin);
-            mensajeFlash = "Festival '" + confirmado.getNombre() + "' confirmado y publicado.";
-        } catch (FestivalNotFoundException | UsuarioNotFoundException | SecurityException | IllegalStateException e) {
-            errorFlash = "No se pudo confirmar: " + e.getMessage();
-        } catch (Exception e) {
-            log.error("Error interno al confirmar festival ID {}: {}", idFestival, e.getMessage(), e);
-            errorFlash = "Error interno al confirmar.";
-        }
-
-        setFlashMessage(request, mensajeFlash != null ? "mensaje" : "error", mensajeFlash != null ? mensajeFlash : errorFlash);
-        URI listUri = uriInfo.getBaseUriBuilder().path(AdminResource.class).path(AdminResource.class, "listarTodosFestivales").build();
-        return Response.seeOther(listUri).build();
+        FestivalDTO confirmado = festivalService.cambiarEstadoFestival(idFestival, EstadoFestival.PUBLICADO, idAdmin);
+        return Response.ok(confirmado).build();
     }
 
-    @POST
-    @Path("/festivales/cambiar-estado")
-    @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
+    /**
+     * Endpoint PUT para cambiar el estado de un festival (CANCELADO,
+     * FINALIZADO).
+     *
+     * @param idFestival ID del festival.
+     * @param estadoUpdate DTO con el nuevo estado.
+     * @return 200 OK con el FestivalDTO actualizado.
+     */
+    @PUT
+    @Path("/festivales/{idFestival}/estado")
     public Response cambiarEstadoFestivalAdmin(
-            @FormParam("idFestival") Integer idFestival,
-            @FormParam("nuevoEstado") String nuevoEstadoStr) {
+            @PathParam("idFestival") Integer idFestival,
+            EstadoUpdateDTO estadoUpdate) {
 
-        log.info("POST /admin/festivales/cambiar-estado para ID: {} a {}", idFestival, nuevoEstadoStr);
-        Integer idAdmin = verificarAccesoAdmin(request);
-        if (idFestival == null || nuevoEstadoStr == null || nuevoEstadoStr.isBlank()) {
+        log.info("PUT /admin/festivales/{}/estado a {}", idFestival, estadoUpdate.getNuevoEstado());
+        Integer idAdmin = verificarAccesoAdmin();
+        if (idFestival == null || estadoUpdate.getNuevoEstado() == null || estadoUpdate.getNuevoEstado().isBlank()) {
             throw new BadRequestException("Faltan parámetros requeridos (idFestival, nuevoEstado).");
         }
 
         EstadoFestival nuevoEstado;
         try {
-            nuevoEstado = EstadoFestival.valueOf(nuevoEstadoStr.toUpperCase());
-            if (nuevoEstado != EstadoFestival.CANCELADO && nuevoEstado != EstadoFestival.FINALIZADO) {
-                throw new IllegalArgumentException("Solo se permite cambiar a CANCELADO o FINALIZADO.");
-            }
+            nuevoEstado = EstadoFestival.valueOf(estadoUpdate.getNuevoEstado().toUpperCase());
         } catch (IllegalArgumentException e) {
-            throw new BadRequestException("Valor de 'nuevoEstado' inválido. Use CANCELADO o FINALIZADO.");
+            throw new BadRequestException("Valor de 'nuevoEstado' inválido. Posibles valores: BORRADOR, PUBLICADO, CANCELADO, FINALIZADO.", e);
         }
 
-        String mensajeFlash = null;
-        String errorFlash = null;
-
-        try {
-            FestivalDTO actualizado = festivalService.cambiarEstadoFestival(idFestival, nuevoEstado, idAdmin);
-            mensajeFlash = "Estado del festival '" + actualizado.getNombre() + "' cambiado a " + nuevoEstado + ".";
-        } catch (FestivalNotFoundException | UsuarioNotFoundException | SecurityException | IllegalStateException e) {
-            errorFlash = "No se pudo cambiar el estado: " + e.getMessage();
-        } catch (Exception e) {
-            log.error("Error interno al cambiar estado de festival ID {}: {}", idFestival, e.getMessage(), e);
-            errorFlash = "Error interno al cambiar estado.";
-        }
-
-        setFlashMessage(request, mensajeFlash != null ? "mensaje" : "error", mensajeFlash != null ? mensajeFlash : errorFlash);
-        URI listUri = uriInfo.getBaseUriBuilder().path(AdminResource.class).path(AdminResource.class, "listarTodosFestivales").build();
-        return Response.seeOther(listUri).build();
+        FestivalDTO actualizado = festivalService.cambiarEstadoFestival(idFestival, nuevoEstado, idAdmin);
+        return Response.ok(actualizado).build();
     }
 
     // --- Gestión de Asistentes ---
     @GET
     @Path("/asistentes")
-    @Produces(MediaType.TEXT_HTML)
-    public Response listarAsistentes(@QueryParam("buscar") String searchTerm) throws ServletException, IOException {
+    public Response listarAsistentes(@QueryParam("buscar") String searchTerm) {
         log.debug("GET /admin/asistentes. Término búsqueda: '{}'", searchTerm);
-        Integer idAdmin = verificarAccesoAdmin(request);
+        verificarAccesoAdmin();
         List<AsistenteDTO> listaAsistentes;
         try {
             listaAsistentes = asistenteService.buscarAsistentes(searchTerm);
         } catch (Exception e) {
             log.error("Error obteniendo lista de asistentes: {}", e.getMessage(), e);
-            request.setAttribute("error", "Error al cargar la lista.");
-            listaAsistentes = Collections.emptyList();
+            throw new InternalServerErrorException("Error al cargar la lista de asistentes.", e);
         }
-        request.setAttribute("asistentes", listaAsistentes);
-        request.setAttribute("idAdminAutenticado", idAdmin);
-        request.setAttribute("searchTerm", searchTerm);
-        mostrarMensajeFlash(request);
-        forwardToJsp("/WEB-INF/jsp/admin/admin-asistentes.jsp");
-        return Response.ok().build();
+        return Response.ok(listaAsistentes).build();
     }
 
     @GET
     @Path("/asistentes/{idAsistente}")
-    @Produces(MediaType.TEXT_HTML)
-    public Response verDetalleAsistente(@PathParam("idAsistente") Integer idAsistente) throws ServletException, IOException {
+    public Response verDetalleAsistente(@PathParam("idAsistente") Integer idAsistente) {
         log.debug("GET /admin/asistentes/{}", idAsistente);
-        Integer idAdmin = verificarAccesoAdmin(request);
+        verificarAccesoAdmin();
         if (idAsistente == null) {
             throw new BadRequestException("ID Asistente no proporcionado.");
         }
 
-        try {
-            AsistenteDTO asistente = asistenteService.obtenerAsistentePorId(idAsistente)
-                    .orElseThrow(() -> new NotFoundException("Asistente no encontrado con ID: " + idAsistente));
-            request.setAttribute("asistente", asistente);
-            request.setAttribute("idAdminAutenticado", idAdmin);
-            request.setAttribute("editMode", false);
-            mostrarMensajeFlash(request);
-            forwardToJsp("/WEB-INF/jsp/admin/admin-asistente-detalle.jsp");
-            return Response.ok().build();
-        } catch (NotFoundException e) {
-            throw e;
-        } catch (Exception e) {
-            log.error("Error al obtener detalles del asistente ID {}: {}", idAsistente, e.getMessage(), e);
-            throw new InternalServerErrorException("Error al cargar detalles del asistente.", e);
-        }
+        AsistenteDTO asistente = asistenteService.obtenerAsistentePorId(idAsistente)
+                .orElseThrow(() -> new NotFoundException("Asistente no encontrado con ID: " + idAsistente));
+        return Response.ok(asistente).build();
     }
 
-    @GET
-    @Path("/asistentes/{idAsistente}/editar")
-    @Produces(MediaType.TEXT_HTML)
-    public Response mostrarFormularioEditarAsistente(@PathParam("idAsistente") Integer idAsistente) throws ServletException, IOException {
-        log.debug("GET /admin/asistentes/{}/editar", idAsistente);
-        Integer idAdmin = verificarAccesoAdmin(request);
-        if (idAsistente == null) {
-            throw new BadRequestException("ID Asistente no válido.");
-        }
-
-        try {
-            AsistenteDTO asistente = asistenteService.obtenerAsistentePorId(idAsistente)
-                    .orElseThrow(() -> new NotFoundException("Asistente no encontrado con ID: " + idAsistente));
-            request.setAttribute("asistente", asistente);
-            request.setAttribute("idAdminAutenticado", idAdmin);
-            request.setAttribute("editMode", true);
-            mostrarMensajeFlash(request);
-            forwardToJsp("/WEB-INF/jsp/admin/admin-asistente-detalle.jsp");
-            return Response.ok().build();
-        } catch (NotFoundException e) {
-            throw e;
-        } catch (Exception e) {
-            log.error("Error al mostrar formulario editar asistente ID {}: {}", idAsistente, e.getMessage(), e);
-            throw new InternalServerErrorException("Error al cargar datos del asistente para editar.", e);
-        }
-    }
-
-    @POST
-    @Path("/asistentes/{idAsistente}/actualizar")
-    @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
+    @PUT
+    @Path("/asistentes/{idAsistente}")
     public Response actualizarAsistente(
             @PathParam("idAsistente") Integer idAsistente,
-            @FormParam("nombre") String nombre,
-            @FormParam("telefono") String telefono) throws ServletException, IOException {
+            @Valid AsistenteDTO asistenteDTO) {
 
-        log.info("POST /admin/asistentes/{}/actualizar", idAsistente);
-        Integer idAdmin = verificarAccesoAdmin(request);
+        log.info("PUT /admin/asistentes/{}", idAsistente);
+        verificarAccesoAdmin();
         if (idAsistente == null) {
             throw new BadRequestException("ID Asistente no válido.");
         }
 
-        String mensajeFlash = null;
-        String errorFlash = null;
-        AsistenteDTO dtoParaForm = new AsistenteDTO(); // Para posible reenvío
-
-        try {
-            if (nombre == null || nombre.isBlank()) {
-                throw new IllegalArgumentException("El nombre del asistente es obligatorio.");
-            }
-            AsistenteDTO dtoActualizar = new AsistenteDTO();
-            dtoActualizar.setNombre(nombre);
-            dtoActualizar.setTelefono(telefono);
-
-            AsistenteDTO actualizado = asistenteService.actualizarAsistente(idAsistente, dtoActualizar);
-            mensajeFlash = "Asistente '" + actualizado.getNombre() + "' (ID: " + idAsistente + ") actualizado.";
-
-        } catch (IllegalArgumentException | AsistenteNotFoundException e) {
-            errorFlash = "Error al actualizar: " + e.getMessage();
-            Optional<AsistenteDTO> originalOpt = asistenteService.obtenerAsistentePorId(idAsistente);
-            if (originalOpt.isPresent()) {
-                dtoParaForm = originalOpt.get();
-                dtoParaForm.setNombre(nombre); // Mantener intento fallido
-                dtoParaForm.setTelefono(telefono);
-                forwardToAsistenteFormWithError(dtoParaForm, idAdmin, errorFlash);
-                return Response.ok().build();
-            } else {
-                errorFlash = "Asistente no encontrado (ID: " + idAsistente + ") al intentar mostrar error.";
-            }
-        } catch (Exception e) {
-            errorFlash = "Error interno inesperado al actualizar.";
-            log.error("Error interno al actualizar asistente ID {}: {}", idAsistente, e.getMessage(), e);
-        }
-
-        setFlashMessage(request, mensajeFlash != null ? "mensaje" : "error", mensajeFlash != null ? mensajeFlash : errorFlash);
-        URI listUri = uriInfo.getBaseUriBuilder().path(AdminResource.class).path(AdminResource.class, "listarAsistentes").build();
-        return Response.seeOther(listUri).build();
+        AsistenteDTO actualizado = asistenteService.actualizarAsistente(idAsistente, asistenteDTO);
+        return Response.ok(actualizado).build();
     }
 
     // --- Gestión de Pulseras NFC ---
     @GET
-    @Path("/festivales/{idFestival}/pulseras")
-    @Produces(MediaType.TEXT_HTML)
-    public Response listarPulserasPorFestivalAdmin(@PathParam("idFestival") Integer idFestival) throws ServletException, IOException {
-        log.debug("GET /admin/festivales/{}/pulseras", idFestival);
-        Integer idAdmin = verificarAccesoAdmin(request);
+    @Path("/festivales/{idFestival}/pulseras-nfc")
+    public Response listarPulserasPorFestivalAdmin(@PathParam("idFestival") Integer idFestival) {
+        log.debug("GET /admin/festivales/{}/pulseras-nfc", idFestival);
+        Integer idAdmin = verificarAccesoAdmin();
         if (idFestival == null) {
             throw new BadRequestException("ID festival no válido.");
         }
 
-        try {
-            FestivalDTO festival = festivalService.obtenerFestivalPorId(idFestival)
-                    .orElseThrow(() -> new NotFoundException("Festival no encontrado con ID: " + idFestival));
-            // Admin puede ver pulseras de cualquier festival
-            List<PulseraNFCDTO> listaPulseras = pulseraNFCService.obtenerPulserasPorFestival(idFestival, idAdmin);
-
-            request.setAttribute("festival", festival);
-            request.setAttribute("pulseras", listaPulseras);
-            request.setAttribute("idAdminAutenticado", idAdmin);
-            mostrarMensajeFlash(request);
-
-            forwardToJsp("/WEB-INF/jsp/admin/admin-festival-pulseras.jsp");
-            return Response.ok().build();
-
-        } catch (NotFoundException e) {
-            throw e;
-        } catch (Exception e) {
-            log.error("Error al listar pulseras para festival ID {}: {}", idFestival, e.getMessage(), e);
-            throw new InternalServerErrorException("Error al cargar las pulseras del festival.", e);
-        }
+        List<PulseraNFCDTO> listaPulseras = pulseraNFCService.obtenerPulserasPorFestival(idFestival, idAdmin);
+        return Response.ok(listaPulseras).build();
     }
 
     // --- Métodos Auxiliares ---
-    /**
-     * Verifica acceso ADMIN y devuelve su ID. Lanza excepciones JAX-RS si
-     * falla.
-     */
-    private Integer verificarAccesoAdmin(HttpServletRequest request) {
-        HttpSession session = request.getSession(false);
-        if (session == null) {
-            log.warn("Intento de acceso a recurso Admin sin sesión activa.");
+    private Integer verificarAccesoAdmin() {
+        if (securityContext == null || securityContext.getUserPrincipal() == null) {
             throw new NotAuthorizedException("No hay sesión activa.", Response.status(Response.Status.UNAUTHORIZED).build());
         }
-        Integer userId = (Integer) session.getAttribute("userId");
-        String userRole = (String) session.getAttribute("userRole");
-        if (userId == null || userRole == null) {
-            log.warn("Intento de acceso a recurso Admin con sesión inválida. Sesión ID: {}", session.getId());
-            session.invalidate();
-            throw new NotAuthorizedException("Sesión inválida.", Response.status(Response.Status.UNAUTHORIZED).build());
+        String userIdStr = securityContext.getUserPrincipal().getName();
+        Integer userId;
+        try {
+            userId = Integer.parseInt(userIdStr);
+        } catch (NumberFormatException e) {
+            log.error("No se pudo parsear userId '{}' desde Principal.", userIdStr, e);
+            throw new InternalServerErrorException("Error interno de autenticación al parsear ID de usuario.");
         }
-        if (!RolUsuario.ADMIN.name().equals(userRole)) {
-            log.warn("Usuario ID {} con rol {} intentó acceder a recurso Admin.", userId, userRole);
+
+        if (!securityContext.isUserInRole(RolUsuario.ADMIN.name())) {
+            log.warn("Usuario ID {} con rol {} intentó acceder a recurso Admin.", userId, "DESCONOCIDO");
             throw new ForbiddenException("Acceso denegado. Se requiere rol ADMIN.");
         }
         log.debug("Acceso permitido para admin ID: {}", userId);
         return userId;
     }
 
-    /**
-     * Realiza forward a un JSP.
-     */
-    private void forwardToJsp(String jspPath) throws ServletException, IOException {
-        RequestDispatcher dispatcher = request.getRequestDispatcher(jspPath);
-        dispatcher.forward(request, response);
-    }
-
-    /**
-     * Guarda mensaje flash en sesión.
-     */
-    private void setFlashMessage(HttpServletRequest request, String type, String message) {
-        if (message != null) {
-            HttpSession session = request.getSession(); // Obtener o crear
-            session.setAttribute(type, message);
-            log.trace("Mensaje flash '{}' guardado en sesión con clave '{}'", message, type);
+    private Integer obtenerIdUsuarioAutenticado() {
+        if (securityContext == null || securityContext.getUserPrincipal() == null) {
+            throw new NotAuthorizedException("No autenticado.", Response.status(Response.Status.UNAUTHORIZED).build());
+        }
+        try {
+            return Integer.parseInt(securityContext.getUserPrincipal().getName());
+        } catch (NumberFormatException e) {
+            throw new InternalServerErrorException("Error procesando identidad del usuario.");
         }
     }
-
-    /**
-     * Mueve mensajes flash de sesión a request.
-     */
-    private void mostrarMensajeFlash(HttpServletRequest request) {
-        HttpSession session = request.getSession(false);
-        if (session != null) {
-            if (session.getAttribute("mensaje") != null) {
-                request.setAttribute("mensajeExito", session.getAttribute("mensaje"));
-                session.removeAttribute("mensaje");
-            }
-            if (session.getAttribute("error") != null) {
-                request.setAttribute("error", session.getAttribute("error"));
-                session.removeAttribute("error");
-            }
-        }
-    }
-
-    /**
-     * Obtiene la URI de la lista de usuarios según el rol.
-     */
-    private URI getListUriForRole(RolUsuario rol) {
-        String methodName;
-        switch (rol) {
-            case ADMIN:
-                methodName = "listarAdmins";
-                break;
-            case PROMOTOR:
-                methodName = "listarPromotores";
-                break;
-            case CAJERO:
-                methodName = "listarCajeros";
-                break;
-            default:
-                methodName = "listarPromotores"; // Fallback
-                log.warn("Rol inesperado {} al determinar URI. Usando lista promotores.", rol);
-        }
-        return uriInfo.getBaseUriBuilder().path(AdminResource.class).path(AdminResource.class, methodName).build();
-    }
-
-    /**
-     * Forward a form de creación de usuario con error.
-     */
-    private void forwardToUsuarioCreateFormWithError(UsuarioCreacionDTO dto, Integer idAdmin, String errorMessage)
-            throws ServletException, IOException {
-        request.setAttribute("error", errorMessage);
-        dto.setPassword(""); // Clear password
-        request.setAttribute("usuario", dto);
-        request.setAttribute("esNuevo", true);
-        request.setAttribute("rolesPosibles", RolUsuario.values());
-        request.setAttribute("idAdminAutenticado", idAdmin);
-        forwardToJsp("/WEB-INF/jsp/admin/admin-usuario-detalle.jsp");
-    }
-
-    /**
-     * Forward a form de edición de usuario con error.
-     */
-    private void forwardToUsuarioEditFormWithError(UsuarioDTO dto, Integer idAdmin, String errorMessage)
-            throws ServletException, IOException {
-        request.setAttribute("error", errorMessage);
-        request.setAttribute("usuario", dto);
-        request.setAttribute("esNuevo", false);
-        request.setAttribute("idAdminAutenticado", idAdmin);
-        forwardToJsp("/WEB-INF/jsp/admin/admin-usuario-detalle.jsp");
-    }
-
-    /**
-     * Forward a form de creación/edición de festival con error.
-     */
-    private void forwardToFestivalFormWithError(FestivalDTO dto, Integer idAdmin, String errorMessage)
-            throws ServletException, IOException {
-        request.setAttribute("error", errorMessage);
-        request.setAttribute("festival", dto);
-        request.setAttribute("esNuevo", true); // Assume error occurred during creation
-        List<UsuarioDTO> promotoresActivos = usuarioService.obtenerUsuariosPorRol(RolUsuario.PROMOTOR)
-                .stream().filter(UsuarioDTO::getEstado).collect(Collectors.toList());
-        request.setAttribute("promotores", promotoresActivos);
-        request.setAttribute("idAdminAutenticado", idAdmin);
-        forwardToJsp("/WEB-INF/jsp/admin/admin-festival-detalle.jsp");
-    }
-
-    /**
-     * Forward a form de edición de asistente con error.
-     */
-    private void forwardToAsistenteFormWithError(AsistenteDTO dto, Integer idAdmin, String errorMessage)
-            throws ServletException, IOException {
-        request.setAttribute("error", errorMessage);
-        request.setAttribute("asistente", dto);
-        request.setAttribute("editMode", true); // Estamos en modo edición
-        request.setAttribute("idAdminAutenticado", idAdmin);
-        forwardToJsp("/WEB-INF/jsp/admin/admin-asistente-detalle.jsp");
-    }
-
 }
