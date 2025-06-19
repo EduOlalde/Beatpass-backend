@@ -39,8 +39,6 @@ public class AuthenticationFilter implements ContainerRequestFilter {
 
     private static final List<String> EXCLUDED_PATHS_PREFIXES = Arrays.asList(
             "auth/login",
-            "admin",
-            "promotor",
             "public/"
     );
 
@@ -57,9 +55,7 @@ public class AuthenticationFilter implements ContainerRequestFilter {
 
         if ("OPTIONS".equalsIgnoreCase(method)) {
             log.debug("Petición OPTIONS para ruta: /api/{}. Abortando con OK para preflight CORS.", path);
-            // Simplemente retorna; no abortes con OK explícitamente aquí,
-            // deja que el manejo CORS (si existe otro filtro) o el contenedor lo hagan.
-            return; // Permitir que la solicitud OPTIONS continúe
+            return;
         }
 
         if (isPathExcluded(path)) {

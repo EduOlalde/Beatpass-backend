@@ -189,6 +189,27 @@ public class PromotorResource {
     }
 
     /**
+     * Endpoint GET para listar los tipos de entrada de un festival específico
+     * del promotor autenticado.
+     *
+     * @param idFestival ID del festival.
+     * @return 200 OK con lista de TipoEntradaDTO.
+     * @throws BadRequestException Si el ID del festival es inválido.
+     * @throws SecurityException Si el promotor no tiene permisos.
+     */
+    @GET
+    @Path("/festivales/{idFestival}/tipos-entrada")
+    public Response listarTiposEntrada(@PathParam("idFestival") Integer idFestival) {
+        log.debug("GET /promotor/festivales/{}/tipos-entrada (listar) recibido", idFestival);
+        Integer idPromotor = obtenerIdUsuarioAutenticadoYVerificarRol(RolUsuario.PROMOTOR);
+        if (idFestival == null || idFestival <= 0) {
+            throw new BadRequestException("ID festival inválido.");
+        }
+        List<TipoEntradaDTO> listaTiposEntrada = tipoEntradaService.obtenerTipoEntradasPorFestival(idFestival, idPromotor);
+        return Response.ok(listaTiposEntrada).build();
+    }
+
+    /**
      * Endpoint POST para añadir un nuevo tipo de entrada a un festival
      * existente del promotor autenticado. Recibe datos en JSON.
      *
@@ -482,8 +503,8 @@ public class PromotorResource {
      * ella tiene el rol PROMOTOR. REFACTORIZADO para usar SecurityContext.
      *
      * @return El ID del usuario promotor autenticado.
-     * @throws NotAuthorizedException Si no autenticado.
-     * @throws ForbiddenException Si el usuario no es PROMOTOR.
+     * @throws NotAuthorizedException Si no hay sesión activa.
+     * @throws ForbiddenException Si el usuario en sesión no es PROMOTOR.
      */
     private Integer verificarAccesoPromotor(SecurityContext sc) {
         if (sc == null || sc.getUserPrincipal() == null) {
