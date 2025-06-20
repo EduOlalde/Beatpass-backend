@@ -1,12 +1,12 @@
 package com.daw2edudiego.beatpasstfg.web;
 
 import com.daw2edudiego.beatpasstfg.dto.CredencialesDTO;
-import com.daw2edudiego.beatpasstfg.dto.TokenDTO; 
-import com.daw2edudiego.beatpasstfg.model.Usuario; 
-import com.daw2edudiego.beatpasstfg.service.UsuarioService; 
-import com.daw2edudiego.beatpasstfg.service.UsuarioServiceImpl; 
-import com.daw2edudiego.beatpasstfg.util.JwtUtil; 
-import com.daw2edudiego.beatpasstfg.util.PasswordUtil; 
+import com.daw2edudiego.beatpasstfg.dto.TokenDTO;
+import com.daw2edudiego.beatpasstfg.model.Usuario;
+import com.daw2edudiego.beatpasstfg.service.UsuarioService;
+import com.daw2edudiego.beatpasstfg.service.UsuarioServiceImpl;
+import com.daw2edudiego.beatpasstfg.util.JwtUtil;
+import com.daw2edudiego.beatpasstfg.util.PasswordUtil;
 
 import jakarta.validation.Valid;
 import jakarta.ws.rs.*;
@@ -32,8 +32,8 @@ public class AuthResource {
     private final JwtUtil jwtUtil;
 
     public AuthResource() {
-        this.usuarioService = new UsuarioServiceImpl(); 
-        this.jwtUtil = new JwtUtil(); 
+        this.usuarioService = new UsuarioServiceImpl();
+        this.jwtUtil = new JwtUtil();
     }
 
     /**
@@ -47,36 +47,36 @@ public class AuthResource {
     @POST
     @Path("/login")
     public Response login(@Valid CredencialesDTO credenciales) {
-        log.info("Intento de login API para email: {}", credenciales != null ? credenciales.getEmail() : "null"); 
+        log.info("Intento de login API para email: {}", credenciales != null ? credenciales.getEmail() : "null");
 
         if (credenciales == null || credenciales.getEmail() == null || credenciales.getEmail().isBlank()
-                || credenciales.getPassword() == null || credenciales.getPassword().isEmpty()) { 
-            log.warn("Login API fallido: Credenciales incompletas."); 
-            throw new BadRequestException("Email y contraseña son obligatorios."); 
+                || credenciales.getPassword() == null || credenciales.getPassword().isEmpty()) {
+            log.warn("Login API fallido: Credenciales incompletas.");
+            throw new BadRequestException("Email y contraseña son obligatorios.");
         }
 
-        Optional<Usuario> usuarioOpt = usuarioService.obtenerEntidadUsuarioPorEmailParaAuth(credenciales.getEmail()); 
+        Optional<Usuario> usuarioOpt = usuarioService.obtenerEntidadUsuarioPorEmailParaAuth(credenciales.getEmail());
 
-        if (usuarioOpt.isPresent()) { 
-            Usuario usuario = usuarioOpt.get(); 
+        if (usuarioOpt.isPresent()) {
+            Usuario usuario = usuarioOpt.get();
 
-            if (!Boolean.TRUE.equals(usuario.getEstado())) { 
-                log.warn("Login API fallido: Cuenta inactiva para email {}", credenciales.getEmail()); 
-                throw new NotAuthorizedException("Cuenta inactiva."); 
+            if (!Boolean.TRUE.equals(usuario.getEstado())) {
+                log.warn("Login API fallido: Cuenta inactiva para email {}", credenciales.getEmail());
+                throw new NotAuthorizedException("Cuenta inactiva.");
             }
 
-            if (PasswordUtil.checkPassword(credenciales.getPassword(), usuario.getPassword())) { 
-                log.info("Autenticación API exitosa para email: {}", credenciales.getEmail()); 
-                String token = jwtUtil.generarToken(usuario.getIdUsuario().toString(), usuario.getRol().name()); 
-
+            if (PasswordUtil.checkPassword(credenciales.getPassword(), usuario.getPassword())) {
+                log.info("Autenticación API exitosa para email: {}", credenciales.getEmail());
+                String token = jwtUtil.generarToken(usuario.getIdUsuario().toString(), usuario.getRol().name(), usuario.getNombre()); // Pasa el nombre del usuario
                 return Response.ok(new TokenDTO(token, usuario.getIdUsuario(), usuario.getNombre(), usuario.getRol().name())).build();
+
             } else {
-                log.warn("Login API fallido: Contraseña incorrecta para email {}", credenciales.getEmail()); 
-                throw new NotAuthorizedException("Email o contraseña incorrectos."); 
+                log.warn("Login API fallido: Contraseña incorrecta para email {}", credenciales.getEmail());
+                throw new NotAuthorizedException("Email o contraseña incorrectos.");
             }
         } else {
-            log.warn("Login API fallido: Usuario no encontrado con email {}", credenciales.getEmail()); 
-            throw new NotAuthorizedException("Email o contraseña incorrectos."); 
+            log.warn("Login API fallido: Usuario no encontrado con email {}", credenciales.getEmail());
+            throw new NotAuthorizedException("Email o contraseña incorrectos.");
         }
     }
 }

@@ -151,13 +151,16 @@ public class FestivalResource {
     public Response eliminarFestival(@PathParam("id") Integer id) {
         log.info("DELETE /festivales/{}", id);
         // Las excepciones de autenticación/autorización ya se propagan.
-        Integer idPromotorAutenticado = obtenerIdUsuarioAutenticadoYVerificarRol(RolUsuario.PROMOTOR);
+        // Se obtiene el ID del usuario autenticado, sin forzar un rol específico aquí.
+        // La validación de si es ADMIN o PROMOTOR dueño se delega al servicio.
+        Integer idUsuarioAutenticado = obtenerIdUsuarioAutenticado(); // <-- CAMBIO: Obtener ID sin verificar rol específico
 
         if (id == null) {
             throw new BadRequestException("ID de festival inválido.");
         }
-        festivalService.eliminarFestival(id, idPromotorAutenticado);
-        log.info("Festival ID {} eliminado por promotor ID {}.", id, idPromotorAutenticado);
+        // Llamada al servicio, que ya contiene la lógica de autorización (ADMIN o PROMOTOR dueño)
+        festivalService.eliminarFestival(id, idUsuarioAutenticado); // <-- Se pasa el ID del usuario autenticado
+        log.info("Festival ID {} eliminado por usuario ID {}.", id, idUsuarioAutenticado); // Log actualizado
         return Response.noContent().build();
     }
 

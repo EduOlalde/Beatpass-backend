@@ -61,9 +61,8 @@ public class PulseraNFCServiceImpl extends AbstractService implements PulseraNFC
             Festival festival = obtenerFestivalDesdeEntradaAsignada(entrada);
 
             // Verificar que el promotor (si es el actor) sea dueño del festival
-            if (actor.getRol() == RolUsuario.PROMOTOR) {
-                verificarPropiedadFestival(festival, idActor);
-            }
+            // This check is now integrated into `verificarPermisoSobreFestival` for clarity and reusability.
+            verificarPermisoSobreFestival(em, festival, idActor); // New centralized check
 
             // Verificar si la entrada ya tiene otra pulsera asociada
             Optional<PulseraNFC> pulseraExistenteParaEntrada = pulseraNFCRepository.findByEntradaId(em, idEntrada);
@@ -164,9 +163,10 @@ public class PulseraNFCServiceImpl extends AbstractService implements PulseraNFC
             throw new IllegalArgumentException("ID festival y ID actor requeridos.");
         }
         return executeRead(em -> {
-            Usuario actor = usuarioRepository.findById(em, idActor)
-                    .orElseThrow(() -> new UsuarioNotFoundException("Usuario actor no encontrado: " + idActor));
-            verificarPermisoListadoPulserasFestival(em, idFestival, actor);
+            Festival festival = festivalRepository.findById(em, idFestival)
+                    .orElseThrow(() -> new FestivalNotFoundException("Festival no encontrado: " + idFestival));
+            verificarPermisoSobreFestival(em, festival, idActor); // Centralized check
+
             List<PulseraNFC> pulseras = pulseraNFCRepository.findByFestivalId(em, idFestival);
             return pulseraNFCMapper.toPulseraNFCDTOList(pulseras);
         }, "obtenerPulserasPorFestival " + idFestival);
@@ -196,9 +196,13 @@ public class PulseraNFCServiceImpl extends AbstractService implements PulseraNFC
                         codigoUid, (pulsera.getFestival() != null ? pulsera.getFestival().getIdFestival() : "NULL"), idFestival);
                 throw new SecurityException("La pulsera no pertenece al festival especificado (" + idFestival + ").");
             }
-            if (cajero.getRol() == RolUsuario.PROMOTOR) {
-                verificarPropiedadFestival(pulsera.getFestival(), idUsuarioCajero);
-            }
+            // The check below is redundant because verificarPermisoSobreFestival is now called for all actor roles.
+            // if (cajero.getRol() == RolUsuario.PROMOTOR) {
+            //     verificarPropiedadFestival(pulsera.getFestival(), idUsuarioCajero); // Pass em
+            // }
+            // New centralized check for festival ownership
+            verificarPermisoSobreFestival(em, pulsera.getFestival(), idUsuarioCajero); //
+
             if (!Boolean.TRUE.equals(pulsera.getActiva())) {
                 throw new IllegalStateException("La pulsera UID " + codigoUid + " no está activa.");
             }
@@ -240,6 +244,9 @@ public class PulseraNFCServiceImpl extends AbstractService implements PulseraNFC
             Festival festival = festivalRepository.findById(em, idFestival)
                     .orElseThrow(() -> new FestivalNotFoundException("Festival no encontrado: " + idFestival));
 
+            // New centralized check for festival ownership
+            verificarPermisoSobreFestival(em, festival, idActor); //
+
             PulseraNFC pulsera = pulseraNFCRepository.findByCodigoUid(em, codigoUid)
                     .orElseThrow(() -> new PulseraNFCNotFoundException("Pulsera no encontrada con UID: " + codigoUid));
             em.lock(pulsera, LockModeType.PESSIMISTIC_WRITE);
@@ -248,9 +255,6 @@ public class PulseraNFCServiceImpl extends AbstractService implements PulseraNFC
                 log.error("Intento de registrar consumo para festival ID {} con pulsera UID {} que pertenece a festival ID {}",
                         idFestival, codigoUid, (pulsera.getFestival() != null ? pulsera.getFestival().getIdFestival() : "NULL"));
                 throw new SecurityException("La pulsera no pertenece al festival especificado (" + idFestival + ").");
-            }
-            if (actor.getRol() == RolUsuario.PROMOTOR) {
-                verificarPropiedadFestival(festival, idActor);
             }
             if (!Boolean.TRUE.equals(pulsera.getActiva())) {
                 throw new IllegalStateException("La pulsera UID " + codigoUid + " no está activa.");
@@ -428,16 +432,40 @@ public class PulseraNFCServiceImpl extends AbstractService implements PulseraNFC
         return ea.getCompraEntrada().getTipoEntrada().getFestival();
     }
 
-    private void verificarPropiedadFestival(Festival festival, Integer idPromotor) {
+    // This method is the original one in PulseraNFCServiceImpl, needs to be updated.
+    // private void verificarPropiedadFestival(Festival festival, Integer idPromotor) {
+    //     if (festival == null) {
+    //         throw new IllegalArgumentException("El festival no puede ser nulo.");
+    //     }
+    //     if (idPromotor == null) {
+    //         throw new IllegalArgumentException("El ID del promotor no puede ser nulo.");
+    //     }
+    //     if (festival.getPromotor() == null || !festival.getPromotor().getIdUsuario().equals(idPromotor)) {
+    //         log.warn("Intento de acceso no autorizado por promotor ID {} al festival ID {}",
+    //                 idPromotor, festival.getIdFestival());
+    //         throw new SecurityException("El usuario no tiene permiso para acceder a los recursos de este festival.");
+    //     }
+    // }
+    // Centralized verification method for festival access permissions, updated version
+    private void verificarPermisoSobreFestival(EntityManager em, Festival festival, Integer idActor) { // New method signature with EntityManager
         if (festival == null) {
-            throw new IllegalArgumentException("El festival no puede ser nulo.");
+            throw new FestivalNotFoundException("El festival asociado no puede ser nulo.");
         }
-        if (idPromotor == null) {
-            throw new IllegalArgumentException("El ID del promotor no puede ser nulo.");
+        if (idActor == null) {
+            throw new IllegalArgumentException("El ID del usuario actor no puede ser nulo.");
         }
-        if (festival.getPromotor() == null || !festival.getPromotor().getIdUsuario().equals(idPromotor)) {
-            log.warn("Intento de acceso no autorizado por promotor ID {} al festival ID {}",
-                    idPromotor, festival.getIdFestival());
+
+        Usuario actor = em.find(Usuario.class, idActor); // Use em.find to get the managed User entity
+        if (actor == null) {
+            throw new UsuarioNotFoundException("Usuario actor no encontrado con ID: " + idActor);
+        }
+
+        boolean isActorAdmin = (actor.getRol() != null && actor.getRol() == RolUsuario.ADMIN); // Check if actor is ADMIN
+        boolean isActorPromotorOwner = (festival.getPromotor() != null && festival.getPromotor().getIdUsuario().equals(idActor));
+
+        if (!(isActorAdmin || isActorPromotorOwner)) {
+            log.warn("Acceso denegado: Usuario ID {} (Rol: {}) intentó acceder al festival ID {} (Prop. por Promotor ID {})",
+                    idActor, (actor.getRol() != null ? actor.getRol() : "NULL_ROL"), festival.getIdFestival(), festival.getPromotor() != null ? festival.getPromotor().getIdUsuario() : "N/A");
             throw new SecurityException("El usuario no tiene permiso para acceder a los recursos de este festival.");
         }
     }
@@ -453,7 +481,8 @@ public class PulseraNFCServiceImpl extends AbstractService implements PulseraNFC
                 throw new SecurityException("Promotor no puede ver pulseras no asociadas a un festival.");
             }
             try {
-                verificarPropiedadFestival(pulsera.getFestival(), idActor);
+                // Call the new centralized check. Note: this passes the festival and expects the check to cover the promoter's ownership.
+                verificarPermisoSobreFestival(em, pulsera.getFestival(), idActor); // Changed to new centralized check
             } catch (IllegalStateException | SecurityException e) {
                 throw new SecurityException("Promotor no tiene permiso para ver esta pulsera.", e);
             }
@@ -469,7 +498,8 @@ public class PulseraNFCServiceImpl extends AbstractService implements PulseraNFC
         if (actor.getRol() == RolUsuario.PROMOTOR) {
             Festival festival = festivalRepository.findById(em, idFestival)
                     .orElseThrow(() -> new FestivalNotFoundException("Festival no encontrado: " + idFestival));
-            verificarPropiedadFestival(festival, actor.getIdUsuario());
+            // Call the new centralized check for the promoter's ownership
+            verificarPermisoSobreFestival(em, festival, actor.getIdUsuario()); // Changed to new centralized check
             return;
         }
         throw new SecurityException("Rol no autorizado para listar pulseras de un festival.");

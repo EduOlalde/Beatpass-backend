@@ -5,7 +5,8 @@ import com.daw2edudiego.beatpasstfg.exception.*;
 import com.daw2edudiego.beatpasstfg.model.TipoEntrada;
 import com.daw2edudiego.beatpasstfg.model.Festival;
 import com.daw2edudiego.beatpasstfg.model.EstadoFestival;
-import com.daw2edudiego.beatpasstfg.model.Usuario;
+import com.daw2edudiego.beatpasstfg.model.RolUsuario; // Import RolUsuario
+import com.daw2edudiego.beatpasstfg.model.Usuario; // Import Usuario
 import com.daw2edudiego.beatpasstfg.repository.TipoEntradaRepositoryImpl;
 import com.daw2edudiego.beatpasstfg.repository.FestivalRepository;
 import com.daw2edudiego.beatpasstfg.repository.FestivalRepositoryImpl;
@@ -13,6 +14,7 @@ import com.daw2edudiego.beatpasstfg.repository.UsuarioRepository;
 import com.daw2edudiego.beatpasstfg.repository.UsuarioRepositoryImpl;
 import com.daw2edudiego.beatpasstfg.mapper.TipoEntradaMapper;
 
+import jakarta.persistence.EntityManager; // Import EntityManager
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
@@ -40,10 +42,10 @@ public class TipoEntradaServiceImpl extends AbstractService implements TipoEntra
     }
 
     @Override
-    public TipoEntradaDTO crearTipoEntrada(TipoEntradaDTO tipoEntradaDTO, Integer idFestival, Integer idPromotor) {
-        log.info("Service: Creando nuevo tipo de entrada para festival ID {} por promotor ID {}", idFestival, idPromotor);
-        if (tipoEntradaDTO == null || idFestival == null || idPromotor == null) {
-            throw new IllegalArgumentException("DTO, ID festival e ID promotor son requeridos.");
+    public TipoEntradaDTO crearTipoEntrada(TipoEntradaDTO tipoEntradaDTO, Integer idFestival, Integer idActor) { // Renamed idPromotor to idActor
+        log.info("Service: Creando nuevo tipo de entrada para festival ID {} por actor ID {}", idFestival, idActor);
+        if (tipoEntradaDTO == null || idFestival == null || idActor == null) {
+            throw new IllegalArgumentException("DTO, ID festival e ID actor son requeridos.");
         }
         if (tipoEntradaDTO.getIdFestival() != null && !idFestival.equals(tipoEntradaDTO.getIdFestival())) {
             throw new IllegalArgumentException("El ID del festival en el DTO no coincide con el ID de la URL.");
@@ -51,12 +53,16 @@ public class TipoEntradaServiceImpl extends AbstractService implements TipoEntra
         validarDatosEntradaDTO(tipoEntradaDTO);
 
         return executeTransactional(em -> {
-            Usuario promotor = usuarioRepository.findById(em, idPromotor)
-                    .orElseThrow(() -> new UsuarioNotFoundException("Promotor no encontrado con ID: " + idPromotor));
+            // Only Promoters can create new ticket types for their festivals
+            Usuario actor = usuarioRepository.findById(em, idActor)
+                    .orElseThrow(() -> new UsuarioNotFoundException("Usuario actor no encontrado con ID: " + idActor));
+            if (actor.getRol() != RolUsuario.PROMOTOR) {
+                throw new SecurityException("Solo los promotores pueden crear tipos de entrada.");
+            }
 
             Festival festival = festivalRepository.findById(em, idFestival)
                     .orElseThrow(() -> new FestivalNotFoundException("Festival no encontrado con ID: " + idFestival));
-            verificarPropiedadFestival(festival, idPromotor);
+            verificarPropiedadFestival(em, festival, idActor); // Pass em
 
             TipoEntrada nuevaEntrada = tipoEntradaMapper.tipoEntradaDTOToTipoEntrada(tipoEntradaDTO);
             nuevaEntrada.setFestival(festival);
@@ -68,22 +74,19 @@ public class TipoEntradaServiceImpl extends AbstractService implements TipoEntra
     }
 
     @Override
-    public List<TipoEntradaDTO> obtenerTipoEntradasPorFestival(Integer idFestival, Integer idPromotor) {
-        log.debug("Service: Obteniendo tipos de entrada para festival ID {} por promotor ID {}", idFestival, idPromotor);
-        if (idFestival == null || idPromotor == null) {
-            throw new IllegalArgumentException("ID festival e ID promotor son requeridos.");
+    public List<TipoEntradaDTO> obtenerTipoEntradasPorFestival(Integer idFestival, Integer idActor) { // Renamed idPromotor to idActor
+        log.debug("Service: Obteniendo tipos de entrada para festival ID {} por actor ID {}", idFestival, idActor);
+        if (idFestival == null || idActor == null) {
+            throw new IllegalArgumentException("ID festival e ID actor son requeridos.");
         }
 
         return executeRead(em -> {
-            Usuario promotor = usuarioRepository.findById(em, idPromotor)
-                    .orElseThrow(() -> new UsuarioNotFoundException("Promotor no encontrado con ID: " + idPromotor));
-
             Festival festival = festivalRepository.findById(em, idFestival)
                     .orElseThrow(() -> new FestivalNotFoundException("Festival no encontrado con ID: " + idFestival));
-            verificarPropiedadFestival(festival, idPromotor);
+            verificarPropiedadFestival(em, festival, idActor); // Pass em
 
             List<TipoEntrada> tiposEntrada = tipoEntradaRepository.findByFestivalId(em, idFestival);
-            log.info("Encontrados {} tipos de entrada para el festival ID {} (Promotor {})", tiposEntrada.size(), idFestival, idPromotor);
+            log.info("Encontrados {} tipos de entrada para el festival ID {} (Actor {})", tiposEntrada.size(), idFestival, idActor);
             return tipoEntradaMapper.toTipoEntradaDTOList(tiposEntrada);
         }, "obtenerTipoEntradasPorFestival " + idFestival);
     }
@@ -111,10 +114,10 @@ public class TipoEntradaServiceImpl extends AbstractService implements TipoEntra
     }
 
     @Override
-    public TipoEntradaDTO actualizarTipoEntrada(Integer idEntrada, TipoEntradaDTO tipoEntradaDTO, Integer idPromotor) {
-        log.info("Service: Actualizando tipo de entrada ID {} por promotor ID {}", idEntrada, idPromotor);
-        if (idEntrada == null || tipoEntradaDTO == null || idPromotor == null) {
-            throw new IllegalArgumentException("ID entrada, DTO e ID promotor son requeridos.");
+    public TipoEntradaDTO actualizarTipoEntrada(Integer idEntrada, TipoEntradaDTO tipoEntradaDTO, Integer idActor) { // Renamed idPromotor to idActor
+        log.info("Service: Actualizando tipo de entrada ID {} por actor ID {}", idEntrada, idActor);
+        if (idEntrada == null || tipoEntradaDTO == null || idActor == null) {
+            throw new IllegalArgumentException("ID entrada, DTO e ID actor son requeridos.");
         }
         if (tipoEntradaDTO.getIdTipoEntrada() != null && !idEntrada.equals(tipoEntradaDTO.getIdTipoEntrada())) {
             throw new IllegalArgumentException("El ID de entrada en el DTO debe coincidir con el ID de la URL o ser nulo.");
@@ -122,13 +125,10 @@ public class TipoEntradaServiceImpl extends AbstractService implements TipoEntra
         validarDatosEntradaDTO(tipoEntradaDTO);
 
         return executeTransactional(em -> {
-            Usuario promotor = usuarioRepository.findById(em, idPromotor)
-                    .orElseThrow(() -> new UsuarioNotFoundException("Promotor no encontrado con ID: " + idPromotor));
-
             TipoEntrada entrada = tipoEntradaRepository.findById(em, idEntrada)
                     .orElseThrow(() -> new TipoEntradaNotFoundException("Tipo de entrada no encontrado con ID: " + idEntrada));
 
-            verificarPropiedadFestival(entrada.getFestival(), idPromotor);
+            verificarPropiedadFestival(em, entrada.getFestival(), idActor); // Pass em
 
             tipoEntradaMapper.updateTipoEntradaFromDto(tipoEntradaDTO, entrada);
 
@@ -139,20 +139,17 @@ public class TipoEntradaServiceImpl extends AbstractService implements TipoEntra
     }
 
     @Override
-    public void eliminarTipoEntrada(Integer idEntrada, Integer idPromotor) {
-        log.info("Service: Eliminando tipo de entrada ID {} por promotor ID {}", idEntrada, idPromotor);
-        if (idEntrada == null || idPromotor == null) {
-            throw new IllegalArgumentException("ID entrada e ID promotor son requeridos.");
+    public void eliminarTipoEntrada(Integer idEntrada, Integer idActor) { // Renamed idPromotor to idActor
+        log.info("Service: Eliminando tipo de entrada ID {} por actor ID {}", idEntrada, idActor);
+        if (idEntrada == null || idActor == null) {
+            throw new IllegalArgumentException("ID entrada e ID actor son requeridos.");
         }
 
         executeTransactional(em -> {
-            Usuario promotor = usuarioRepository.findById(em, idPromotor)
-                    .orElseThrow(() -> new UsuarioNotFoundException("Promotor no encontrado con ID: " + idPromotor));
-
             TipoEntrada entrada = tipoEntradaRepository.findById(em, idEntrada)
                     .orElseThrow(() -> new TipoEntradaNotFoundException("Tipo de entrada no encontrado con ID: " + idEntrada));
 
-            verificarPropiedadFestival(entrada.getFestival(), idPromotor);
+            verificarPropiedadFestival(em, entrada.getFestival(), idActor); // Pass em
 
             boolean eliminado = tipoEntradaRepository.deleteById(em, idEntrada);
             if (!eliminado) {
@@ -165,10 +162,10 @@ public class TipoEntradaServiceImpl extends AbstractService implements TipoEntra
     }
 
     @Override
-    public Optional<TipoEntradaDTO> obtenerTipoEntradaPorId(Integer idEntrada, Integer idPromotor) {
-        log.debug("Service: Obteniendo entrada ID {} por promotor ID {}", idEntrada, idPromotor);
-        if (idEntrada == null || idPromotor == null) {
-            throw new IllegalArgumentException("IDs de entrada y promotor son requeridos.");
+    public Optional<TipoEntradaDTO> obtenerTipoEntradaPorId(Integer idEntrada, Integer idActor) { // Renamed idPromotor to idActor
+        log.debug("Service: Obteniendo entrada ID {} por actor ID {}", idEntrada, idActor);
+        if (idEntrada == null || idActor == null) {
+            throw new IllegalArgumentException("IDs de entrada y actor son requeridos.");
         }
 
         return executeRead(em -> {
@@ -180,7 +177,7 @@ public class TipoEntradaServiceImpl extends AbstractService implements TipoEntra
             }
 
             TipoEntrada entrada = entradaOpt.get();
-            verificarPropiedadFestival(entrada.getFestival(), idPromotor);
+            verificarPropiedadFestival(em, entrada.getFestival(), idActor); // Pass em
             return Optional.of(tipoEntradaMapper.tipoEntradaToTipoEntradaDTO(entrada));
         }, "obtenerTipoEntradaPorId " + idEntrada);
     }
@@ -237,20 +234,32 @@ public class TipoEntradaServiceImpl extends AbstractService implements TipoEntra
     }
 
     /**
-     * Verifica que el promotor sea propietario del festival.
+     * Verifica que el usuario actor (ADMIN o PROMOTOR) tenga permiso sobre el
+     * festival. Si es PROMOTOR, debe ser el propietario del festival. Si es
+     * ADMIN, siempre tiene acceso.
      */
-    private void verificarPropiedadFestival(Festival festival, Integer idPromotor) {
+    private void verificarPropiedadFestival(EntityManager em, Festival festival, Integer idActor) { // Added EntityManager parameter
         if (festival == null) {
-            throw new IllegalArgumentException("El festival no puede ser nulo.");
+            throw new FestivalNotFoundException("El festival asociado no puede ser nulo.");
         }
-        if (idPromotor == null) {
-            throw new IllegalArgumentException("El ID del promotor no puede ser nulo.");
+        if (idActor == null) {
+            throw new IllegalArgumentException("El ID del usuario actor no puede ser nulo.");
         }
-        if (festival.getPromotor() == null || !festival.getPromotor().getIdUsuario().equals(idPromotor)) {
-            log.warn("Intento de acceso no autorizado por promotor ID {} al festival ID {}",
-                    idPromotor, festival.getIdFestival());
+
+        // Fetch the acting user (actor) to check their role.
+        Usuario actor = em.find(Usuario.class, idActor); // Use em.find directly here for simplicity and direct management
+
+        if (actor == null) {
+            throw new UsuarioNotFoundException("Usuario actor no encontrado con ID: " + idActor);
+        }
+
+        boolean isActorAdmin = (actor.getRol() != null && actor.getRol() == RolUsuario.ADMIN); // Added null check for safety
+        boolean isActorPromotorOwner = (festival.getPromotor() != null && festival.getPromotor().getIdUsuario().equals(idActor));
+
+        if (!(isActorAdmin || isActorPromotorOwner)) {
+            log.warn("Intento de acceso no autorizado por usuario ID {} (Rol: {}) al festival ID {} (Prop. por Promotor ID {})",
+                    idActor, (actor.getRol() != null ? actor.getRol() : "NULL_ROL"), festival.getIdFestival(), festival.getPromotor() != null ? festival.getPromotor().getIdUsuario() : "N/A");
             throw new SecurityException("El usuario no tiene permiso para acceder a los recursos de este festival.");
         }
     }
-
 }

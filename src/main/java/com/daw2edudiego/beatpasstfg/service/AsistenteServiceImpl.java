@@ -3,13 +3,18 @@ package com.daw2edudiego.beatpasstfg.service;
 import com.daw2edudiego.beatpasstfg.dto.AsistenteDTO;
 import com.daw2edudiego.beatpasstfg.exception.AsistenteNotFoundException;
 import com.daw2edudiego.beatpasstfg.exception.FestivalNotFoundException;
+import com.daw2edudiego.beatpasstfg.exception.UsuarioNotFoundException;
 import com.daw2edudiego.beatpasstfg.model.Asistente;
 import com.daw2edudiego.beatpasstfg.model.EstadoEntrada;
 import com.daw2edudiego.beatpasstfg.model.Festival;
+import com.daw2edudiego.beatpasstfg.model.RolUsuario; // Import RolUsuario
+import com.daw2edudiego.beatpasstfg.model.Usuario; // Import Usuario
 import com.daw2edudiego.beatpasstfg.repository.AsistenteRepository;
 import com.daw2edudiego.beatpasstfg.repository.AsistenteRepositoryImpl;
 import com.daw2edudiego.beatpasstfg.repository.FestivalRepository;
 import com.daw2edudiego.beatpasstfg.repository.FestivalRepositoryImpl;
+import com.daw2edudiego.beatpasstfg.repository.UsuarioRepository; // Import UsuarioRepository
+import com.daw2edudiego.beatpasstfg.repository.UsuarioRepositoryImpl; // Import UsuarioRepositoryImpl
 import com.daw2edudiego.beatpasstfg.util.JPAUtil;
 import jakarta.persistence.*;
 import org.slf4j.Logger;
@@ -28,11 +33,13 @@ public class AsistenteServiceImpl extends AbstractService implements AsistenteSe
 
     private final AsistenteRepository asistenteRepository;
     private final FestivalRepository festivalRepository;
+    private final UsuarioRepository usuarioRepository; // Added for fetching User for role check
     private final AsistenteMapper asistenteMapper;
 
     public AsistenteServiceImpl() {
         this.asistenteRepository = new AsistenteRepositoryImpl();
         this.festivalRepository = new FestivalRepositoryImpl();
+        this.usuarioRepository = new UsuarioRepositoryImpl(); // Initialize
         this.asistenteMapper = AsistenteMapper.INSTANCE;
     }
 
@@ -149,16 +156,16 @@ public class AsistenteServiceImpl extends AbstractService implements AsistenteSe
     }
 
     @Override
-    public List<AsistenteDTO> obtenerAsistentesPorFestival(Integer idFestival, Integer idPromotor) {
-        log.debug("Service: Obteniendo asistentes para festival ID {} por promotor ID {}", idFestival, idPromotor);
-        if (idFestival == null || idPromotor == null) {
-            throw new IllegalArgumentException("ID de festival e ID de promotor son requeridos.");
+    public List<AsistenteDTO> obtenerAsistentesPorFestival(Integer idFestival, Integer idActor) { // Renamed idPromotor to idActor
+        log.debug("Service: Obteniendo asistentes para festival ID {} por actor ID {}", idFestival, idActor);
+        if (idFestival == null || idActor == null) {
+            throw new IllegalArgumentException("ID de festival e ID de actor son requeridos.");
         }
 
         return executeRead(em -> {
             Festival festival = festivalRepository.findById(em, idFestival)
                     .orElseThrow(() -> new FestivalNotFoundException("Festival no encontrado con ID: " + idFestival));
-            verificarPropiedadFestival(festival, idPromotor);
+            verificarPropiedadFestival(em, festival, idActor); // Pass em
 
             List<Asistente> asistentes = asistenteRepository.findAsistentesByFestivalId(em, idFestival);
             List<AsistenteDTO> asistenteDTOs = asistenteMapper.toAsistenteDTOList(asistentes);
@@ -246,11 +253,32 @@ public class AsistenteServiceImpl extends AbstractService implements AsistenteSe
         }
     }
 
-    private void verificarPropiedadFestival(Festival festival, Integer idPromotor) {
-        if (festival == null || idPromotor == null) {
-            throw new IllegalArgumentException("Festival e ID Promotor no pueden ser nulos.");
+    /**
+     * Verifica que el usuario actor (ADMIN o PROMOTOR) tenga permiso sobre el
+     * festival. Si es PROMOTOR, debe ser el propietario del festival. Si es
+     * ADMIN, siempre tiene acceso.
+     */
+    private void verificarPropiedadFestival(EntityManager em, Festival festival, Integer idActor) { // Added EntityManager parameter
+        if (festival == null) {
+            throw new FestivalNotFoundException("El festival asociado no puede ser nulo.");
         }
-        if (festival.getPromotor() == null || !festival.getPromotor().getIdUsuario().equals(idPromotor)) {
+        if (idActor == null) {
+            throw new IllegalArgumentException("El ID del usuario actor no puede ser nulo.");
+        }
+
+        // Fetch the acting user (actor) to check their role.
+        Usuario actor = em.find(Usuario.class, idActor); // Use em.find directly here for simplicity and direct management
+
+        if (actor == null) {
+            throw new UsuarioNotFoundException("Usuario actor no encontrado con ID: " + idActor);
+        }
+
+        boolean isActorAdmin = (actor.getRol() != null && actor.getRol() == RolUsuario.ADMIN); // Added null check for safety
+        boolean isActorPromotorOwner = (festival.getPromotor() != null && festival.getPromotor().getIdUsuario().equals(idActor));
+
+        if (!(isActorAdmin || isActorPromotorOwner)) {
+            log.warn("Intento de acceso no autorizado por usuario ID {} (Rol: {}) al festival ID {} (Prop. por Promotor ID {})",
+                    idActor, (actor.getRol() != null ? actor.getRol() : "NULL_ROL"), festival.getIdFestival(), festival.getPromotor() != null ? festival.getPromotor().getIdUsuario() : "N/A");
             throw new SecurityException("El usuario no tiene permiso para acceder a los recursos de este festival.");
         }
     }

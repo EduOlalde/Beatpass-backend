@@ -40,13 +40,16 @@ public class JwtUtil {
      *
      * @param userId El ID del usuario (subject). No puede ser nulo.
      * @param role El rol del usuario (claim). No puede ser nulo.
+     * @param userName El nombre del usuario. No puede ser nulo.
      * @return El JWT generado como String.
      * @throws NullPointerException si la clave secreta no pudo inicializarse.
      * @throws IllegalArgumentException si userId o role es nulo.
      */
-    public String generarToken(String userId, String role) {
+    public String generarToken(String userId, String role, String userName) {
         Objects.requireNonNull(userId, "El ID de usuario no puede ser nulo para generar el token.");
         Objects.requireNonNull(role, "El Rol no puede ser nulo para generar el token.");
+        Objects.requireNonNull(userName, "El nombre de usuario no puede ser nulo para generar el token.");
+
         if (key == null) {
             throw new IllegalStateException("La clave secreta JWT no está inicializada. Revisa las variables de entorno.");
         }
@@ -54,11 +57,12 @@ public class JwtUtil {
         Date now = new Date();
         Date expiryDate = new Date(now.getTime() + EXPIRATION_TIME_MS);
 
-        log.debug("Generando token para userId: {} con rol: {}", userId, role);
+        log.debug("Generando token para userId: {} con rol: {} y nombre: {}", userId, role, userName);
 
         return Jwts.builder()
                 .setSubject(userId)
                 .claim(ROLE_CLAIM_NAME, role)
+                .claim("name", userName)
                 .setIssuedAt(now)
                 .setExpiration(expiryDate)
                 .signWith(key, SignatureAlgorithm.HS256)
