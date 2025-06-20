@@ -61,6 +61,7 @@ public class ApplicationConfig extends Application {
         resources.add(AuthenticationFilter.class);
         resources.add(GenericExceptionMapper.class);
         resources.add(CorsFilter.class);
+        resources.add(ObjectMapperContextResolver.class);
 
         return resources;
     }
