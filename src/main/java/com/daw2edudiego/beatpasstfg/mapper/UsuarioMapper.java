@@ -32,12 +32,15 @@ public interface UsuarioMapper {
     // Método para actualizar una entidad Usuario existente desde un UsuarioDTO
     // Útil para cuando solo se quiere actualizar ciertos campos como el nombre o estado
     @Mapping(target = "idUsuario", ignore = true)
-    @Mapping(target = "email", ignore = true) // Email no es actualizable vía este DTO
-    @Mapping(target = "password", ignore = true) // Contraseña no se actualiza vía este DTO
-    @Mapping(target = "rol", ignore = true) // Rol no es actualizable vía este DTO
+    @Mapping(target = "email", ignore = true)
+    @Mapping(target = "password", ignore = true)
+    @Mapping(target = "rol", ignore = true)
+    @Mapping(target = "estado", ignore = true)
+    @Mapping(target = "cambioPasswordRequerido", ignore = true) 
     @Mapping(target = "fechaCreacion", ignore = true)
     @Mapping(target = "fechaModificacion", ignore = true)
     @Mapping(target = "festivales", ignore = true)
     @Mapping(target = "recargasRealizadas", ignore = true)
     void updateUsuarioFromDto(UsuarioDTO usuarioDTO, @MappingTarget Usuario usuario);
+
 }

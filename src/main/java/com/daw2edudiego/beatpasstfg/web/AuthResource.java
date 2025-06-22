@@ -67,8 +67,17 @@ public class AuthResource {
 
             if (PasswordUtil.checkPassword(credenciales.getPassword(), usuario.getPassword())) {
                 log.info("Autenticación API exitosa para email: {}", credenciales.getEmail());
-                String token = jwtUtil.generarToken(usuario.getIdUsuario().toString(), usuario.getRol().name(), usuario.getNombre()); // Pasa el nombre del usuario
-                return Response.ok(new TokenDTO(token, usuario.getIdUsuario(), usuario.getNombre(), usuario.getRol().name())).build();
+
+                String token = jwtUtil.generarToken(
+                        usuario.getIdUsuario().toString(),
+                        usuario.getRol().name(),
+                        usuario.getNombre(),
+                        usuario.getCambioPasswordRequerido()
+                );
+
+                TokenDTO tokenDTO = new TokenDTO();
+                tokenDTO.setToken(token);
+                return Response.ok(tokenDTO).build();
 
             } else {
                 log.warn("Login API fallido: Contraseña incorrecta para email {}", credenciales.getEmail());

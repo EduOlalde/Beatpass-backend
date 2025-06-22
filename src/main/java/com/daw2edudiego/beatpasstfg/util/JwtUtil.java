@@ -21,6 +21,7 @@ public class JwtUtil {
     private static final String SECRET_KEY_STRING = System.getenv("TFG_TOKEN_KEY");
     private static final long EXPIRATION_TIME_MS = 1000 * 60 * 60; // 1 hora
     private static final String ROLE_CLAIM_NAME = "role";
+    private static final String PWD_CHANGE_CLAIM_NAME = "pwdChangeRequired";
     private static final SecretKey key;
 
     static {
@@ -41,14 +42,16 @@ public class JwtUtil {
      * @param userId El ID del usuario (subject). No puede ser nulo.
      * @param role El rol del usuario (claim). No puede ser nulo.
      * @param userName El nombre del usuario. No puede ser nulo.
+     * @param passwordChangeRequired Si el usuario debe cambiar password obligatoriamente
      * @return El JWT generado como String.
      * @throws NullPointerException si la clave secreta no pudo inicializarse.
      * @throws IllegalArgumentException si userId o role es nulo.
      */
-    public String generarToken(String userId, String role, String userName) {
+    public String generarToken(String userId, String role, String userName, Boolean passwordChangeRequired) {
         Objects.requireNonNull(userId, "El ID de usuario no puede ser nulo para generar el token.");
         Objects.requireNonNull(role, "El Rol no puede ser nulo para generar el token.");
         Objects.requireNonNull(userName, "El nombre de usuario no puede ser nulo para generar el token.");
+        Objects.requireNonNull(passwordChangeRequired, "El flag de cambio de password no puede ser nulo.");
 
         if (key == null) {
             throw new IllegalStateException("La clave secreta JWT no está inicializada. Revisa las variables de entorno.");
@@ -57,12 +60,13 @@ public class JwtUtil {
         Date now = new Date();
         Date expiryDate = new Date(now.getTime() + EXPIRATION_TIME_MS);
 
-        log.debug("Generando token para userId: {} con rol: {} y nombre: {}", userId, role, userName);
+        log.debug("Generando token para userId: {}, rol: {}, nombre: {}, pwdChangeRequired: {}", userId, role, userName, passwordChangeRequired);
 
         return Jwts.builder()
                 .setSubject(userId)
                 .claim(ROLE_CLAIM_NAME, role)
                 .claim("name", userName)
+                .claim(PWD_CHANGE_CLAIM_NAME, passwordChangeRequired) // --- CAMBIO: Añadimos el nuevo claim al token ---
                 .setIssuedAt(now)
                 .setExpiration(expiryDate)
                 .signWith(key, SignatureAlgorithm.HS256)
@@ -155,7 +159,4 @@ public class JwtUtil {
         return claims.getExpiration();
     }
 
-    // --- Métodos Deprecados Eliminados ---
-    // Constructor privado para prevenir instanciación de clase utilidad si se prefiere estática
-    // public JwtUtil() {} // Se deja público si se va a instanciar
 }

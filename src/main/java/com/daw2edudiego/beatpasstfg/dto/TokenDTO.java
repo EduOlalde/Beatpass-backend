@@ -6,14 +6,15 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 /**
  * DTO simple para encapsular y devolver un token JWT.
  */
-@JsonInclude(JsonInclude.Include.NON_NULL) 
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class TokenDTO {
 
     @NotBlank(message = "El token no puede estar vacío.")
     private String token;
-    private Integer userId; 
-    private String userName; 
-    private String userRole; 
+    private Integer userId;
+    private String userName;
+    private String userRole;
+    private Boolean cambioPasswordRequerido;
 
     public TokenDTO() {
     }
@@ -25,8 +26,9 @@ public class TokenDTO {
      * @param userId El ID del usuario.
      * @param userName El nombre del usuario.
      * @param userRole El rol del usuario.
+     * @param cambioPasswordRequerido Flag que indica si el cambio es necesario.
      */
-    public TokenDTO(String token, Integer userId, String userName, String userRole) {
+    public TokenDTO(String token, Integer userId, String userName, String userRole, Boolean cambioPasswordRequerido) {
         if (token == null || token.isBlank()) {
             throw new IllegalArgumentException("El token no puede ser nulo ni vacío para TokenDTO.");
         }
@@ -34,9 +36,10 @@ public class TokenDTO {
         this.userId = userId;
         this.userName = userName;
         this.userRole = userRole;
+        this.cambioPasswordRequerido = cambioPasswordRequerido;
     }
 
-    // --- Getter y Setter ---
+    // --- Getters y Setters ---
     public String getToken() {
         return token;
     }
@@ -72,7 +75,14 @@ public class TokenDTO {
         this.userRole = userRole;
     }
 
-    // --- toString ---
+    public Boolean getCambioPasswordRequerido() {
+        return cambioPasswordRequerido;
+    }
+
+    public void setCambioPasswordRequerido(Boolean cambioPasswordRequerido) {
+        this.cambioPasswordRequerido = cambioPasswordRequerido;
+    }
+
     @Override
     public String toString() {
         return "TokenDTO{"
@@ -80,6 +90,7 @@ public class TokenDTO {
                 + ", userId=" + userId
                 + ", userName='" + userName + '\''
                 + ", userRole='" + userRole + '\''
+                + ", cambioPasswordRequerido=" + cambioPasswordRequerido
                 + '}';
     }
 }
