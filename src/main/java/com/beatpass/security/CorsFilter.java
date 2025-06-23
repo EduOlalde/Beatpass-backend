@@ -4,6 +4,7 @@ import jakarta.ws.rs.container.ContainerRequestContext;
 import jakarta.ws.rs.container.ContainerResponseContext;
 import jakarta.ws.rs.container.ContainerResponseFilter;
 import jakarta.ws.rs.container.PreMatching;
+import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.ext.Provider;
 import java.io.IOException;
 import java.util.Arrays;
@@ -12,17 +13,13 @@ import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/**
- * Filtro JAX-RS para añadir los encabezados CORS a las respuestas. Permite
- * orígenes específicos y maneja las peticiones OPTIONS (preflight).
- */
 @Provider
 @PreMatching
 public class CorsFilter implements ContainerResponseFilter {
 
     private static final Logger log = LoggerFactory.getLogger(CorsFilter.class);
 
-    private static final Set<String> ALLOWED_ORIGINS = new HashSet<>(Arrays.asList(         
+    private static final Set<String> ALLOWED_ORIGINS = new HashSet<>(Arrays.asList(
             "https://eduolalde.github.io",
             "https://daaf292.github.io",
             "https://beatpass.onrender.com"
@@ -52,9 +49,8 @@ public class CorsFilter implements ContainerResponseFilter {
                 }
                 responseContext.getHeaders().add("Access-Control-Max-Age", "3600");
 
-                if (responseContext.getStatus() == 0 || responseContext.getStatus() == 204) {
-                    responseContext.setStatus(200);
-                }
+                requestContext.abortWith(Response.ok().build());
+                return; 
             }
         } else if (origin != null) {
             log.warn("CORS Filter - Request from unauthorized origin: {}", origin);
