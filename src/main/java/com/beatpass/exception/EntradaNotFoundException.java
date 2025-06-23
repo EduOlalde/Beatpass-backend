@@ -2,11 +2,11 @@ package com.beatpass.exception;
 
 /**
  * Excepción unchecked (RuntimeException) que se lanza cuando no se encuentra
- * una entidad {@link com.daw2edudiego.beatpasstfg.model.EntradaAsignada}
+ * una entidad {@link com.beatpass.model.EntradaAsignada}
  * específica en la base de datos, generalmente al buscar por su ID o código QR.
  *
- * @see com.daw2edudiego.beatpasstfg.model.EntradaAsignada
- * @see com.daw2edudiego.beatpasstfg.service.EntradaAsignadaService
+ * @see com.beatpass.model.EntradaAsignada
+ * @see com.beatpass.service.EntradaAsignadaService
  */
 public class EntradaNotFoundException extends RuntimeException {
 

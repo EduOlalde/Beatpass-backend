@@ -155,7 +155,7 @@ public class PdfServiceImpl implements PdfService {
 
                     contentStream.newLineAtOffset(0, -lineHeight);
                     contentStream.setFont(fontBold, 9);
-                    contentStream.showText("Beatpass TFG - " + java.time.Year.now().getValue());
+                    contentStream.showText("Beatpass - " + java.time.Year.now().getValue());
                     contentStream.endText();
                 }
             }

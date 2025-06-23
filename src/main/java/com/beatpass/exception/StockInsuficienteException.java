@@ -3,14 +3,14 @@ package com.beatpass.exception;
 /**
  * Excepción unchecked (RuntimeException) que se lanza cuando se intenta
  * realizar una operación que requiere una cantidad específica de un tipo de
- * entrada ({@link com.daw2edudiego.beatpasstfg.model.Entrada}), pero el stock
+ * entrada ({@link com.beatpass.model.Entrada}), pero el stock
  * disponible es menor que la cantidad requerida.
  * <p>
  * Esto ocurre típicamente durante el proceso de registro de una venta.
  * </p>
  *
  * @see
- * com.daw2edudiego.beatpasstfg.service.VentaService#registrarVenta(Integer,
+ * com.beatpass.service.VentaService#registrarVenta(Integer,
  * Integer, int)
  */
 public class StockInsuficienteException extends RuntimeException {

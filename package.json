@@ -1,5 +1,5 @@
 {
-  "name": "beatpasstfg",
+  "name": "beatpass",
   "version": "1.0.0",
   "description": "**Beatpass** es un proyecto de Fin de Grado (TFG) que consiste en una plataforma web desarrollada con Jakarta EE para la gestión y venta de entradas para festivales de música. El sistema ofrece un servicio especializado para promotores de eventos, permitiéndoles crear y administrar sus festivales, definir tipos de entrada, gestionar ventas y asistentes.",
   "main": "index.js",

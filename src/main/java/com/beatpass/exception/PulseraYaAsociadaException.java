@@ -3,13 +3,13 @@ package com.beatpass.exception;
 /**
  * Excepción unchecked (RuntimeException) que se lanza al intentar realizar una
  * operación que vincularía una
- * {@link com.daw2edudiego.beatpasstfg.model.PulseraNFC} a una
- * {@link com.daw2edudiego.beatpasstfg.model.EntradaAsignada}, pero dicha
+ * {@link com.beatpass.model.PulseraNFC} a una
+ * {@link com.beatpass.model.EntradaAsignada}, pero dicha
  * pulsera ya se encuentra asociada a otra entrada activa dentro del mismo
  * contexto relevante (normalmente, el mismo festival).
  *
  * @see
- * com.daw2edudiego.beatpasstfg.service.PulseraNFCService#asociarPulseraEntrada(String,
+ * com.beatpass.service.PulseraNFCService#asociarPulseraEntrada(String,
  * Integer, Integer)
  */
 public class PulseraYaAsociadaException extends RuntimeException {

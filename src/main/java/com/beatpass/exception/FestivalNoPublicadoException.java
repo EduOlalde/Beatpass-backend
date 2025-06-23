@@ -3,8 +3,8 @@ package com.beatpass.exception;
 /**
  * Excepción unchecked (RuntimeException) que se lanza cuando se intenta
  * realizar una operación que requiere que un
- * {@link com.daw2edudiego.beatpasstfg.model.Festival} esté en estado
- * {@link com.daw2edudiego.beatpasstfg.model.EstadoFestival#PUBLICADO}, pero el
+ * {@link com.beatpass.model.Festival} esté en estado
+ * {@link com.beatpass.model.EstadoFestival#PUBLICADO}, pero el
  * festival se encuentra en otro estado (ej: BORRADOR, CANCELADO, FINALIZADO).
  * <p>
  * Un ejemplo típico es intentar registrar una venta de entradas para un
@@ -12,7 +12,7 @@ package com.beatpass.exception;
  * </p>
  *
  * @see
- * com.daw2edudiego.beatpasstfg.service.VentaService#registrarVenta(Integer,
+ * com.beatpass.service.VentaService#registrarVenta(Integer,
  * Integer, int)
  */
 public class FestivalNoPublicadoException extends RuntimeException {

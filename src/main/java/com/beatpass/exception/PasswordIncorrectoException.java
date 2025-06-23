@@ -6,7 +6,7 @@ package com.beatpass.exception;
  * coincide con la contraseña actual almacenada (hasheada) para ese usuario.
  *
  * @see
- * com.daw2edudiego.beatpasstfg.service.UsuarioService#cambiarPassword(Integer,
+ * com.beatpass.service.UsuarioService#cambiarPassword(Integer,
  * String, String)
  * @author Eduardo Olalde
  */

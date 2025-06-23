@@ -1,4 +1,3 @@
-// src/main/java/com/daw2edudiego/beatpasstfg/config/JPAInitializerListener.java
 package com.beatpass.config;
 
 import com.beatpass.util.JPAUtil;

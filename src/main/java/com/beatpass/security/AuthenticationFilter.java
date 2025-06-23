@@ -152,7 +152,7 @@ public class AuthenticationFilter implements ContainerRequestFilter {
     private void abortUnauthorized(ContainerRequestContext requestContext, String message) {
         log.debug("Abortando petición con 401 Unauthorized. Mensaje: {}", message);
         Response unauthorizedResponse = Response.status(Response.Status.UNAUTHORIZED)
-                .header(HttpHeaders.WWW_AUTHENTICATE, "Bearer realm=\"BeatpassTFG API\"") // Informa al cliente
+                .header(HttpHeaders.WWW_AUTHENTICATE, "Bearer realm=\"Beatpass API\"") // Informa al cliente
                 .entity("{\"error\": \"" + message + "\"}")
                 .type(MediaType.APPLICATION_JSON)
                 .build();

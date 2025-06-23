@@ -3,8 +3,8 @@ package com.beatpass.exception;
 /**
  * Excepción unchecked (RuntimeException) que se lanza cuando se intenta
  * realizar una operación que requiere que una
- * {@link com.daw2edudiego.beatpasstfg.model.EntradaAsignada} esté nominada a un
- * {@link com.daw2edudiego.beatpasstfg.model.Asistente}, pero la entrada aún no
+ * {@link com.beatpass.model.EntradaAsignada} esté nominada a un
+ * {@link com.beatpass.model.Asistente}, pero la entrada aún no
  * ha sido nominada.
  * <p>
  * Un ejemplo típico es intentar asociar una pulsera NFC a una entrada que no
@@ -12,7 +12,7 @@ package com.beatpass.exception;
  * </p>
  *
  * @see
- * com.daw2edudiego.beatpasstfg.service.PulseraNFCService#asociarPulseraEntrada(String,
+ * com.beatpass.service.PulseraNFCService#asociarPulseraEntrada(String,
  * Integer, Integer)
  */
 public class EntradaNoNominadaException extends RuntimeException {

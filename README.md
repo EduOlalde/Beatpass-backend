@@ -1,4 +1,4 @@
-# Beatpass TFG
+# Beatpass
 
 ## Descripción
 
@@ -107,8 +107,8 @@ El proyecto incluye:
 
 1.  **Clonar el Repositorio:**
     ```bash
-    git clone [https://github.com/EduOlalde/DAW2-TFG-Beatpass.git](https://github.com/EduOlalde/DAW2-TFG-Beatpass.git)
-    cd DAW2-TFG-Beatpass
+    git clone [https://github.com/EduOlalde/Beatpass-backend.git](https://github.com/EduOlalde/Beatpass-backend.git)
+    cd Beatpass-backend
     ```
 2.  **Configurar Base de Datos:**
     * Crea una base de datos (ej: `beatpasstfg_db`).
@@ -139,17 +139,17 @@ El proyecto incluye:
         ```bash
         mvn clean package
         ```
-    * Esto generará un archivo `BeatpassTFG.war` en el directorio `target/`.
+    * Esto generará un archivo `ROOT.war` en el directorio `target/`.
 7.  **Desplegar en Tomcat:**
-    * Copia el archivo `BeatpassTFG.war` al directorio `webapps` de tu instalación de Tomcat.
+    * Copia el archivo `ROOT.war` al directorio `webapps` de tu instalación de Tomcat.
     * Inicia el servidor Tomcat. La aplicación debería desplegarse automáticamente.
 8.  **Acceder a la API (Backend):**
-    * Los endpoints de la API estarán disponibles bajo `http://localhost:8080/BeatpassTFG/api/` (o el puerto y contexto que use tu Tomcat).
+    * Los endpoints de la API estarán disponibles bajo `http://localhost:8080/api/` (o el puerto y contexto que use tu Tomcat).
 
 
 ## Despliegue
 
-* **Backend (BeatpassTFG.war):** Desplegado en [Render](https://render.com/) en la URL `https://beatpass.onrender.com`.
+* **Backend (ROOT.war):** Desplegado en [Render](https://render.com/) en la URL `https://beatpass.onrender.com`.
 * **Base de Datos:** Alojada en [Alwaysdata](https://www.alwaysdata.com/).
 * **Frontend (Simuladores):** Desplegado en [GitHub Pages](https://pages.github.com/).
 

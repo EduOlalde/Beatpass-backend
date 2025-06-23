@@ -2,11 +2,11 @@ package com.beatpass.exception;
 
 /**
  * Excepción unchecked (RuntimeException) que se lanza cuando no se encuentra un
- * {@link com.daw2edudiego.beatpasstfg.model.Festival} específico en la base de
+ * {@link com.beatpass.model.Festival} específico en la base de
  * datos, generalmente al buscar por su ID.
  *
- * @see com.daw2edudiego.beatpasstfg.model.Festival
- * @see com.daw2edudiego.beatpasstfg.service.FestivalService
+ * @see com.beatpass.model.Festival
+ * @see com.beatpass.service.FestivalService
  */
 public class FestivalNotFoundException extends RuntimeException {
 

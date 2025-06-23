@@ -5,8 +5,8 @@ package com.beatpass.exception;
  * realizar una operación sobre un Asistente que no se encuentra en el sistema
  * (generalmente al buscar por ID o email).
  *
- * @see com.daw2edudiego.beatpasstfg.model.Asistente
- * @see com.daw2edudiego.beatpasstfg.service.AsistenteService
+ * @see com.beatpass.model.Asistente
+ * @see com.beatpass.service.AsistenteService
  */
 public class AsistenteNotFoundException extends RuntimeException {
 

@@ -2,12 +2,12 @@ package com.beatpass.exception;
 
 /**
  * Excepción unchecked (RuntimeException) que se lanza al intentar realizar una
- * operación de consumo ({@link com.daw2edudiego.beatpasstfg.model.Consumo}) con
- * una {@link com.daw2edudiego.beatpasstfg.model.PulseraNFC} que no dispone de
+ * operación de consumo ({@link com.beatpass.model.Consumo}) con
+ * una {@link com.beatpass.model.PulseraNFC} que no dispone de
  * saldo suficiente para cubrir el importe del consumo.
  *
  * @see
- * com.daw2edudiego.beatpasstfg.service.PulseraNFCService#registrarConsumo(String,
+ * com.beatpass.service.PulseraNFCService#registrarConsumo(String,
  * java.math.BigDecimal, String, Integer, Integer, Integer)
  */
 public class SaldoInsuficienteException extends RuntimeException {

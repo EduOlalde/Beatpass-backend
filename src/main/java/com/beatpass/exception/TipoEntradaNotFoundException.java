@@ -3,12 +3,12 @@ package com.beatpass.exception;
 /**
  * Excepción unchecked (RuntimeException) que se lanza cuando no se encuentra un
  * tipo de entrada específico
- * ({@link com.daw2edudiego.beatpasstfg.model.Entrada}) en la base de datos,
+ * ({@link com.beatpass.model.Entrada}) en la base de datos,
  * generalmente al buscar por su ID.
  *
- * @see com.daw2edudiego.beatpasstfg.model.Entrada
- * @see com.daw2edudiego.beatpasstfg.service.EntradaService
- * @see com.daw2edudiego.beatpasstfg.service.VentaService
+ * @see com.beatpass.model.Entrada
+ * @see com.beatpass.service.EntradaService
+ * @see com.beatpass.service.VentaService
  * @author Eduardo Olalde
  */
 public class TipoEntradaNotFoundException extends RuntimeException {

@@ -2,11 +2,11 @@ package com.beatpass.exception;
 
 /**
  * Excepción unchecked (RuntimeException) que se lanza cuando no se encuentra un
- * {@link com.daw2edudiego.beatpasstfg.model.Usuario} específico en el sistema,
+ * {@link com.beatpass.model.Usuario} específico en el sistema,
  * generalmente al buscar por su ID o email.
  *
- * @see com.daw2edudiego.beatpasstfg.model.Usuario
- * @see com.daw2edudiego.beatpasstfg.service.UsuarioService
+ * @see com.beatpass.model.Usuario
+ * @see com.beatpass.service.UsuarioService
  */
 public class UsuarioNotFoundException extends RuntimeException {
 

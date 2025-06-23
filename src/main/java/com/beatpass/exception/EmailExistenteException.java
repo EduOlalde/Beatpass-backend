@@ -2,15 +2,15 @@ package com.beatpass.exception;
 
 /**
  * Excepción unchecked (RuntimeException) que se lanza al intentar crear un
- * nuevo usuario ({@link com.daw2edudiego.beatpasstfg.model.Usuario}) o
- * asistente ({@link com.daw2edudiego.beatpasstfg.model.Asistente}) con una
+ * nuevo usuario ({@link com.beatpass.model.Usuario}) o
+ * asistente ({@link com.beatpass.model.Asistente}) con una
  * dirección de correo electrónico que ya está registrada en el sistema,
  * violando la restricción de unicidad del email.
  *
  * @see
- * com.daw2edudiego.beatpasstfg.service.UsuarioService#crearUsuario(com.daw2edudiego.beatpasstfg.dto.UsuarioCreacionDTO)
+ * com.beatpasst.service.UsuarioService#crearUsuario(com.beatpassdto.UsuarioCreacionDTO)
  * @see
- * com.daw2edudiego.beatpasstfg.service.AsistenteService#obtenerOcrearAsistentePorEmail(String,
+ * com.beatpass.service.AsistenteService#obtenerOcrearAsistentePorEmail(String,
  * String, String)
  */
 public class EmailExistenteException extends RuntimeException {

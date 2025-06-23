@@ -2,11 +2,11 @@ package com.beatpass.exception;
 
 /**
  * Excepción unchecked (RuntimeException) que se lanza cuando no se encuentra
- * una entidad {@link com.daw2edudiego.beatpasstfg.model.PulseraNFC} específica
+ * una entidad {@link com.beatpass.model.PulseraNFC} específica
  * en la base de datos, generalmente al buscar por su ID o código UID.
  *
- * @see com.daw2edudiego.beatpasstfg.model.PulseraNFC
- * @see com.daw2edudiego.beatpasstfg.service.PulseraNFCService
+ * @see com.beatpass.model.PulseraNFC
+ * @see com.beatpass.service.PulseraNFCService
  */
 public class PulseraNFCNotFoundException extends RuntimeException {
 
