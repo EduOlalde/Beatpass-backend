@@ -21,12 +21,6 @@ public class CorsFilter implements ContainerRequestFilter, ContainerResponseFilt
     private static final Logger log = LoggerFactory.getLogger(CorsFilter.class);
 
     private static final Set<String> ALLOWED_ORIGINS = new HashSet<>(Arrays.asList(
-            "http://localhost:3000",
-            "http://127.0.0.1:3000",
-            "http://localhost:5173",
-            "http://127.0.0.1:5173",
-            "http://localhost:5500",
-            "http://127.0.0.1:5500",
             "https://eduolalde.github.io",
             "https://daaf292.github.io",
             "https://beatpass.onrender.com"
