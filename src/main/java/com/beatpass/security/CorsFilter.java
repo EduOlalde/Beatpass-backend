@@ -20,6 +20,12 @@ public class CorsFilter implements ContainerResponseFilter {
     private static final Logger log = LoggerFactory.getLogger(CorsFilter.class);
 
     private static final Set<String> ALLOWED_ORIGINS = new HashSet<>(Arrays.asList(
+            "http://localhost:3000",
+            "http://127.0.0.1:3000",
+            "http://localhost:5173",
+            "http://127.0.0.1:5173",
+            "http://localhost:5500",
+            "http://127.0.0.1:5500",
             "https://eduolalde.github.io",
             "https://daaf292.github.io",
             "https://beatpass.onrender.com"
@@ -50,7 +56,7 @@ public class CorsFilter implements ContainerResponseFilter {
                 responseContext.getHeaders().add("Access-Control-Max-Age", "3600");
 
                 requestContext.abortWith(Response.ok().build());
-                return; 
+                return;
             }
         } else if (origin != null) {
             log.warn("CORS Filter - Request from unauthorized origin: {}", origin);
