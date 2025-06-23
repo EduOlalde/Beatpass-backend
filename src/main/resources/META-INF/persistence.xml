@@ -2,17 +2,17 @@
 <persistence version="3.0" xmlns="https://jakarta.ee/xml/ns/persistence" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="https://jakarta.ee/xml/ns/persistence https://jakarta.ee/xml/ns/persistence/persistence_3_0.xsd">
   <persistence-unit name="beatpassPersistenceUnit" transaction-type="RESOURCE_LOCAL">
     <provider>org.hibernate.jpa.HibernatePersistenceProvider</provider>
-    <class>com.daw2edudiego.beatpasstfg.model.Usuario</class>
-    <class>com.daw2edudiego.beatpasstfg.model.Asistente</class>
-    <class>com.daw2edudiego.beatpasstfg.model.Festival</class>
-    <class>com.daw2edudiego.beatpasstfg.model.Compra</class>
-    <class>com.daw2edudiego.beatpasstfg.model.CompraEntrada</class>
-    <class>com.daw2edudiego.beatpasstfg.model.PulseraNFC</class>
-    <class>com.daw2edudiego.beatpasstfg.model.Recarga</class>
-    <class>com.daw2edudiego.beatpasstfg.model.Consumo</class>
-    <class>com.daw2edudiego.beatpasstfg.model.EstadisticasFestival</class>
-    <class>com.daw2edudiego.beatpasstfg.model.TipoEntrada</class>
-    <class>com.daw2edudiego.beatpasstfg.model.Entrada</class>
+    <class>com.beatpass.model.Festival</class>
+    <class>com.beatpass.model.Compra</class>
+    <class>com.beatpass.model.Usuario</class>
+    <class>com.beatpass.model.Consumo</class>
+    <class>com.beatpass.model.Recarga</class>
+    <class>com.beatpass.model.Asistente</class>
+    <class>com.beatpass.model.EstadisticasFestival</class>
+    <class>com.beatpass.model.PulseraNFC</class>
+    <class>com.beatpass.model.CompraEntrada</class>
+    <class>com.beatpass.model.TipoEntrada</class>
+    <class>com.beatpass.model.Entrada</class>
     <properties>
       <property name="hibernate.connection.provider_class" value="org.hibernate.hikaricp.internal.HikariCPConnectionProvider"/>
       <property name="hibernate.hikari.maximumPoolSize" value="10"/>
