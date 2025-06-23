@@ -209,7 +209,7 @@
     </dependencies>
 
     <build>
-        <finalName>BeatpassTFG</finalName>
+        <finalName>ROOT</finalName>
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
