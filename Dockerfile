@@ -5,7 +5,7 @@
  RUN rm -rf /usr/local/tomcat/webapps/*
  
  COPY recursos/server.xml /usr/local/tomcat/conf/server.xml
- COPY target/BeatpassTFG.war /usr/local/tomcat/webapps/ROOT.war
+ COPY target/ROOT.war /usr/local/tomcat/webapps/ROOT.war
  
 
  EXPOSE 8080
