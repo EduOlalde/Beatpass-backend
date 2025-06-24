@@ -24,6 +24,7 @@ import com.beatpass.service.PulseraNFCService;
 import com.beatpass.service.TipoEntradaServiceImpl;
 import com.beatpass.service.UsuarioService;
 import com.beatpass.model.RolUsuario;
+import jakarta.annotation.security.RolesAllowed;
 import jakarta.validation.Valid;
 
 import jakarta.ws.rs.*;
@@ -76,6 +77,7 @@ import java.util.Map;
 @Path("/promotor")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
+@RolesAllowed("PROMOTOR")
 public class PromotorResource {
 
     private static final Logger log = LoggerFactory.getLogger(PromotorResource.class);
@@ -121,8 +123,7 @@ public class PromotorResource {
     @Path("/festivales")
     public Response listarFestivales() {
         log.debug("GET /promotor/festivales (listar) recibido");
-        // Para listar "mis festivales", SÍ se requiere que sea PROMOTOR
-        Integer idPromotor = obtenerIdUsuarioAutenticadoYVerificarRol(RolUsuario.PROMOTOR);
+        Integer idPromotor = Integer.parseInt(securityContext.getUserPrincipal().getName());
 
         log.debug("Listando festivales para Promotor ID: {}", idPromotor);
         List<FestivalDTO> listaFestivales = festivalService.obtenerFestivalesPorPromotor(idPromotor);
@@ -148,8 +149,7 @@ public class PromotorResource {
     @Path("/festivales")
     public Response crearFestival(@Valid FestivalDTO festivalDTO) {
         log.info("POST /promotor/festivales (crear) recibido");
-        // Para crear un festival, SÍ se requiere que sea PROMOTOR
-        Integer idPromotor = obtenerIdUsuarioAutenticadoYVerificarRol(RolUsuario.PROMOTOR);
+        Integer idPromotor = Integer.parseInt(securityContext.getUserPrincipal().getName());
 
         FestivalDTO festivalCreado = festivalService.crearFestival(festivalDTO, idPromotor);
         URI location = uriInfo.getAbsolutePathBuilder().path(festivalCreado.getIdFestival().toString()).build();
@@ -171,8 +171,7 @@ public class PromotorResource {
     @Path("/festivales/{id}")
     public Response actualizarFestival(@PathParam("id") Integer idFestivalParam, @Valid FestivalDTO festivalDTO) {
         log.info("PUT /promotor/festivales/{} (actualizar) recibido", idFestivalParam);
-        // Para actualizar un festival, SÍ se requiere que sea PROMOTOR
-        Integer idPromotor = obtenerIdUsuarioAutenticadoYVerificarRol(RolUsuario.PROMOTOR);
+        Integer idPromotor = Integer.parseInt(securityContext.getUserPrincipal().getName());
 
         if (idFestivalParam == null) {
             throw new BadRequestException("ID de festival no válido.");
@@ -196,21 +195,16 @@ public class PromotorResource {
      */
     @GET
     @Path("/festivales/{id}")
+    @RolesAllowed({"ADMIN", "PROMOTOR"})
     public Response obtenerDetallesFestival(@PathParam("id") Integer idFestivalParam) {
         log.debug("GET /promotor/festivales/{} (Detalles JSON) recibido", idFestivalParam);
-        // Obtener el ID del usuario autenticado, sin forzar un rol específico aquí.
-        // La validación de si es ADMIN o PROMOTOR dueño se delega al servicio.
-        Integer idUsuarioAutenticado = obtenerIdUsuarioAutenticado(); // CAMBIO CLAVE: Obtener el ID sin rol específico
-        final Integer idFestival = idFestivalParam;
+        Integer idUsuarioAutenticado = Integer.parseInt(securityContext.getUserPrincipal().getName());
 
-        if (idFestival == null || idFestival <= 0) {
+        if (idFestivalParam == null || idFestivalParam <= 0) {
             throw new BadRequestException("ID de festival no válido.");
         }
 
-        // El servicio de Festival ya verifica que el usuario autenticado (ADMIN o PROMOTOR)
-        // tiene permiso sobre este festival. Si el usuario es PROMOTOR, verifica que es dueño.
-        // Si es ADMIN, le permite el acceso.
-        FestivalDTO festival = festivalService.obtenerFestivalPorId(idFestival)
+        FestivalDTO festival = festivalService.obtenerFestivalPorId(idFestivalParam)
                 .filter(f -> securityContext.isUserInRole(RolUsuario.ADMIN.name()) || idUsuarioAutenticado.equals(f.getIdPromotor()))
                 .orElseThrow(() -> new ForbiddenException("Festival no encontrado o no pertenece a este promotor."));
 
@@ -228,12 +222,10 @@ public class PromotorResource {
      */
     @GET
     @Path("/festivales/{idFestival}/tipos-entrada")
+    @RolesAllowed({"ADMIN", "PROMOTOR"})
     public Response listarTiposEntrada(@PathParam("idFestival") Integer idFestival) {
         log.debug("GET /promotor/festivales/{}/tipos-entrada (listar) recibido", idFestival);
-        // Obtener el ID del usuario autenticado, sin forzar un rol específico.
-        // La capa de servicio (tipoEntradaService.obtenerTipoEntradasPorFestival)
-        // se encarga de la autorización (ADMIN o PROMOTOR dueño).
-        Integer idUsuarioAutenticado = obtenerIdUsuarioAutenticado(); // CAMBIO CLAVE
+        Integer idUsuarioAutenticado = Integer.parseInt(securityContext.getUserPrincipal().getName());
         if (idFestival == null || idFestival <= 0) {
             throw new BadRequestException("ID festival inválido.");
         }
@@ -258,9 +250,9 @@ public class PromotorResource {
     public Response crearTipoEntrada(
             @PathParam("idFestival") Integer idFestival,
             @Valid TipoEntradaDTO tipoEntradaDTO) {
+
         log.info("POST /promotor/festivales/{}/tipos-entrada (crear) recibido", idFestival);
-        // Para crear un tipo de entrada, SÍ se requiere que sea PROMOTOR
-        Integer idPromotor = obtenerIdUsuarioAutenticadoYVerificarRol(RolUsuario.PROMOTOR);
+        Integer idPromotor = Integer.parseInt(securityContext.getUserPrincipal().getName());
         if (idFestival == null || idFestival <= 0) {
             throw new BadRequestException("ID festival inválido.");
         }
@@ -294,8 +286,7 @@ public class PromotorResource {
             @Valid TipoEntradaDTO tipoEntradaDTO) {
 
         log.info("PUT /promotor/tipos-entrada/{} (actualizar) recibido", idTipoEntrada);
-        // Para actualizar un tipo de entrada, SÍ se requiere que sea PROMOTOR
-        Integer idPromotor = obtenerIdUsuarioAutenticadoYVerificarRol(RolUsuario.PROMOTOR);
+        Integer idPromotor = Integer.parseInt(securityContext.getUserPrincipal().getName());
         if (idTipoEntrada == null || idTipoEntrada <= 0) {
             throw new BadRequestException("ID de tipo de entrada no válido.");
         }
@@ -321,8 +312,7 @@ public class PromotorResource {
     @Path("/tipos-entrada/{idTipoEntrada}")
     public Response eliminarTipoEntrada(@PathParam("idTipoEntrada") Integer idTipoEntrada) {
         log.info("DELETE /promotor/tipos-entrada/{} (eliminar) recibido", idTipoEntrada);
-        // Para eliminar un tipo de entrada, SÍ se requiere que sea PROMOTOR
-        Integer idPromotor = obtenerIdUsuarioAutenticadoYVerificarRol(RolUsuario.PROMOTOR);
+        Integer idPromotor = Integer.parseInt(securityContext.getUserPrincipal().getName());
         if (idTipoEntrada == null || idTipoEntrada <= 0) {
             throw new BadRequestException("ID de tipo de entrada no válido.");
         }
@@ -348,12 +338,10 @@ public class PromotorResource {
      */
     @GET
     @Path("/festivales/{idFestival}/entradas")
+    @RolesAllowed({"ADMIN", "PROMOTOR"})
     public Response listarEntradas(@PathParam("idFestival") Integer idFestival) {
         log.debug("GET /promotor/festivales/{}/entradas recibido", idFestival);
-        // Obtener el ID del usuario autenticado, sin forzar un rol específico.
-        // La capa de servicio (entradaService.obtenerEntradasPorFestival)
-        // se encarga de la autorización (ADMIN o PROMOTOR dueño).
-        Integer idUsuarioAutenticado = obtenerIdUsuarioAutenticado(); // CAMBIO CLAVE
+        Integer idUsuarioAutenticado = Integer.parseInt(securityContext.getUserPrincipal().getName());
         if (idFestival == null || idFestival <= 0) {
             throw new BadRequestException("ID festival inválido.");
         }
@@ -378,8 +366,7 @@ public class PromotorResource {
             @Valid NominacionRequestDTO nominacionRequest) {
 
         log.info("POST /promotor/entradas/{}/nominar recibido para asistente email {}", idEntrada, nominacionRequest.getEmailAsistente());
-        // Para nominar una entrada, SÍ se requiere que sea PROMOTOR
-        Integer idPromotor = obtenerIdUsuarioAutenticadoYVerificarRol(RolUsuario.PROMOTOR);
+        Integer idPromotor = Integer.parseInt(securityContext.getUserPrincipal().getName());
 
         if (idEntrada == null || idEntrada <= 0) {
             throw new BadRequestException("ID de entrada no válido.");
@@ -406,8 +393,7 @@ public class PromotorResource {
     @Path("/entradas/{idEntrada}/cancelar")
     public Response cancelarEntrada(@PathParam("idEntrada") Integer idEntrada) {
         log.info("POST /promotor/entradas/{}/cancelar recibido", idEntrada);
-        // Para cancelar una entrada, SÍ se requiere que sea PROMOTOR
-        Integer idPromotor = obtenerIdUsuarioAutenticadoYVerificarRol(RolUsuario.PROMOTOR);
+        Integer idPromotor = Integer.parseInt(securityContext.getUserPrincipal().getName());
         if (idEntrada == null || idEntrada <= 0) {
             throw new BadRequestException("ID entrada inválido.");
         }
@@ -433,8 +419,7 @@ public class PromotorResource {
             @Valid AsociarPulseraRequestDTO asociarPulseraRequest) {
 
         log.info("POST /promotor/entradas/{}/asociar-pulsera con UID: {}", idEntrada, asociarPulseraRequest.getCodigoUid());
-        // Para asociar pulsera (desde el panel promotor), SÍ se requiere que sea PROMOTOR
-        Integer idPromotor = obtenerIdUsuarioAutenticadoYVerificarRol(RolUsuario.PROMOTOR);
+        Integer idPromotor = Integer.parseInt(securityContext.getUserPrincipal().getName());
 
         if (idEntrada == null || idEntrada <= 0) {
             throw new BadRequestException("ID de entrada no válido.");
@@ -456,12 +441,10 @@ public class PromotorResource {
      */
     @GET
     @Path("/festivales/{idFestival}/asistentes")
+    @RolesAllowed({"ADMIN", "PROMOTOR"})
     public Response listarAsistentesPorFestival(@PathParam("idFestival") Integer idFestival) {
         log.debug("GET /promotor/festivales/{}/asistentes recibido", idFestival);
-        // Obtener el ID del usuario autenticado, sin forzar un rol específico.
-        // La capa de servicio (asistenteService.obtenerAsistentesPorFestival)
-        // se encarga de la autorización (ADMIN o PROMOTOR dueño).
-        Integer idUsuarioAutenticado = obtenerIdUsuarioAutenticado(); // CAMBIO CLAVE
+        Integer idUsuarioAutenticado = Integer.parseInt(securityContext.getUserPrincipal().getName());
         if (idFestival == null || idFestival <= 0) {
             throw new BadRequestException("ID de festival no válido.");
         }
@@ -482,12 +465,10 @@ public class PromotorResource {
      */
     @GET
     @Path("/festivales/{idFestival}/compras")
+    @RolesAllowed({"ADMIN", "PROMOTOR"})
     public Response listarComprasPorFestival(@PathParam("idFestival") Integer idFestival) {
         log.debug("GET /promotor/festivales/{}/compras recibido", idFestival);
-        // Obtener el ID del usuario autenticado, sin forzar un rol específico.
-        // La capa de servicio (compraService.obtenerComprasPorFestival)
-        // se encarga de la autorización (ADMIN o PROMOTOR dueño).
-        Integer idUsuarioAutenticado = obtenerIdUsuarioAutenticado(); // CAMBIO CLAVE
+        Integer idUsuarioAutenticado = Integer.parseInt(securityContext.getUserPrincipal().getName());
         if (idFestival == null || idFestival <= 0) {
             throw new BadRequestException("ID de festival no válido.");
         }
@@ -508,10 +489,11 @@ public class PromotorResource {
      */
     @POST
     @Path("/cambiar-password-obligatorio")
+    @RolesAllowed({"ADMIN", "PROMOTOR", "CAJERO"})
     public Response procesarCambioPasswordObligatorio(
             @Valid CambioPasswordRequestDTO cambioPasswordRequest) {
 
-        Integer userId = obtenerIdUsuarioAutenticado();
+        Integer userId = Integer.parseInt(securityContext.getUserPrincipal().getName());
 
         if (!cambioPasswordRequest.getNewPassword().equals(cambioPasswordRequest.getConfirmPassword())) {
             throw new BadRequestException("Las contraseñas no coinciden.");
@@ -536,12 +518,10 @@ public class PromotorResource {
      */
     @GET
     @Path("/festivales/{idFestival}/pulseras")
+    @RolesAllowed({"ADMIN", "PROMOTOR", "CAJERO"})
     public Response listarPulserasPorFestivalPromotor(@PathParam("idFestival") Integer idFestival) {
         log.debug("GET /promotor/festivales/{}/pulseras recibido", idFestival);
-        // Obtener el ID del usuario autenticado, sin forzar un rol específico.
-        // La capa de servicio (pulseraNFCService.obtenerPulserasPorFestival)
-        // se encarga de la autorización (ADMIN o PROMOTOR dueño).
-        Integer idUsuarioAutenticado = obtenerIdUsuarioAutenticado(); // CAMBIO CLAVE
+        Integer idUsuarioAutenticado = Integer.parseInt(securityContext.getUserPrincipal().getName());
         if (idFestival == null || idFestival <= 0) {
             throw new BadRequestException("ID de festival no válido.");
         }
@@ -567,11 +547,6 @@ public class PromotorResource {
         }
     }
 
-    /**
-     * Obtiene ID y verifica rol. Lanza excepciones JAX-RS si falla. Este método
-     * se mantiene para endpoints que *estrictamente* requieran un rol
-     * específico (ej. PROMOTOR para sus propias acciones de gestión).
-     */
     private Integer obtenerIdUsuarioAutenticadoYVerificarRol(RolUsuario rolRequerido) {
         Integer userId = obtenerIdUsuarioAutenticado();
         if (!securityContext.isUserInRole(rolRequerido.name())) {

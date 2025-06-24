@@ -3,11 +3,12 @@ package com.beatpass.web;
 import com.beatpass.dto.TipoEntradaDTO;
 import com.beatpass.dto.FestivalDTO;
 import com.beatpass.model.EstadoFestival;
-import com.beatpass.model.RolUsuario;
 import com.beatpass.service.TipoEntradaServiceImpl;
 import com.beatpass.service.FestivalService;
 import com.beatpass.service.FestivalServiceImpl;
 
+import jakarta.annotation.security.PermitAll;
+import jakarta.annotation.security.RolesAllowed;
 import jakarta.validation.Valid;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.Context;
@@ -59,6 +60,7 @@ public class FestivalResource {
      */
     @GET
     @Path("/{id}/tipos-entrada")
+    @PermitAll
     public Response obtenerTiposEntradaPublico(@PathParam("id") Integer id) {
         log.info("GET /festivales/{}/tipos-entrada (Público)", id);
         if (id == null) {
@@ -72,14 +74,15 @@ public class FestivalResource {
     /**
      * Crea un nuevo festival. Requiere rol PROMOTOR. Estado inicial BORRADOR.
      *
-     * @param festivalDTO DTO con datos del festival.
+     * @param festivalDTO DTO con datos del festival (nombre, fechas, etc.).
      * @return 201 Created con DTO creado, 400 Bad Request, 401/403 Error, 500
      * Error.
      */
     @POST
+    @RolesAllowed("PROMOTOR")
     public Response crearFestival(@Valid FestivalDTO festivalDTO) {
         log.info("POST /festivales");
-        Integer idPromotorAutenticado = obtenerIdUsuarioAutenticadoYVerificarRol(RolUsuario.PROMOTOR);
+        Integer idPromotorAutenticado = Integer.parseInt(securityContext.getUserPrincipal().getName());
 
         if (festivalDTO == null || festivalDTO.getNombre() == null || festivalDTO.getNombre().isBlank()
                 || festivalDTO.getFechaInicio() == null || festivalDTO.getFechaFin() == null
@@ -101,6 +104,7 @@ public class FestivalResource {
      */
     @GET
     @Path("/{id}")
+    @PermitAll
     public Response obtenerFestival(@PathParam("id") Integer id) {
         log.info("GET /festivales/{}", id);
         if (id == null) {
@@ -113,7 +117,8 @@ public class FestivalResource {
     }
 
     /**
-     * Actualiza un festival existente. Requiere rol PROMOTOR propietario.
+     * Actualiza un festival existente. Requiere rol PROMOTOR propietario o
+     * ADMIN.
      *
      * @param id ID del festival a actualizar.
      * @param festivalDTO DTO con los nuevos datos.
@@ -121,9 +126,10 @@ public class FestivalResource {
      */
     @PUT
     @Path("/{id}")
+    @RolesAllowed({"ADMIN", "PROMOTOR"})
     public Response actualizarFestival(@PathParam("id") Integer id, @Valid FestivalDTO festivalDTO) {
         log.info("PUT /festivales/{}", id);
-        Integer idPromotorAutenticado = obtenerIdUsuarioAutenticadoYVerificarRol(RolUsuario.PROMOTOR);
+        Integer idUsuarioActualizador = Integer.parseInt(securityContext.getUserPrincipal().getName());
 
         if (id == null) {
             throw new BadRequestException("ID de festival inválido.");
@@ -134,13 +140,13 @@ public class FestivalResource {
                 || festivalDTO.getFechaFin().isBefore(festivalDTO.getFechaInicio())) {
             throw new BadRequestException("Nombre y fechas válidas (inicio <= fin) son obligatorios.");
         }
-        FestivalDTO festivalActualizado = festivalService.actualizarFestival(id, festivalDTO, idPromotorAutenticado);
-        log.info("Festival ID {} actualizado por promotor ID {}.", id, idPromotorAutenticado);
+        FestivalDTO festivalActualizado = festivalService.actualizarFestival(id, festivalDTO, idUsuarioActualizador);
+        log.info("Festival ID {} actualizado por usuario ID {}.", id, idUsuarioActualizador);
         return Response.ok(festivalActualizado).build();
     }
 
     /**
-     * Elimina un festival existente. Requiere rol PROMOTOR propietario.
+     * Elimina un festival existente. Requiere rol PROMOTOR propietario o ADMIN.
      *
      * @param id ID del festival a eliminar.
      * @return 204 No Content, 400/401/403/404 Error, 409 Conflict (FKs), 500
@@ -148,19 +154,16 @@ public class FestivalResource {
      */
     @DELETE
     @Path("/{id}")
+    @RolesAllowed({"ADMIN", "PROMOTOR"})
     public Response eliminarFestival(@PathParam("id") Integer id) {
         log.info("DELETE /festivales/{}", id);
-        // Las excepciones de autenticación/autorización ya se propagan.
-        // Se obtiene el ID del usuario autenticado, sin forzar un rol específico aquí.
-        // La validación de si es ADMIN o PROMOTOR dueño se delega al servicio.
-        Integer idUsuarioAutenticado = obtenerIdUsuarioAutenticado(); // <-- CAMBIO: Obtener ID sin verificar rol específico
+        Integer idUsuarioAutenticado = Integer.parseInt(securityContext.getUserPrincipal().getName());
 
         if (id == null) {
             throw new BadRequestException("ID de festival inválido.");
         }
-        // Llamada al servicio, que ya contiene la lógica de autorización (ADMIN o PROMOTOR dueño)
-        festivalService.eliminarFestival(id, idUsuarioAutenticado); // <-- Se pasa el ID del usuario autenticado
-        log.info("Festival ID {} eliminado por usuario ID {}.", id, idUsuarioAutenticado); // Log actualizado
+        festivalService.eliminarFestival(id, idUsuarioAutenticado);
+        log.info("Festival ID {} eliminado por usuario ID {}.", id, idUsuarioAutenticado);
         return Response.noContent().build();
     }
 
@@ -175,6 +178,7 @@ public class FestivalResource {
      */
     @GET
     @Path("/publicados")
+    @PermitAll
     public Response buscarFestivalesPublicados(
             @QueryParam("fechaDesde") String fechaDesdeStr,
             @QueryParam("fechaHasta") String fechaHastaStr) {
@@ -204,9 +208,10 @@ public class FestivalResource {
      */
     @GET
     @Path("/mis-festivales")
+    @RolesAllowed("PROMOTOR")
     public Response obtenerMisFestivales() {
         log.info("GET /festivales/mis-festivales");
-        Integer idPromotorAutenticado = obtenerIdUsuarioAutenticadoYVerificarRol(RolUsuario.PROMOTOR);
+        Integer idPromotorAutenticado = Integer.parseInt(securityContext.getUserPrincipal().getName());
 
         List<FestivalDTO> festivales = festivalService.obtenerFestivalesPorPromotor(idPromotorAutenticado);
         log.info("Devolviendo {} festivales para promotor ID {}", festivales.size(), idPromotorAutenticado);
@@ -214,9 +219,9 @@ public class FestivalResource {
     }
 
     /**
-     * Cambia el estado de un festival propio. Requiere rol PROMOTOR y ser
-     * dueño. ¡ADVERTENCIA! La lógica actual del servicio permite al promotor
-     * cambiar a cualquier estado.
+     * Cambia el estado de un festival propio. Requiere rol PROMOTOR o ADMIN y
+     * ser dueño. ¡ADVERTENCIA! La lógica actual del servicio permite al
+     * promotor cambiar a cualquier estado.
      *
      * @param id ID del festival.
      * @param nuevoEstadoStr Nuevo estado (String).
@@ -225,11 +230,12 @@ public class FestivalResource {
      */
     @PUT
     @Path("/{id}/estado")
+    @RolesAllowed({"ADMIN", "PROMOTOR"})
     public Response cambiarEstadoFestival(
             @PathParam("id") Integer id,
             @QueryParam("nuevoEstado") String nuevoEstadoStr) {
         log.warn("PUT /festivales/{}/estado por promotor (¡Permite cualquier estado!). Nuevo: {}", id, nuevoEstadoStr);
-        Integer idPromotorAutenticado = obtenerIdUsuarioAutenticadoYVerificarRol(RolUsuario.PROMOTOR);
+        Integer idUsuarioActor = Integer.parseInt(securityContext.getUserPrincipal().getName());
 
         if (id == null) {
             throw new BadRequestException("ID festival inválido.");
@@ -241,18 +247,18 @@ public class FestivalResource {
             }
             nuevoEstado = EstadoFestival.valueOf(nuevoEstadoStr.toUpperCase());
         } catch (IllegalArgumentException e) {
-            throw new BadRequestException("Valor 'nuevoEstado' inválido. Posibles: BORRADOR, PUBLICADO, CANCELADO, FINALIZADO."); // Incluir todos los posibles estados.
+            throw new BadRequestException("Valor 'nuevoEstado' inválido. Posibles: BORRADOR, PUBLICADO, CANCELADO, FINALIZADO.");
         }
 
-        FestivalDTO festivalActualizado = festivalService.cambiarEstadoFestival(id, nuevoEstado, idPromotorAutenticado);
-        log.info("Estado festival ID {} cambiado a {} por promotor ID {}.", id, nuevoEstado, idPromotorAutenticado);
+        FestivalDTO festivalActualizado = festivalService.cambiarEstadoFestival(id, nuevoEstado, idUsuarioActor);
+        log.info("Estado festival ID {} cambiado a {} por usuario ID {}.", id, nuevoEstado, idUsuarioActor);
         return Response.ok(festivalActualizado).build();
     }
 
     // --- Métodos Auxiliares de Seguridad (Simulados/Placeholder) ---
     /**
      * Obtiene ID de usuario autenticado desde SecurityContext. Lanza
-     * excepciones JAX-RS.
+     * excepciones JAX-RS si no autenticado o error.
      */
     private Integer obtenerIdUsuarioAutenticado() {
         if (securityContext == null || securityContext.getUserPrincipal() == null) {
@@ -263,28 +269,5 @@ public class FestivalResource {
         } catch (NumberFormatException e) {
             throw new InternalServerErrorException("Error procesando identidad del usuario.");
         }
-    }
-
-    /**
-     * Verifica si el usuario autenticado tiene el rol especificado.
-     */
-    private boolean esRol(RolUsuario rol) {
-        if (securityContext == null) {
-            return false;
-        }
-        return securityContext.isUserInRole(rol.name());
-    }
-
-    /**
-     * Obtiene ID y verifica rol. Lanza excepciones JAX-RS si falla.
-     */
-    private Integer obtenerIdUsuarioAutenticadoYVerificarRol(RolUsuario rolRequerido) {
-        Integer userId = obtenerIdUsuarioAutenticado();
-        if (!esRol(rolRequerido)) {
-            log.warn("Usuario ID {} no tiene el rol requerido {}", userId, rolRequerido);
-            throw new ForbiddenException("Acceso denegado. Rol requerido: " + rolRequerido);
-        }
-        log.trace("Usuario ID {} verificado con rol {}", userId, rolRequerido);
-        return userId;
     }
 }
