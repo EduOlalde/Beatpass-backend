@@ -6,6 +6,7 @@ import com.beatpass.model.RolUsuario;
 import com.beatpass.service.UsuarioService;
 import com.beatpass.service.UsuarioServiceImpl;
 
+import jakarta.annotation.security.RolesAllowed; // Importar esta anotación
 import jakarta.validation.Valid;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.Context;
@@ -49,9 +50,10 @@ public class UsuarioResource {
      * @return 201 Created con DTO creado, 400/401/403/409 Error, 500 Error.
      */
     @POST
+    @RolesAllowed("ADMIN") // <--- Aplicamos la anotación aquí
     public Response crearUsuario(@Valid UsuarioCreacionDTO usuarioCreacionDTO) {
         log.info("POST /usuarios para email: {}", usuarioCreacionDTO != null ? usuarioCreacionDTO.getEmail() : "null");
-        verificarAccesoAdmin();
+        // Se elimina la llamada a verificarAccesoAdmin() ya que @RolesAllowed se encarga
 
         if (usuarioCreacionDTO == null || usuarioCreacionDTO.getEmail() == null || usuarioCreacionDTO.getEmail().isBlank()
                 || usuarioCreacionDTO.getPassword() == null || usuarioCreacionDTO.getPassword().isEmpty()
@@ -78,20 +80,20 @@ public class UsuarioResource {
      */
     @GET
     @Path("/{id}")
+    @RolesAllowed({"ADMIN", "PROMOTOR", "CAJERO"}) // <--- Todos los roles autenticados pueden acceder
     public Response obtenerUsuarioPorId(@PathParam("id") Integer id) {
         log.info("GET /usuarios/{}", id);
-        Integer idUsuarioAutenticado;
-        boolean esAdmin;
-        idUsuarioAutenticado = obtenerIdUsuarioAutenticado();
-        esAdmin = esRol(RolUsuario.ADMIN);
+        Integer idUsuarioAutenticado = Integer.parseInt(securityContext.getUserPrincipal().getName()); // Obtener ID del usuario autenticado
+        boolean esAdmin = securityContext.isUserInRole(RolUsuario.ADMIN.name()); // Verificar si es ADMIN
 
         if (id == null) {
             throw new BadRequestException("ID de usuario inválido.");
         }
 
-        if (idUsuarioAutenticado == null || (!esAdmin && !idUsuarioAutenticado.equals(id))) {
+        // Si no es ADMIN y el ID solicitado no es el propio, denegar acceso
+        if (!esAdmin && !idUsuarioAutenticado.equals(id)) {
             log.warn("Acceso no autorizado a GET /usuarios/{} por usuario {}", id, idUsuarioAutenticado);
-            throw new ForbiddenException("Acceso denegado.");
+            throw new ForbiddenException("Acceso denegado. Solo puede ver su propio perfil o debe ser Administrador.");
         }
 
         Optional<UsuarioDTO> usuarioOpt = usuarioService.obtenerUsuarioPorId(id);
@@ -107,14 +109,15 @@ public class UsuarioResource {
      * @return 200 OK con lista de UsuarioDTO, 400/401/403 Error, 500 Error.
      */
     @GET
+    @RolesAllowed("ADMIN") // <--- Aplicamos la anotación aquí
     public Response obtenerUsuariosPorRol(@QueryParam("rol") String rolStr) {
         log.info("GET /usuarios?rol={}", rolStr);
-        verificarAccesoAdmin(); // Verifica ADMIN - lanza ForbiddenException.
+        // Se elimina la llamada a verificarAccesoAdmin()
 
         RolUsuario rol;
         try {
             if (rolStr == null || rolStr.isBlank()) {
-                throw new IllegalArgumentException("Parámetro 'rol' obligatorio.");
+                throw new BadRequestException("Parámetro 'rol' obligatorio.");
             }
             rol = RolUsuario.valueOf(rolStr.toUpperCase());
         } catch (IllegalArgumentException e) {
@@ -136,9 +139,10 @@ public class UsuarioResource {
      */
     @PUT
     @Path("/{id}/estado")
+    @RolesAllowed("ADMIN") // <--- Aplicamos la anotación aquí
     public Response actualizarEstadoUsuario(@PathParam("id") Integer id, @QueryParam("activo") Boolean activo) {
         log.info("PUT /usuarios/{}/estado?activo={}", id, activo);
-        verificarAccesoAdmin(); // Lanza ForbiddenException
+        // Se elimina la llamada a verificarAccesoAdmin()
 
         if (id == null) {
             throw new BadRequestException("ID usuario inválido.");
@@ -161,15 +165,16 @@ public class UsuarioResource {
      */
     @DELETE
     @Path("/{id}")
+    @RolesAllowed("ADMIN") // <--- Aplicamos la anotación aquí
     public Response eliminarUsuario(@PathParam("id") Integer id) {
         log.info("DELETE /usuarios/{}", id);
-        verificarAccesoAdmin(); // Lanza ForbiddenException
+        // Se elimina la llamada a verificarAccesoAdmin()
         if (id == null) {
             throw new BadRequestException("ID usuario inválido.");
         }
 
         // Evitar que un admin se borre a sí mismo
-        Integer idAdminAutenticado = obtenerIdUsuarioAutenticado(); // Lanza NotAuthorizedException
+        Integer idAdminAutenticado = Integer.parseInt(securityContext.getUserPrincipal().getName()); // Obtener ID del usuario autenticado
         if (id.equals(idAdminAutenticado)) {
             throw new BadRequestException("Un administrador no puede eliminarse a sí mismo.");
         }
@@ -180,13 +185,10 @@ public class UsuarioResource {
     }
 
     // --- Métodos Auxiliares ---
-    /**
-     * El método `crearRespuestaError` se ha vuelto redundante y se puede
-     * eliminar después de implementar el `GenericExceptionMapper`. El
-     * `ExceptionMapper` ahora se encarga de traducir las excepciones a
-     * respuestas JSON.
-     */
-    // private Response crearRespuestaError(Response.Status status, String mensaje) { ... }
+    // Los métodos 'obtenerIdUsuarioAutenticado', 'esRol' y 'verificarAccesoAdmin'
+    // se vuelven redundantes para la autorización de rol gracias a @RolesAllowed,
+    // pero 'obtenerIdUsuarioAutenticado' todavía puede ser útil para obtener el ID.
+    // Los dejamos para compatibilidad con otros endpoints o si se requiere lógica de autorización más compleja (ej. "ser dueño").
     /**
      * Obtiene ID del usuario autenticado. Lanza excepción JAX-RS si no
      * autenticado o error.
@@ -200,23 +202,5 @@ public class UsuarioResource {
         } catch (NumberFormatException e) {
             throw new InternalServerErrorException("Error procesando identidad.");
         }
-    }
-
-    /**
-     * Verifica si el usuario actual tiene el rol especificado.
-     */
-    private boolean esRol(RolUsuario rol) {
-        return securityContext != null && securityContext.isUserInRole(rol.name());
-    }
-
-    /**
-     * Verifica si el usuario tiene rol ADMIN. Lanza ForbiddenException si no.
-     */
-    private void verificarAccesoAdmin() {
-        if (!esRol(RolUsuario.ADMIN)) {
-            log.warn("Acceso denegado. Rol ADMIN requerido.");
-            throw new ForbiddenException("Acceso denegado. Se requiere rol de Administrador.");
-        }
-        log.trace("Acceso ADMIN verificado.");
     }
 }

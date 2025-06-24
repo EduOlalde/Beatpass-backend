@@ -21,6 +21,7 @@ import com.beatpass.service.CompradorServiceImpl;
 import com.beatpass.service.UsuarioService;
 import com.beatpass.model.EstadoFestival;
 import com.beatpass.model.RolUsuario;
+import jakarta.annotation.security.RolesAllowed;
 import jakarta.validation.Valid;
 
 import jakarta.ws.rs.*;
@@ -46,6 +47,7 @@ import java.util.Map;
 @Path("/admin")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
+@RolesAllowed("ADMIN")
 public class AdminResource {
 
     private static final Logger log = LoggerFactory.getLogger(AdminResource.class);
@@ -90,7 +92,6 @@ public class AdminResource {
 
     private Response listarUsuariosPorRol(RolUsuario rol) {
         log.debug("GET /admin/usuarios/listar para rol: {}", rol);
-        Integer idAdmin = verificarAccesoAdmin();
         List<UsuarioDTO> listaUsuarios = usuarioService.obtenerUsuariosPorRol(rol);
         return Response.ok(listaUsuarios).build();
     }
@@ -106,7 +107,6 @@ public class AdminResource {
     @Path("/usuarios/{idUsuario}")
     public Response obtenerUsuarioPorId(@PathParam("idUsuario") Integer idUsuario) {
         log.debug("GET /admin/usuarios/{}", idUsuario);
-        Integer idAdmin = verificarAccesoAdmin();
         if (idUsuario == null) {
             throw new BadRequestException("ID Usuario no válido.");
         }
@@ -127,7 +127,6 @@ public class AdminResource {
     @GET
     @Path("/clientes")
     public Response listarClientes(@QueryParam("tab") String tab, @QueryParam("buscar") String searchTerm) {
-        verificarAccesoAdmin();
         String activeTab = "compradores".equalsIgnoreCase(tab) ? "compradores" : "asistentes";
 
         Map<String, List<?>> data = new HashMap<>();
@@ -151,7 +150,6 @@ public class AdminResource {
     @POST
     @Path("/usuarios")
     public Response crearUsuario(@Valid UsuarioCreacionDTO usuarioCreacionDTO) {
-        verificarAccesoAdmin();
         log.info("POST /admin/usuarios (CREACIÓN Admin) para email: {}", usuarioCreacionDTO.getEmail());
 
         UsuarioDTO creado = usuarioService.crearUsuario(usuarioCreacionDTO);
@@ -173,7 +171,6 @@ public class AdminResource {
             @PathParam("idUsuario") Integer idUsuario,
             @Valid UsuarioUpdateDTO updateRequest) {
 
-        verificarAccesoAdmin();
         if (idUsuario == null) {
             throw new BadRequestException("ID Usuario no válido.");
         }
@@ -199,7 +196,6 @@ public class AdminResource {
             EstadoUpdateDTO estadoUpdate) {
 
         log.info("PUT /admin/usuarios/{}/estado a {}", idUsuario, estadoUpdate.getNuevoEstado());
-        verificarAccesoAdmin();
         if (idUsuario == null || estadoUpdate.getNuevoEstado() == null || estadoUpdate.getNuevoEstado().isBlank()) {
             throw new BadRequestException("Faltan parámetros requeridos (idUsuario, nuevoEstado).");
         }
@@ -224,11 +220,10 @@ public class AdminResource {
     @DELETE
     @Path("/usuarios/{idUsuario}")
     public Response eliminarUsuario(@PathParam("idUsuario") Integer idUsuario) {
-        verificarAccesoAdmin();
         if (idUsuario == null) {
             throw new BadRequestException("ID Usuario no válido.");
         }
-        Integer idAdminAutenticado = obtenerIdUsuarioAutenticado();
+        Integer idAdminAutenticado = Integer.parseInt(securityContext.getUserPrincipal().getName()); // Obtener ID del usuario autenticado
         if (idUsuario.equals(idAdminAutenticado)) {
             throw new BadRequestException("Un administrador no puede eliminarse a sí mismo.");
         }
@@ -250,7 +245,6 @@ public class AdminResource {
     public Response crearFestivalAdmin(
             @Valid AdminFestivalCreacionDTO festivalCreacionRequest) {
 
-        verificarAccesoAdmin();
         log.info("POST /admin/festivales (CREACIÓN Admin) para promotor ID: {}", festivalCreacionRequest.getIdPromotorSeleccionado());
 
         FestivalDTO festivalDTO = new FestivalDTO();
@@ -271,7 +265,6 @@ public class AdminResource {
     @Path("/festivales")
     public Response listarTodosFestivales(@QueryParam("estado") String estadoFilter) {
         log.debug("GET /admin/festivales. Filtro estado: '{}'", estadoFilter);
-        verificarAccesoAdmin();
 
         List<FestivalDTO> listaFestivales;
         EstadoFestival estadoEnum = null;
@@ -301,7 +294,7 @@ public class AdminResource {
     @Path("/festivales/{idFestival}/confirmar")
     public Response confirmarFestival(@PathParam("idFestival") Integer idFestival) {
         log.info("PUT /admin/festivales/{}/confirmar", idFestival);
-        Integer idAdmin = verificarAccesoAdmin();
+        Integer idAdmin = Integer.parseInt(securityContext.getUserPrincipal().getName()); // Obtener ID del usuario autenticado
         if (idFestival == null) {
             throw new BadRequestException("Falta idFestival.");
         }
@@ -325,7 +318,7 @@ public class AdminResource {
             EstadoUpdateDTO estadoUpdate) {
 
         log.info("PUT /admin/festivales/{}/estado a {}", idFestival, estadoUpdate.getNuevoEstado());
-        Integer idAdmin = verificarAccesoAdmin();
+        Integer idAdmin = Integer.parseInt(securityContext.getUserPrincipal().getName()); // Obtener ID del usuario autenticado
         if (idFestival == null || estadoUpdate.getNuevoEstado() == null || estadoUpdate.getNuevoEstado().isBlank()) {
             throw new BadRequestException("Faltan parámetros requeridos (idFestival, nuevoEstado).");
         }
@@ -344,9 +337,10 @@ public class AdminResource {
     // --- Gestión de Asistentes ---
     @GET
     @Path("/asistentes")
+    // @RolesAllowed("ADMIN") // Ya se aplica a nivel de clase
     public Response listarAsistentes(@QueryParam("buscar") String searchTerm) {
         log.debug("GET /admin/asistentes. Término búsqueda: '{}'", searchTerm);
-        verificarAccesoAdmin();
+        // verificarAccesoAdmin(); // Se elimina ya que @RolesAllowed se encarga
         List<AsistenteDTO> listaAsistentes;
         try {
             listaAsistentes = asistenteService.buscarAsistentes(searchTerm);
@@ -361,7 +355,6 @@ public class AdminResource {
     @Path("/asistentes/{idAsistente}")
     public Response verDetalleAsistente(@PathParam("idAsistente") Integer idAsistente) {
         log.debug("GET /admin/asistentes/{}", idAsistente);
-        verificarAccesoAdmin();
         if (idAsistente == null) {
             throw new BadRequestException("ID Asistente no proporcionado.");
         }
@@ -378,7 +371,6 @@ public class AdminResource {
             @Valid AsistenteDTO asistenteDTO) {
 
         log.info("PUT /admin/asistentes/{}", idAsistente);
-        verificarAccesoAdmin();
         if (idAsistente == null) {
             throw new BadRequestException("ID Asistente no válido.");
         }
@@ -392,7 +384,7 @@ public class AdminResource {
     @Path("/festivales/{idFestival}/pulseras-nfc")
     public Response listarPulserasPorFestivalAdmin(@PathParam("idFestival") Integer idFestival) {
         log.debug("GET /admin/festivales/{}/pulseras-nfc", idFestival);
-        Integer idAdmin = verificarAccesoAdmin();
+        Integer idAdmin = Integer.parseInt(securityContext.getUserPrincipal().getName()); // Obtener ID del usuario autenticado
         if (idFestival == null) {
             throw new BadRequestException("ID festival no válido.");
         }
@@ -402,27 +394,6 @@ public class AdminResource {
     }
 
     // --- Métodos Auxiliares ---
-    private Integer verificarAccesoAdmin() {
-        if (securityContext == null || securityContext.getUserPrincipal() == null) {
-            throw new NotAuthorizedException("No hay sesión activa.", Response.status(Response.Status.UNAUTHORIZED).build());
-        }
-        String userIdStr = securityContext.getUserPrincipal().getName();
-        Integer userId;
-        try {
-            userId = Integer.parseInt(userIdStr);
-        } catch (NumberFormatException e) {
-            log.error("No se pudo parsear userId '{}' desde Principal.", userIdStr, e);
-            throw new InternalServerErrorException("Error interno de autenticación al parsear ID de usuario.");
-        }
-
-        if (!securityContext.isUserInRole(RolUsuario.ADMIN.name())) {
-            log.warn("Usuario ID {} con rol {} intentó acceder a recurso Admin.", userId, "DESCONOCIDO");
-            throw new ForbiddenException("Acceso denegado. Se requiere rol ADMIN.");
-        }
-        log.debug("Acceso permitido para admin ID: {}", userId);
-        return userId;
-    }
-
     private Integer obtenerIdUsuarioAutenticado() {
         if (securityContext == null || securityContext.getUserPrincipal() == null) {
             throw new NotAuthorizedException("No autenticado.", Response.status(Response.Status.UNAUTHORIZED).build());

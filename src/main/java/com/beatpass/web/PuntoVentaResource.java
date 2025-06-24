@@ -2,10 +2,10 @@ package com.beatpass.web;
 
 import com.beatpass.exception.PulseraNFCNotFoundException;
 import com.beatpass.dto.PulseraNFCDTO;
-import com.beatpass.model.RolUsuario;
 import com.beatpass.service.PulseraNFCService;
 import com.beatpass.service.PulseraNFCServiceImpl;
 
+import jakarta.annotation.security.RolesAllowed;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.MediaType;
@@ -28,6 +28,7 @@ import java.util.Optional;
  */
 @Path("/pos")
 @Produces(MediaType.APPLICATION_JSON)
+@RolesAllowed({"CAJERO", "ADMIN", "PROMOTOR"})
 public class PuntoVentaResource {
 
     private static final Logger log = LoggerFactory.getLogger(PuntoVentaResource.class);
@@ -54,8 +55,7 @@ public class PuntoVentaResource {
     @Path("/pulseras/{codigoUid}")
     public Response obtenerDatosPulsera(@PathParam("codigoUid") String codigoUid) {
         log.debug("GET /pos/pulseras/{}", codigoUid);
-        // Las excepciones de autenticación/autorización ya se propagan.
-        Integer idActor = verificarAccesoActor();
+        Integer idActor = Integer.parseInt(securityContext.getUserPrincipal().getName());
 
         if (codigoUid == null || codigoUid.isBlank()) {
             throw new BadRequestException("Código UID obligatorio.");
@@ -92,7 +92,7 @@ public class PuntoVentaResource {
 
         log.info("POST /pos/pulseras/{}/recargar?festivalId={} - Monto: {}, Metodo: {}",
                 codigoUid, festivalId, monto, metodoPago);
-        Integer idUsuarioCajero = verificarAccesoActor();
+        Integer idUsuarioCajero = Integer.parseInt(securityContext.getUserPrincipal().getName());
 
         if (festivalId == null) {
             throw new BadRequestException("Parámetro 'festivalId' obligatorio.");
@@ -100,7 +100,6 @@ public class PuntoVentaResource {
         if (codigoUid == null || codigoUid.isBlank()) {
             throw new BadRequestException("Código UID obligatorio.");
         }
-        // Validación del monto se delega al servicio
 
         PulseraNFCDTO pulseraActualizada = pulseraNFCService.registrarRecarga(codigoUid, monto, metodoPago, idUsuarioCajero, festivalId);
         log.info("Recarga exitosa UID {} en festival {}. Nuevo saldo: {}", codigoUid, festivalId, pulseraActualizada.getSaldo());
@@ -131,15 +130,14 @@ public class PuntoVentaResource {
 
         log.info("POST /pos/pulseras/{}/consumir - Monto: {}, Desc: {}, FestivalID: {}",
                 codigoUid, monto, descripcion, idFestival);
-        Integer idActor = verificarAccesoActor();
+        Integer idActor = Integer.parseInt(securityContext.getUserPrincipal().getName());
 
         if (codigoUid == null || codigoUid.isBlank()) {
             throw new BadRequestException("Código UID obligatorio.");
         }
-        if (idFestival == null) { // Aseguramos que idFestival sea obligatorio
+        if (idFestival == null) {
             throw new BadRequestException("Parámetro 'idFestival' obligatorio.");
         }
-        // Validación de otros params en servicio
 
         PulseraNFCDTO pulseraActualizada = pulseraNFCService.registrarConsumo(codigoUid, monto, descripcion, idFestival, idPuntoVenta, idActor);
         log.info("Consumo {} registrado UID {} fest {}. Nuevo saldo: {}", monto, codigoUid, idFestival, pulseraActualizada.getSaldo());
@@ -168,8 +166,6 @@ public class PuntoVentaResource {
         log.info("POST /pos/pulseras/asociar-pulsera - QR Entrada: {}, UID Pulsera: {}, FestivalID: {}",
                 qrLog, codigoUidPulsera, idFestival);
 
-        verificarAccesoActor();
-
         if (codigoQrEntrada == null || codigoQrEntrada.isBlank()
                 || codigoUidPulsera == null || codigoUidPulsera.isBlank()) {
             throw new BadRequestException("Los parámetros 'codigoQrEntrada' y 'codigoUidPulsera' son obligatorios.");
@@ -178,6 +174,7 @@ public class PuntoVentaResource {
             throw new BadRequestException("El parámetro 'idFestival' es obligatorio.");
         }
 
+        Integer idActor = Integer.parseInt(securityContext.getUserPrincipal().getName());
         PulseraNFCDTO pulseraAsociadaDTO = pulseraNFCService.asociarPulseraViaQrEntrada(codigoQrEntrada, codigoUidPulsera, idFestival);
 
         Map<String, Object> successResponse = new HashMap<>();
@@ -187,42 +184,4 @@ public class PuntoVentaResource {
         log.info("Pulsera UID {} asociada a entrada QR {} en festival {}", pulseraAsociadaDTO.getCodigoUid(), qrLog, idFestival);
         return Response.ok(successResponse).build();
     }
-
-    // --- Métodos Auxiliares ---
-    /**
-     * Verifica autenticación y rol (CAJERO, ADMIN, PROMOTOR). Lanza excepciones
-     * JAX-RS.
-     *
-     * @return User ID del actor autenticado.
-     * @throws NotAuthorizedException si no está autenticado.
-     * @throws ForbiddenException si no tiene el rol adecuado.
-     * @throws InternalServerErrorException si hay problemas con el ID de
-     * usuario.
-     */
-    private Integer verificarAccesoActor() {
-        if (securityContext == null || securityContext.getUserPrincipal() == null) {
-            log.warn("Intento de acceso POS sin SecurityContext válido.");
-            throw new NotAuthorizedException("Autenticación requerida.", Response.status(Response.Status.UNAUTHORIZED).build());
-        }
-        String userIdStr = securityContext.getUserPrincipal().getName();
-        Integer userId;
-        try {
-            userId = Integer.parseInt(userIdStr);
-        } catch (NumberFormatException e) {
-            log.error("No se pudo parsear userId '{}' desde Principal.", userIdStr, e);
-            throw new InternalServerErrorException("Error interno de autenticación al parsear ID de usuario.");
-        }
-
-        boolean tieneRolPermitido = securityContext.isUserInRole(RolUsuario.CAJERO.name())
-                || securityContext.isUserInRole(RolUsuario.ADMIN.name())
-                || securityContext.isUserInRole(RolUsuario.PROMOTOR.name());
-
-        if (!tieneRolPermitido) {
-            log.warn("Usuario ID {} (Roles: {}) intentó acceder a POS sin rol permitido (CAJERO, ADMIN, PROMOTOR).", userId, securityContext.getUserPrincipal());
-            throw new ForbiddenException("Rol no autorizado para esta operación.");
-        }
-        log.debug("Acceso POS permitido para actor ID: {}", userId);
-        return userId;
-    }
-
 }
