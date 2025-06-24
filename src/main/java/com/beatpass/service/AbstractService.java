@@ -1,5 +1,10 @@
 package com.beatpass.service;
 
+import com.beatpass.exception.FestivalNotFoundException;
+import com.beatpass.exception.UsuarioNotFoundException;
+import com.beatpass.model.Festival;
+import com.beatpass.model.RolUsuario;
+import com.beatpass.model.Usuario;
 import com.beatpass.util.JPAUtil;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityTransaction;
@@ -10,8 +15,8 @@ import java.util.function.Function;
 
 /**
  * Clase base abstracta para servicios que necesitan gestión transaccional de
- * JPA. Proporciona métodos para ejecutar operaciones dentro de una transacción
- * y manejar el EntityManager.
+ * JPA. Proporciona métodos para ejecutar operaciones y lógica de negocio común,
+ * como la verificación de permisos.
  */
 public abstract class AbstractService {
 
@@ -19,16 +24,7 @@ public abstract class AbstractService {
 
     /**
      * Ejecuta una operación de lectura dentro de un EntityManager. El
-     * EntityManager se abrirá y cerrará automáticamente. No se gestiona ninguna
-     * transacción, ya que es para operaciones de solo lectura.
-     *
-     * @param <R> Tipo de retorno de la operación.
-     * @param operation La función que contiene la lógica de negocio. Recibe un
-     * EntityManager.
-     * @param operationName Nombre de la operación para fines de logging.
-     * @return El resultado de la operación.
-     * @throws RuntimeException Si ocurre algún error durante la operación o la
-     * gestión del EntityManager.
+     * EntityManager se gestiona automáticamente.
      */
     protected <R> R executeRead(Function<EntityManager, R> operation, String operationName) {
         EntityManager em = null;
@@ -48,16 +44,7 @@ public abstract class AbstractService {
 
     /**
      * Ejecuta una operación de escritura dentro de una transacción de JPA. El
-     * EntityManager y la transacción se gestionan automáticamente (begin,
-     * commit/rollback, close).
-     *
-     * @param <R> Tipo de retorno de la operación.
-     * @param operation La función que contiene la lógica de negocio. Recibe un
-     * EntityManager.
-     * @param operationName Nombre de la operación para fines de logging.
-     * @return El resultado de la operación.
-     * @throws RuntimeException Si ocurre algún error durante la operación o la
-     * gestión de la transacción.
+     * EntityManager y la transacción se gestionan automáticamente.
      */
     protected <R> R executeTransactional(Function<EntityManager, R> operation, String operationName) {
         EntityManager em = null;
@@ -80,25 +67,66 @@ public abstract class AbstractService {
     }
 
     /**
-     * Maneja excepciones, realizando un rollback si la transacción está activa
-     * y mapeando la excepción a un tipo RuntimeException adecuado.
+     * Método centralizado de autorización. Verifica si un usuario (actor) tiene
+     * permisos sobre un festival. El permiso se concede si el actor es ADMIN o
+     * si es un PROMOTOR dueño del festival.
      *
-     * @param e La excepción original.
-     * @param tx La transacción actual (puede ser nula).
-     * @param operationName El nombre de la operación en la que ocurrió el
-     * error.
+     * @param em El EntityManager activo para realizar las consultas.
+     * @param idFestival El ID del festival sobre el cual se verifica el
+     * permiso.
+     * @param idActor El ID del usuario que intenta realizar la acción.
+     * @throws UsuarioNotFoundException Si el actor no se encuentra.
+     * @throws FestivalNotFoundException Si el festival no se encuentra.
+     * @throws SecurityException Si el actor no tiene los permisos requeridos.
      */
+    protected void verificarPermisoSobreFestival(EntityManager em, Integer idFestival, Integer idActor) {
+        if (idFestival == null) {
+            throw new FestivalNotFoundException("El ID del festival no puede ser nulo para la verificación de permisos.");
+        }
+        if (idActor == null) {
+            throw new IllegalArgumentException("El ID del usuario actor no puede ser nulo.");
+        }
+
+        // Buscar al actor que realiza la acción
+        Usuario actor = em.find(Usuario.class, idActor);
+        if (actor == null) {
+            throw new UsuarioNotFoundException("Usuario actor no encontrado con ID: " + idActor);
+        }
+
+        // Un ADMIN siempre tiene permiso
+        if (actor.getRol() == RolUsuario.ADMIN) {
+            log.trace("Permiso concedido para festival ID {} a usuario ID {} (Rol: ADMIN).", idFestival, idActor);
+            return;
+        }
+
+        // Buscar el festival
+        Festival festival = em.find(Festival.class, idFestival);
+        if (festival == null) {
+            throw new FestivalNotFoundException("Festival no encontrado con ID: " + idFestival);
+        }
+
+        // Si el actor es PROMOTOR, verificar que sea el dueño
+        if (actor.getRol() == RolUsuario.PROMOTOR) {
+            if (festival.getPromotor() != null && festival.getPromotor().getIdUsuario().equals(idActor)) {
+                log.trace("Permiso concedido para festival ID {} a usuario promotor dueño ID {}.", idFestival, idActor);
+                return;
+            }
+        }
+
+        // Si no es ADMIN ni el PROMOTOR dueño, denegar acceso
+        log.warn("Intento de acceso no autorizado por usuario ID {} (Rol: {}) al festival ID {} (Propiedad de Promotor ID {})",
+                idActor,
+                actor.getRol(),
+                festival.getIdFestival(),
+                festival.getPromotor() != null ? festival.getPromotor().getIdUsuario() : "N/A");
+        throw new SecurityException("El usuario no tiene permiso para acceder a los recursos de este festival.");
+    }
+
     protected void handleException(Exception e, EntityTransaction tx, String operationName) {
         log.debug("Manejando excepción durante la acción '{}'. Intentando rollback.", operationName);
         rollbackTransaction(tx, operationName);
     }
 
-    /**
-     * Realiza un rollback de la transacción si está activa.
-     *
-     * @param tx La transacción a la que se le hará rollback.
-     * @param operationName El contexto de la operación para el log.
-     */
     protected void rollbackTransaction(EntityTransaction tx, String operationName) {
         if (tx != null && tx.isActive()) {
             try {
@@ -110,11 +138,6 @@ public abstract class AbstractService {
         }
     }
 
-    /**
-     * Cierra el EntityManager si está abierto.
-     *
-     * @param em El EntityManager a cerrar.
-     */
     protected void closeEntityManager(EntityManager em) {
         if (em != null && em.isOpen()) {
             try {
@@ -126,14 +149,6 @@ public abstract class AbstractService {
         }
     }
 
-    /**
-     * Mapea una excepción genérica a una RuntimeException específica de la capa
-     * de servicio, o la envuelve en una RuntimeException si no es una excepción
-     * de negocio conocida.
-     *
-     * @param e La excepción a mapear.
-     * @return Una RuntimeException adecuada.
-     */
     protected RuntimeException mapException(Exception e) {
         if (e instanceof RuntimeException) {
             return (RuntimeException) e;

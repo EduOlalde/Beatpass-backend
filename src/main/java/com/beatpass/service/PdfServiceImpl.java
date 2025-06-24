@@ -16,23 +16,30 @@ import java.io.IOException;
 import java.util.Base64;
 import java.util.List;
 
+/**
+ * Implementación del servicio de generación de documentos PDF. Utiliza Apache
+ * PDFBox.
+ */
 public class PdfServiceImpl implements PdfService {
 
     private static final Logger log = LoggerFactory.getLogger(PdfServiceImpl.class);
 
-    // Implementación de generar un PDF con múltiples entradas, una por página.
+    public PdfServiceImpl() {
+        // Este servicio no tiene dependencias inyectables.
+    }
+
     @Override
     public byte[] generarPdfMultiplesEntradas(List<EntradaDTO> entradas, String nombreFestival) throws IOException {
         if (entradas == null || entradas.isEmpty()) {
             log.warn("No se pueden generar entradas en PDF: la lista de entradas está vacía o es nula.");
-            return new byte[0]; // Devuelve un array vacío si no hay entradas
+            return new byte[0];
         }
 
         try (PDDocument document = new PDDocument()) {
             PDType1Font fontBold = new PDType1Font(Standard14Fonts.FontName.HELVETICA_BOLD);
             PDType1Font fontRegular = new PDType1Font(Standard14Fonts.FontName.HELVETICA);
-            float lineHeight = 15f; // Espacio entre líneas de texto
-            float margin = 40f;   // Margen de la página
+            float lineHeight = 15f;
+            float margin = 40f;
 
             for (EntradaDTO entrada : entradas) {
                 PDPage page = new PDPage(PDRectangle.A4);
@@ -41,19 +48,6 @@ public class PdfServiceImpl implements PdfService {
 
                     float currentY = PDRectangle.A4.getHeight() - margin;
 
-                    // Logo (Placeholder)
-                    // try {
-                    //     InputStream logoStream = getClass().getResourceAsStream("/path/to/your/logo.png");
-                    //     if (logoStream != null) {
-                    //          PDImageXObject pdLogo = PDImageXObject.createFromByteArray(document, logoStream.readAllBytes(), "logo");
-                    //          float logoWidth = 100;
-                    //          float logoHeight = (pdLogo.getHeight() * logoWidth) / pdLogo.getWidth(); // Mantener proporción
-                    //          contentStream.drawImage(pdLogo, margin, currentY - logoHeight, logoWidth, logoHeight);
-                    //          currentY -= (logoHeight + lineHeight);
-                    //     }
-                    // } catch (Exception e_logo) {
-                    //     log.warn("No se pudo cargar el logo para el PDF: {}", e_logo.getMessage());
-                    // }
                     // Título del Festival
                     contentStream.beginText();
                     contentStream.setFont(fontBold, 18);
@@ -77,13 +71,10 @@ public class PdfServiceImpl implements PdfService {
                     contentStream.setFont(fontBold, 12);
 
                     if (entrada.getNombreAsistente() != null && !entrada.getNombreAsistente().isBlank()) {
-                        // Si la entrada está nominada, muestra el nombre
                         contentStream.showText(entrada.getNombreAsistente());
                     } else if (Boolean.FALSE.equals(entrada.getRequiereNominacion())) {
-                        // Si NO requiere nominación, es al portador
                         contentStream.showText("Al Portador");
                     } else {
-                        // Si requiere nominación y no tiene nombre, está pendiente
                         contentStream.showText("Pendiente de nominar");
                     }
 
@@ -91,14 +82,6 @@ public class PdfServiceImpl implements PdfService {
                     currentY -= lineHeight;
                     contentStream.newLineAtOffset(0, -lineHeight);
 
-                    /* Si se quiere incluir el email
-                    contentStream.showText("Email: ");
-                    contentStream.setFont(fontBold, 12);
-                    contentStream.showText(entrada.getEmailAsistente() != null ? entrada.getEmailAsistente() : "N/A");
-                    contentStream.setFont(fontRegular, 12);
-                    currentY -= lineHeight;
-                    contentStream.newLineAtOffset(0, -lineHeight);
-                     */
                     contentStream.showText("Código QR: ");
                     contentStream.setFont(fontBold, 12);
                     contentStream.showText(entrada.getCodigoQr() != null ? entrada.getCodigoQr() : "N/A");
@@ -114,12 +97,12 @@ public class PdfServiceImpl implements PdfService {
                             byte[] imageBytes = Base64.getDecoder().decode(base64Image);
                             PDImageXObject pdImage = PDImageXObject.createFromByteArray(document, imageBytes, "qr-" + entrada.getIdEntrada());
 
-                            float qrSize = 140f; // Tamaño del QR en el PDF
-                            float qrX = (page.getMediaBox().getWidth() - qrSize) / 2; // Centrar QR horizontalmente
-                            float qrY = currentY - qrSize - lineHeight; // Posicionar debajo del texto
+                            float qrSize = 140f;
+                            float qrX = (page.getMediaBox().getWidth() - qrSize) / 2;
+                            float qrY = currentY - qrSize - lineHeight;
 
                             contentStream.drawImage(pdImage, qrX, qrY, qrSize, qrSize);
-                            currentY = qrY - (lineHeight * 1.5f); // Actualizar Y después del QR
+                            currentY = qrY - (lineHeight * 1.5f);
                             log.debug("Imagen QR añadida al PDF para la entrada ID {}", entrada.getIdEntrada());
                         } catch (IllegalArgumentException | IOException e_qr) {
                             log.error("Error al decodificar o añadir la imagen QR Base64 al PDF para entrada ID {}: {}", entrada.getIdEntrada(), e_qr.getMessage());
@@ -143,7 +126,7 @@ public class PdfServiceImpl implements PdfService {
                     // Instrucciones o pie de página
                     contentStream.beginText();
                     contentStream.setFont(fontRegular, 9);
-                    contentStream.newLineAtOffset(margin, margin + lineHeight * 2); // Posicionar cerca del fondo
+                    contentStream.newLineAtOffset(margin, margin + lineHeight * 2);
                     contentStream.showText("Presenta esta entrada (impresa o en tu dispositivo móvil) en el acceso al festival.");
                     contentStream.newLineAtOffset(0, -lineHeight);
 

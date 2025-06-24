@@ -5,18 +5,19 @@ import com.beatpass.dto.UsuarioDTO;
 import com.beatpass.exception.EmailExistenteException;
 import com.beatpass.exception.PasswordIncorrectoException;
 import com.beatpass.exception.UsuarioNotFoundException;
+import com.beatpass.mapper.UsuarioMapper;
 import com.beatpass.model.RolUsuario;
 import com.beatpass.model.Usuario;
 import com.beatpass.repository.UsuarioRepository;
-import com.beatpass.repository.UsuarioRepositoryImpl;
-import java.util.List;
-import java.util.Optional;
+import jakarta.inject.Inject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import com.beatpass.mapper.UsuarioMapper;
+
+import java.util.List;
+import java.util.Optional;
 
 /**
- * Implementación de UsuarioService.
+ * Implementación del servicio para la gestión de usuarios.
  */
 public class UsuarioServiceImpl extends AbstractService implements UsuarioService {
 
@@ -24,8 +25,9 @@ public class UsuarioServiceImpl extends AbstractService implements UsuarioServic
     private final UsuarioRepository usuarioRepository;
     private final UsuarioMapper usuarioMapper;
 
-    public UsuarioServiceImpl() {
-        this.usuarioRepository = new UsuarioRepositoryImpl();
+    @Inject
+    public UsuarioServiceImpl(UsuarioRepository usuarioRepository) {
+        this.usuarioRepository = usuarioRepository;
         this.usuarioMapper = UsuarioMapper.INSTANCE;
     }
 
@@ -40,7 +42,7 @@ public class UsuarioServiceImpl extends AbstractService implements UsuarioServic
             }
 
             Usuario usuario = usuarioMapper.usuarioCreacionDTOToUsuario(ucDTO);
-            usuario.setEstado(true); // Propiedades no mapeadas directamente, se setean aquí
+            usuario.setEstado(true);
             usuario.setCambioPasswordRequerido(true);
             usuario.setPassword(com.beatpass.util.PasswordUtil.hashPassword(ucDTO.getPassword()));
 
@@ -151,7 +153,7 @@ public class UsuarioServiceImpl extends AbstractService implements UsuarioServic
             }
 
             usuario.setPassword(com.beatpass.util.PasswordUtil.hashPassword(passwordNueva));
-            usuario.setCambioPasswordRequerido(false); // Marcar como actualizado
+            usuario.setCambioPasswordRequerido(false);
             usuarioRepository.save(em, usuario);
             log.info("Contraseña cambiada exitosamente para usuario ID: {}", userId);
             return null;
@@ -201,10 +203,6 @@ public class UsuarioServiceImpl extends AbstractService implements UsuarioServic
         }, "actualizar nombre usuario ID " + id);
     }
 
-    // --- Métodos Privados de Ayuda ---
-    /**
-     * Valida los campos del DTO de creación.
-     */
     private void validarUsuarioCreacionDTO(UsuarioCreacionDTO dto) {
         if (dto == null || dto.getEmail() == null || dto.getEmail().isBlank()
                 || dto.getPassword() == null || dto.getPassword().isEmpty()
@@ -216,10 +214,6 @@ public class UsuarioServiceImpl extends AbstractService implements UsuarioServic
         }
     }
 
-    /**
-     * Valida los parámetros para el cambio de contraseña iniciado por el
-     * usuario.
-     */
     private void validarCambioPassword(Integer userId, String antigua, String nueva) {
         if (userId == null || antigua == null || antigua.isEmpty() || nueva == null || nueva.isEmpty()) {
             throw new IllegalArgumentException("ID usuario, contraseña antigua y nueva son obligatorios.");
@@ -232,9 +226,6 @@ public class UsuarioServiceImpl extends AbstractService implements UsuarioServic
         }
     }
 
-    /**
-     * Valida los parámetros para el cambio de contraseña obligatorio.
-     */
     private void validarPasswordNueva(Integer userId, String nueva) {
         if (userId == null || nueva == null || nueva.isEmpty()) {
             throw new IllegalArgumentException("ID usuario y nueva contraseña son obligatorios.");

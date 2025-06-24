@@ -1,41 +1,26 @@
 package com.beatpass.service;
 
-import com.beatpass.exception.StockInsuficienteException;
-import com.beatpass.exception.PagoInvalidoException;
-import com.beatpass.exception.TipoEntradaNotFoundException;
-import com.beatpass.exception.FestivalNoPublicadoException;
-import com.beatpass.model.Compra;
-import com.beatpass.model.TipoEntrada;
-import com.beatpass.model.Entrada;
-import com.beatpass.model.CompraEntrada;
-import com.beatpass.model.EstadoEntrada;
-import com.beatpass.model.Comprador;
-import com.beatpass.model.EstadoFestival;
-import com.beatpass.model.Festival;
-import com.beatpass.repository.CompraEntradaRepository;
-import com.beatpass.repository.CompraRepository;
-import com.beatpass.repository.CompraEntradaRepositoryImpl;
-import com.beatpass.repository.EntradaRepository;
-import com.beatpass.repository.CompraRepositoryImpl;
-import com.beatpass.repository.TipoEntradaRepository;
-import com.beatpass.repository.EntradaRepositoryImpl;
-import com.beatpass.repository.TipoEntradaRepositoryImpl;
 import com.beatpass.dto.CompraDTO;
 import com.beatpass.dto.EntradaDTO;
 import com.beatpass.dto.IniciarCompraResponseDTO;
+import com.beatpass.exception.FestivalNoPublicadoException;
+import com.beatpass.exception.PagoInvalidoException;
+import com.beatpass.exception.StockInsuficienteException;
+import com.beatpass.exception.TipoEntradaNotFoundException;
+import com.beatpass.mapper.CompraMapper;
+import com.beatpass.mapper.EntradaMapper;
+import com.beatpass.model.*;
+import com.beatpass.repository.*;
 import com.beatpass.util.QRCodeUtil;
-
 import com.stripe.exception.StripeException;
 import com.stripe.model.PaymentIntent;
 import com.stripe.param.PaymentIntentCreateParams;
 import com.stripe.param.PaymentIntentRetrieveParams;
-
+import jakarta.inject.Inject;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.LockModeType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import com.beatpass.mapper.CompraMapper;
-import com.beatpass.mapper.EntradaMapper;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -46,7 +31,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 /**
- * Implementación de VentaService.
+ * Implementación del servicio para la gestión del proceso de venta.
  */
 public class VentaServiceImpl extends AbstractService implements VentaService {
 
@@ -63,13 +48,14 @@ public class VentaServiceImpl extends AbstractService implements VentaService {
 
     private static final String EXPECTED_CURRENCY = "eur";
 
-    public VentaServiceImpl() {
-        this.compradorService = new CompradorServiceImpl();
-        this.tipoEntradaRepository = new TipoEntradaRepositoryImpl();
-        this.compraRepository = new CompraRepositoryImpl();
-        this.compraEntradaRepository = new CompraEntradaRepositoryImpl();
-        this.entradaRepository = new EntradaRepositoryImpl();
-        this.emailService = new EmailServiceImpl();
+    @Inject
+    public VentaServiceImpl(CompradorService compradorService, TipoEntradaRepository tipoEntradaRepository, CompraRepository compraRepository, CompraEntradaRepository compraEntradaRepository, EntradaRepository entradaRepository, EmailService emailService) {
+        this.compradorService = compradorService;
+        this.tipoEntradaRepository = tipoEntradaRepository;
+        this.compraRepository = compraRepository;
+        this.compraEntradaRepository = compraEntradaRepository;
+        this.entradaRepository = entradaRepository;
+        this.emailService = emailService;
         this.compraMapper = CompraMapper.INSTANCE;
         this.entradaMapper = EntradaMapper.INSTANCE;
     }
@@ -180,7 +166,6 @@ public class VentaServiceImpl extends AbstractService implements VentaService {
         }, "iniciarProcesoPago " + idTipoEntrada);
     }
 
-    // --- Métodos privados de ayuda ---
     private void validarParametrosConfirmacion(String email, String nombre, Integer idTipoEntrada, int cantidad, String paymentIntentId) {
         if (email == null || email.isBlank() || nombre == null || nombre.isBlank() || idTipoEntrada == null) {
             throw new IllegalArgumentException("Email, nombre, idTipoEntrada son requeridos.");

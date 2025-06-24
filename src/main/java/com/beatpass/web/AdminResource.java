@@ -1,48 +1,29 @@
 package com.beatpass.web;
 
-import com.beatpass.dto.AsistenteDTO;
-import com.beatpass.dto.EstadoUpdateDTO;
-import com.beatpass.dto.UsuarioCreacionDTO;
-import com.beatpass.dto.AdminFestivalCreacionDTO;
-import com.beatpass.dto.FestivalDTO;
-import com.beatpass.dto.CompradorDTO;
-import com.beatpass.dto.UsuarioUpdateDTO;
-import com.beatpass.dto.UsuarioDTO;
-import com.beatpass.dto.PulseraNFCDTO;
-import com.beatpass.service.FestivalService;
-import com.beatpass.service.PulseraNFCServiceImpl;
-import com.beatpass.service.AsistenteServiceImpl;
-import com.beatpass.service.UsuarioServiceImpl;
-import com.beatpass.service.CompradorService;
-import com.beatpass.service.AsistenteService;
-import com.beatpass.service.FestivalServiceImpl;
-import com.beatpass.service.PulseraNFCService;
-import com.beatpass.service.CompradorServiceImpl;
-import com.beatpass.service.UsuarioService;
+import com.beatpass.dto.*;
 import com.beatpass.model.EstadoFestival;
 import com.beatpass.model.RolUsuario;
+import com.beatpass.service.*;
 import jakarta.annotation.security.RolesAllowed;
+import jakarta.inject.Inject;
 import jakarta.validation.Valid;
-
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.SecurityContext;
 import jakarta.ws.rs.core.UriInfo;
-import java.net.URI;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.net.URI;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 /**
- * Recurso JAX-RS para el panel de Administración (/api/admin). Gestiona
- * Usuarios, Festivales, Asistentes y Pulseras. Requiere rol ADMIN en JWT (via
- * SecurityContext). Ahora devuelve JSON.
+ * Recurso JAX-RS para el panel de Administración (/api/admin). Requiere rol
+ * ADMIN y gestiona Usuarios, Festivales, Asistentes y Pulseras.
  */
 @Path("/admin")
 @Produces(MediaType.APPLICATION_JSON)
@@ -63,12 +44,13 @@ public class AdminResource {
     @Context
     private SecurityContext securityContext;
 
-    public AdminResource() {
-        this.usuarioService = new UsuarioServiceImpl();
-        this.festivalService = new FestivalServiceImpl();
-        this.asistenteService = new AsistenteServiceImpl();
-        this.pulseraNFCService = new PulseraNFCServiceImpl();
-        this.compradorService = new CompradorServiceImpl();
+    @Inject
+    public AdminResource(UsuarioService usuarioService, FestivalService festivalService, AsistenteService asistenteService, PulseraNFCService pulseraNFCService, CompradorService compradorService) {
+        this.usuarioService = usuarioService;
+        this.festivalService = festivalService;
+        this.asistenteService = asistenteService;
+        this.pulseraNFCService = pulseraNFCService;
+        this.compradorService = compradorService;
     }
 
     // --- Gestión de Usuarios ---
@@ -96,13 +78,6 @@ public class AdminResource {
         return Response.ok(listaUsuarios).build();
     }
 
-    /**
-     * Endpoint GET para obtener los datos de un usuario por ID (para edición o
-     * detalle).
-     *
-     * @param idUsuario ID del usuario.
-     * @return 200 OK con UsuarioDTO.
-     */
     @GET
     @Path("/usuarios/{idUsuario}")
     public Response obtenerUsuarioPorId(@PathParam("idUsuario") Integer idUsuario) {
@@ -116,14 +91,6 @@ public class AdminResource {
         return Response.ok(usuario).build();
     }
 
-    /**
-     * Endpoint GET para listar clientes (compradores o asistentes).
-     *
-     * @param tab Pestaña activa ('compradores' o 'asistentes').
-     * @param searchTerm Término de búsqueda.
-     * @return 200 OK con un Map que contiene las listas de
-     * compradores/asistentes.
-     */
     @GET
     @Path("/clientes")
     public Response listarClientes(@QueryParam("tab") String tab, @QueryParam("buscar") String searchTerm) {
@@ -141,12 +108,6 @@ public class AdminResource {
         return Response.ok(data).build();
     }
 
-    /**
-     * Endpoint POST para crear un nuevo usuario.
-     *
-     * @param usuarioCreacionDTO DTO con los datos del nuevo usuario.
-     * @return 201 Created con el UsuarioDTO creado.
-     */
     @POST
     @Path("/usuarios")
     public Response crearUsuario(@Valid UsuarioCreacionDTO usuarioCreacionDTO) {
@@ -157,14 +118,6 @@ public class AdminResource {
         return Response.created(location).entity(creado).build();
     }
 
-    /**
-     * Endpoint PUT para actualizar el nombre de un usuario existente.
-     *
-     * @param idUsuario ID del usuario a actualizar.
-     * @param updateRequest DTO con el nuevo nombre (y quizás otros campos si se
-     * expande).
-     * @return 200 OK con el UsuarioDTO actualizado.
-     */
     @PUT
     @Path("/usuarios/{idUsuario}")
     public Response actualizarNombreUsuario(
@@ -182,13 +135,6 @@ public class AdminResource {
         return Response.ok(actualizado).build();
     }
 
-    /**
-     * Endpoint PUT para cambiar el estado (activo/inactivo) de un usuario.
-     *
-     * @param idUsuario ID del usuario.
-     * @param estadoUpdate DTO con el nuevo estado.
-     * @return 200 OK con el UsuarioDTO actualizado.
-     */
     @PUT
     @Path("/usuarios/{idUsuario}/estado")
     public Response cambiarEstadoUsuario(
@@ -207,23 +153,17 @@ public class AdminResource {
             throw new BadRequestException("Valor de 'nuevoEstado' inválido. Debe ser 'true' o 'false'.", e);
         }
 
-        UsuarioDTO actualizado = usuarioService.actualizarEstadoUsuario(idUsuario, nuevoEstadoBoolean); // Pasa el boolean
+        UsuarioDTO actualizado = usuarioService.actualizarEstadoUsuario(idUsuario, nuevoEstadoBoolean);
         return Response.ok(actualizado).build();
     }
 
-    /**
-     * Endpoint DELETE para eliminar un usuario.
-     *
-     * @param idUsuario ID del usuario a eliminar.
-     * @return 204 No Content.
-     */
     @DELETE
     @Path("/usuarios/{idUsuario}")
     public Response eliminarUsuario(@PathParam("idUsuario") Integer idUsuario) {
         if (idUsuario == null) {
             throw new BadRequestException("ID Usuario no válido.");
         }
-        Integer idAdminAutenticado = Integer.parseInt(securityContext.getUserPrincipal().getName()); // Obtener ID del usuario autenticado
+        Integer idAdminAutenticado = Integer.parseInt(securityContext.getUserPrincipal().getName());
         if (idUsuario.equals(idAdminAutenticado)) {
             throw new BadRequestException("Un administrador no puede eliminarse a sí mismo.");
         }
@@ -233,13 +173,6 @@ public class AdminResource {
     }
 
     // --- Gestión de Festivales ---
-    /**
-     * Endpoint POST para crear un festival (desde admin, asignando promotor).
-     *
-     * @param festivalCreacionRequest DTO con los datos del festival y el ID del
-     * promotor.
-     * @return 201 Created con el FestivalDTO creado.
-     */
     @POST
     @Path("/festivales")
     public Response crearFestivalAdmin(
@@ -276,25 +209,16 @@ public class AdminResource {
             listaFestivales = festivalService.obtenerFestivalesPorEstado(estadoEnum);
         } catch (IllegalArgumentException e) {
             throw new BadRequestException("Estado de filtro inválido: '" + estadoFilter + "'.", e);
-        } catch (Exception e) {
-            log.error("Error obteniendo lista de festivales para admin: {}", e.getMessage(), e);
-            throw new InternalServerErrorException("Error crítico al cargar la lista de festivales.", e);
         }
 
         return Response.ok(listaFestivales).build();
     }
 
-    /**
-     * Endpoint PUT para confirmar un festival (cambiar a PUBLICADO).
-     *
-     * @param idFestival ID del festival.
-     * @return 200 OK con el FestivalDTO actualizado.
-     */
     @PUT
     @Path("/festivales/{idFestival}/confirmar")
     public Response confirmarFestival(@PathParam("idFestival") Integer idFestival) {
         log.info("PUT /admin/festivales/{}/confirmar", idFestival);
-        Integer idAdmin = Integer.parseInt(securityContext.getUserPrincipal().getName()); // Obtener ID del usuario autenticado
+        Integer idAdmin = Integer.parseInt(securityContext.getUserPrincipal().getName());
         if (idFestival == null) {
             throw new BadRequestException("Falta idFestival.");
         }
@@ -303,14 +227,6 @@ public class AdminResource {
         return Response.ok(confirmado).build();
     }
 
-    /**
-     * Endpoint PUT para cambiar el estado de un festival (CANCELADO,
-     * FINALIZADO).
-     *
-     * @param idFestival ID del festival.
-     * @param estadoUpdate DTO con el nuevo estado.
-     * @return 200 OK con el FestivalDTO actualizado.
-     */
     @PUT
     @Path("/festivales/{idFestival}/estado")
     public Response cambiarEstadoFestivalAdmin(
@@ -318,7 +234,7 @@ public class AdminResource {
             EstadoUpdateDTO estadoUpdate) {
 
         log.info("PUT /admin/festivales/{}/estado a {}", idFestival, estadoUpdate.getNuevoEstado());
-        Integer idAdmin = Integer.parseInt(securityContext.getUserPrincipal().getName()); // Obtener ID del usuario autenticado
+        Integer idAdmin = Integer.parseInt(securityContext.getUserPrincipal().getName());
         if (idFestival == null || estadoUpdate.getNuevoEstado() == null || estadoUpdate.getNuevoEstado().isBlank()) {
             throw new BadRequestException("Faltan parámetros requeridos (idFestival, nuevoEstado).");
         }
@@ -337,17 +253,9 @@ public class AdminResource {
     // --- Gestión de Asistentes ---
     @GET
     @Path("/asistentes")
-    // @RolesAllowed("ADMIN") // Ya se aplica a nivel de clase
     public Response listarAsistentes(@QueryParam("buscar") String searchTerm) {
         log.debug("GET /admin/asistentes. Término búsqueda: '{}'", searchTerm);
-        // verificarAccesoAdmin(); // Se elimina ya que @RolesAllowed se encarga
-        List<AsistenteDTO> listaAsistentes;
-        try {
-            listaAsistentes = asistenteService.buscarAsistentes(searchTerm);
-        } catch (Exception e) {
-            log.error("Error obteniendo lista de asistentes: {}", e.getMessage(), e);
-            throw new InternalServerErrorException("Error al cargar la lista de asistentes.", e);
-        }
+        List<AsistenteDTO> listaAsistentes = asistenteService.buscarAsistentes(searchTerm);
         return Response.ok(listaAsistentes).build();
     }
 
@@ -384,24 +292,12 @@ public class AdminResource {
     @Path("/festivales/{idFestival}/pulseras-nfc")
     public Response listarPulserasPorFestivalAdmin(@PathParam("idFestival") Integer idFestival) {
         log.debug("GET /admin/festivales/{}/pulseras-nfc", idFestival);
-        Integer idAdmin = Integer.parseInt(securityContext.getUserPrincipal().getName()); // Obtener ID del usuario autenticado
+        Integer idAdmin = Integer.parseInt(securityContext.getUserPrincipal().getName());
         if (idFestival == null) {
             throw new BadRequestException("ID festival no válido.");
         }
 
         List<PulseraNFCDTO> listaPulseras = pulseraNFCService.obtenerPulserasPorFestival(idFestival, idAdmin);
         return Response.ok(listaPulseras).build();
-    }
-
-    // --- Métodos Auxiliares ---
-    private Integer obtenerIdUsuarioAutenticado() {
-        if (securityContext == null || securityContext.getUserPrincipal() == null) {
-            throw new NotAuthorizedException("No autenticado.", Response.status(Response.Status.UNAUTHORIZED).build());
-        }
-        try {
-            return Integer.parseInt(securityContext.getUserPrincipal().getName());
-        } catch (NumberFormatException e) {
-            throw new InternalServerErrorException("Error procesando identidad del usuario.");
-        }
     }
 }

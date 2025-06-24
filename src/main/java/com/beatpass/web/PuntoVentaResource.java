@@ -1,17 +1,16 @@
 package com.beatpass.web;
 
-import com.beatpass.exception.PulseraNFCNotFoundException;
 import com.beatpass.dto.PulseraNFCDTO;
+import com.beatpass.exception.PulseraNFCNotFoundException;
 import com.beatpass.service.PulseraNFCService;
-import com.beatpass.service.PulseraNFCServiceImpl;
 
 import jakarta.annotation.security.RolesAllowed;
+import jakarta.inject.Inject;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.SecurityContext;
-import jakarta.ws.rs.core.UriInfo;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -23,8 +22,7 @@ import java.util.Optional;
 
 /**
  * Recurso JAX-RS para operaciones de Punto de Venta (POS) (/api/pos). Requiere
- * autenticación JWT (CAJERO, ADMIN o PROMOTOR). Opera en el contexto de un
- * festival específico.
+ * autenticación JWT (CAJERO, ADMIN o PROMOTOR).
  */
 @Path("/pos")
 @Produces(MediaType.APPLICATION_JSON)
@@ -37,20 +35,12 @@ public class PuntoVentaResource {
 
     @Context
     private SecurityContext securityContext;
-    @Context
-    private UriInfo uriInfo; // No se usa actualmente, pero disponible
 
-    public PuntoVentaResource() {
-        this.pulseraNFCService = new PulseraNFCServiceImpl();
+    @Inject
+    public PuntoVentaResource(PulseraNFCService pulseraNFCService) {
+        this.pulseraNFCService = pulseraNFCService;
     }
 
-    /**
-     * Obtiene datos (incluyendo saldo) de una pulsera por UID. Requiere rol
-     * CAJERO, ADMIN o PROMOTOR.
-     *
-     * @param codigoUid UID de la pulsera.
-     * @return 200 OK con PulseraNFCDTO, 400/401/403/404 Error, 500 Error.
-     */
     @GET
     @Path("/pulseras/{codigoUid}")
     public Response obtenerDatosPulsera(@PathParam("codigoUid") String codigoUid) {
@@ -70,17 +60,6 @@ public class PuntoVentaResource {
                 .orElseThrow(() -> new PulseraNFCNotFoundException("Pulsera no encontrada o sin permiso: " + codigoUid));
     }
 
-    /**
-     * Registra una recarga de saldo en una pulsera. Requiere rol CAJERO, ADMIN
-     * o PROMOTOR.
-     *
-     * @param codigoUid UID de la pulsera.
-     * @param festivalId ID del festival (QueryParam obligatorio).
-     * @param monto Monto a recargar (FormParam obligatorio > 0).
-     * @param metodoPago Método de pago (FormParam opcional).
-     * @return 200 OK con PulseraNFCDTO actualizado, 400/401/403/404 Error, 500
-     * Error.
-     */
     @POST
     @Path("/pulseras/{codigoUid}/recargar")
     @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
@@ -106,18 +85,6 @@ public class PuntoVentaResource {
         return Response.ok(pulseraActualizada).build();
     }
 
-    /**
-     * Registra un consumo (gasto) con una pulsera. Requiere rol CAJERO, ADMIN o
-     * PROMOTOR.
-     *
-     * @param codigoUid UID de la pulsera.
-     * @param monto Monto a consumir (FormParam obligatorio > 0).
-     * @param descripcion Descripción (FormParam obligatorio).
-     * @param idFestival ID del festival (FormParam obligatorio).
-     * @param idPuntoVenta ID opcional del punto de venta (FormParam).
-     * @return 200 OK con PulseraNFCDTO actualizado, 400/401/403/404/409 Error,
-     * 500 Error.
-     */
     @POST
     @Path("/pulseras/{codigoUid}/consumir")
     @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
@@ -144,15 +111,6 @@ public class PuntoVentaResource {
         return Response.ok(pulseraActualizada).build();
     }
 
-    /**
-     * Asocia una pulsera NFC a una entrada mediante el código QR de la entrada.
-     * Requiere rol CAJERO, ADMIN o PROMOTOR.
-     *
-     * @param codigoQrEntrada Código QR de la entrada.
-     * @param codigoUidPulsera UID de la pulsera NFC.
-     * @param idFestival ID del festival (obligatorio).
-     * @return 200 OK con mensaje y datos de la pulsera, o error 4xx/5xx.
-     */
     @POST
     @Path("/pulseras/asociar-pulsera")
     @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
@@ -174,7 +132,6 @@ public class PuntoVentaResource {
             throw new BadRequestException("El parámetro 'idFestival' es obligatorio.");
         }
 
-        Integer idActor = Integer.parseInt(securityContext.getUserPrincipal().getName());
         PulseraNFCDTO pulseraAsociadaDTO = pulseraNFCService.asociarPulseraViaQrEntrada(codigoQrEntrada, codigoUidPulsera, idFestival);
 
         Map<String, Object> successResponse = new HashMap<>();
