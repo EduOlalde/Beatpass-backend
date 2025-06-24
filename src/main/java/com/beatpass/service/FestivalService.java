@@ -26,12 +26,23 @@ public interface FestivalService {
     FestivalDTO crearFestival(FestivalDTO festivalDTO, Integer idPromotor);
 
     /**
-     * Obtiene la información de un festival por su ID.
+     * Obtiene la información de un festival por su ID (uso público, sin chequeo
+     * de permisos).
      *
-     * @param id El ID del festival a buscar.
+     * @param id ID del usuario
      * @return Optional con FestivalDTO si se encuentra.
      */
     Optional<FestivalDTO> obtenerFestivalPorId(Integer id);
+
+    /**
+     * Obtiene la información de un festival por su ID, verificando permisos del
+     * actor..
+     *
+     * @param id El ID del festival a buscar.
+     * @param idActor ID del usuario
+     * @return Optional con FestivalDTO si se encuentra.
+     */
+    Optional<FestivalDTO> obtenerFestivalPorId(Integer id, Integer idActor);
 
     /**
      * Actualiza la información de un festival existente (nombre, fechas, etc.).

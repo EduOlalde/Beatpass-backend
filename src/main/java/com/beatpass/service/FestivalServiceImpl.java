@@ -66,8 +66,23 @@ public class FestivalServiceImpl extends AbstractService implements FestivalServ
         }
         return executeRead(em
                 -> festivalRepository.findById(em, id).map(festivalMapper::festivalToFestivalDTO),
-                "obtenerFestivalPorId " + id
+                "obtenerFestivalPorId (Público) " + id
         );
+    }
+
+    @Override
+    public Optional<FestivalDTO> obtenerFestivalPorId(Integer id, Integer idActor) {
+        if (id == null || idActor == null) {
+            return Optional.empty();
+        }
+        return executeRead(em -> {
+            Optional<Festival> festivalOpt = festivalRepository.findById(em, id);
+            if (festivalOpt.isPresent()) {
+                verificarPermisoSobreFestival(em, id, idActor);
+                return festivalOpt.map(festivalMapper::festivalToFestivalDTO);
+            }
+            return Optional.empty();
+        }, "obtenerFestivalPorId " + id + " por actor " + idActor);
     }
 
     @Override

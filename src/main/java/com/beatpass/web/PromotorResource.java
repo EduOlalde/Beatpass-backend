@@ -110,9 +110,8 @@ public class PromotorResource {
             throw new BadRequestException("ID de festival no válido.");
         }
 
-        FestivalDTO festival = festivalService.obtenerFestivalPorId(idFestivalParam)
-                .filter(f -> securityContext.isUserInRole(RolUsuario.ADMIN.name()) || idUsuarioAutenticado.equals(f.getIdPromotor()))
-                .orElseThrow(() -> new ForbiddenException("Festival no encontrado o no pertenece a este promotor."));
+        FestivalDTO festival = festivalService.obtenerFestivalPorId(idFestivalParam, idUsuarioAutenticado)
+                .orElseThrow(() -> new NotFoundException("Festival no encontrado o sin permisos de acceso."));
 
         return Response.ok(festival).build();
     }

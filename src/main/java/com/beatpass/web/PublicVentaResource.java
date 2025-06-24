@@ -88,13 +88,6 @@ public class PublicVentaResource {
         log.info("POST /public/venta/confirmar-compra - Entrada: {}, Cant: {}, Email Comprador: {}, PI: {}",
                 confirmarCompraRequest.getIdEntrada(), confirmarCompraRequest.getCantidad(), confirmarCompraRequest.getEmailComprador(), confirmarCompraRequest.getPaymentIntentId());
 
-        if (confirmarCompraRequest.getIdEntrada() == null || confirmarCompraRequest.getCantidad() == null || confirmarCompraRequest.getCantidad() <= 0
-                || confirmarCompraRequest.getEmailComprador() == null || confirmarCompraRequest.getEmailComprador().isBlank()
-                || confirmarCompraRequest.getNombreComprador() == null || confirmarCompraRequest.getNombreComprador().isBlank()
-                || confirmarCompraRequest.getPaymentIntentId() == null || confirmarCompraRequest.getPaymentIntentId().isBlank()) {
-            throw new BadRequestException("Faltan datos obligatorios (entrada, cantidad>0, email, nombre, paymentIntentId).");
-        }
-
         CompraDTO compraConfirmada = ventaService.confirmarVentaConPago(
                 confirmarCompraRequest.getEmailComprador(),
                 confirmarCompraRequest.getNombreComprador(),
