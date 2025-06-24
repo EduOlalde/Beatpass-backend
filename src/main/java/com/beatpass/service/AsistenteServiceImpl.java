@@ -7,15 +7,14 @@ import com.beatpass.exception.UsuarioNotFoundException;
 import com.beatpass.model.Asistente;
 import com.beatpass.model.EstadoEntrada;
 import com.beatpass.model.Festival;
-import com.beatpass.model.RolUsuario; // Import RolUsuario
-import com.beatpass.model.Usuario; // Import Usuario
+import com.beatpass.model.RolUsuario;
+import com.beatpass.model.Usuario;
 import com.beatpass.repository.AsistenteRepository;
 import com.beatpass.repository.AsistenteRepositoryImpl;
 import com.beatpass.repository.FestivalRepository;
 import com.beatpass.repository.FestivalRepositoryImpl;
-import com.beatpass.repository.UsuarioRepository; // Import UsuarioRepository
-import com.beatpass.repository.UsuarioRepositoryImpl; // Import UsuarioRepositoryImpl
-import com.beatpass.util.JPAUtil;
+import com.beatpass.repository.UsuarioRepository;
+import com.beatpass.repository.UsuarioRepositoryImpl;
 import jakarta.persistence.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,13 +32,13 @@ public class AsistenteServiceImpl extends AbstractService implements AsistenteSe
 
     private final AsistenteRepository asistenteRepository;
     private final FestivalRepository festivalRepository;
-    private final UsuarioRepository usuarioRepository; // Added for fetching User for role check
+    private final UsuarioRepository usuarioRepository;
     private final AsistenteMapper asistenteMapper;
 
     public AsistenteServiceImpl() {
         this.asistenteRepository = new AsistenteRepositoryImpl();
         this.festivalRepository = new FestivalRepositoryImpl();
-        this.usuarioRepository = new UsuarioRepositoryImpl(); // Initialize
+        this.usuarioRepository = new UsuarioRepositoryImpl();
         this.asistenteMapper = AsistenteMapper.INSTANCE;
     }
 
@@ -79,34 +78,41 @@ public class AsistenteServiceImpl extends AbstractService implements AsistenteSe
             throw new IllegalArgumentException("El email es obligatorio para obtener o crear un asistente.");
         }
 
-        EntityManager emLookup = null;
-        try {
-            emLookup = JPAUtil.createEntityManager();
-            Optional<Asistente> existenteOpt = asistenteRepository.findByEmail(emLookup, email);
+        return executeTransactional(em -> {
+            Optional<Asistente> existenteOpt = asistenteRepository.findByEmail(em, email);
 
             if (existenteOpt.isPresent()) {
-                log.debug("Asistente encontrado con email {}", email);
-                return existenteOpt.get();
+                Asistente asistenteExistente = existenteOpt.get();
+                // Opcional: Actualizar nombre/teléfono si el asistente ya existe y los datos son diferentes
+                boolean changed = false;
+                if (nombre != null && !nombre.isBlank() && !nombre.trim().equals(asistenteExistente.getNombre())) {
+                    asistenteExistente.setNombre(nombre.trim());
+                    changed = true;
+                }
+                if (telefono != null && !telefono.trim().equals(asistenteExistente.getTelefono())) {
+                    asistenteExistente.setTelefono(telefono.trim());
+                    changed = true;
+                }
+                if (changed) {
+                    asistenteExistente = asistenteRepository.save(em, asistenteExistente);
+                    log.debug("Asistente existente con email {} actualizado.", email);
+                } else {
+                    log.debug("Asistente encontrado con email {}. No requiere actualización.", email);
+                }
+                return asistenteExistente;
+            } else {
+                log.info("Asistente con email {} no encontrado, creando uno nuevo.", email);
+                if (nombre == null || nombre.isBlank()) {
+                    throw new IllegalArgumentException("El nombre es obligatorio al crear un nuevo asistente.");
+                }
+                Asistente nuevoAsistente = new Asistente();
+                nuevoAsistente.setEmail(email.trim().toLowerCase());
+                nuevoAsistente.setNombre(nombre.trim());
+                nuevoAsistente.setTelefono(telefono != null ? telefono.trim() : null);
+                nuevoAsistente = asistenteRepository.save(em, nuevoAsistente);
+                log.info("Nuevo asistente creado con ID {}", nuevoAsistente.getIdAsistente());
+                return nuevoAsistente;
             }
-        } finally {
-            if (emLookup != null && emLookup.isOpen()) {
-                emLookup.close();
-            }
-        }
-
-        log.info("Asistente con email {} no encontrado, creando uno nuevo.", email);
-        if (nombre == null || nombre.isBlank()) {
-            throw new IllegalArgumentException("El nombre es obligatorio al crear un nuevo asistente.");
-        }
-
-        return executeTransactional(em -> {
-            Asistente nuevoAsistente = new Asistente();
-            nuevoAsistente.setEmail(email.trim().toLowerCase());
-            nuevoAsistente.setNombre(nombre.trim());
-            nuevoAsistente.setTelefono(telefono != null ? telefono.trim() : null);
-            nuevoAsistente = asistenteRepository.save(em, nuevoAsistente);
-            log.info("Nuevo asistente creado con ID {}", nuevoAsistente.getIdAsistente());
-            return nuevoAsistente;
         }, "obtenerOcrearAsistentePorEmail " + email);
     }
 
@@ -156,7 +162,7 @@ public class AsistenteServiceImpl extends AbstractService implements AsistenteSe
     }
 
     @Override
-    public List<AsistenteDTO> obtenerAsistentesPorFestival(Integer idFestival, Integer idActor) { // Renamed idPromotor to idActor
+    public List<AsistenteDTO> obtenerAsistentesPorFestival(Integer idFestival, Integer idActor) {
         log.debug("Service: Obteniendo asistentes para festival ID {} por actor ID {}", idFestival, idActor);
         if (idFestival == null || idActor == null) {
             throw new IllegalArgumentException("ID de festival e ID de actor son requeridos.");
@@ -165,7 +171,7 @@ public class AsistenteServiceImpl extends AbstractService implements AsistenteSe
         return executeRead(em -> {
             Festival festival = festivalRepository.findById(em, idFestival)
                     .orElseThrow(() -> new FestivalNotFoundException("Festival no encontrado con ID: " + idFestival));
-            verificarPropiedadFestival(em, festival, idActor); // Pass em
+            verificarPropiedadFestival(em, festival, idActor);
 
             List<Asistente> asistentes = asistenteRepository.findAsistentesByFestivalId(em, idFestival);
             List<AsistenteDTO> asistenteDTOs = asistenteMapper.toAsistenteDTOList(asistentes);
@@ -199,7 +205,7 @@ public class AsistenteServiceImpl extends AbstractService implements AsistenteSe
     // --- Métodos Privados de Ayuda ---
     // Método auxiliar para rellenar festivalPulseraInfo para una lista de AsistenteDTOs
     private void fillFestivalPulseraInfoForAsistentes(EntityManager em, List<AsistenteDTO> asistenteDTOs) {
-        fillFestivalPulseraInfoForAsistentes(em, asistenteDTOs, null); // Llama a la versión sobrecargada sin filtro de festival
+        fillFestivalPulseraInfoForAsistentes(em, asistenteDTOs, null);
     }
 
     // Sobrecarga para permitir filtrar por un festival específico
@@ -236,12 +242,11 @@ public class AsistenteServiceImpl extends AbstractService implements AsistenteSe
 
         List<Object[]> results = query.getResultList();
 
-        // Mapear los resultados a un mapa temporal para un acceso rápido por asistenteId
         Map<Integer, Map<String, String>> tempPulseraInfo = new HashMap<>();
         for (Object[] row : results) {
             Integer asistenteId = (Integer) row[0];
             String festivalName = (String) row[1];
-            String codigoUid = (String) row[2]; // Puede ser null si no hay pulsera asociada
+            String codigoUid = (String) row[2];
 
             tempPulseraInfo
                     .computeIfAbsent(asistenteId, k -> new LinkedHashMap<>())
@@ -258,7 +263,7 @@ public class AsistenteServiceImpl extends AbstractService implements AsistenteSe
      * festival. Si es PROMOTOR, debe ser el propietario del festival. Si es
      * ADMIN, siempre tiene acceso.
      */
-    private void verificarPropiedadFestival(EntityManager em, Festival festival, Integer idActor) { // Added EntityManager parameter
+    private void verificarPropiedadFestival(EntityManager em, Festival festival, Integer idActor) {
         if (festival == null) {
             throw new FestivalNotFoundException("El festival asociado no puede ser nulo.");
         }
@@ -266,8 +271,7 @@ public class AsistenteServiceImpl extends AbstractService implements AsistenteSe
             throw new IllegalArgumentException("El ID del usuario actor no puede ser nulo.");
         }
 
-        // Fetch the acting user (actor) to check their role.
-        Usuario actor = em.find(Usuario.class, idActor); // Use em.find directly here for simplicity and direct management
+        Usuario actor = em.find(Usuario.class, idActor);
 
         if (actor == null) {
             throw new UsuarioNotFoundException("Usuario actor no encontrado con ID: " + idActor);
