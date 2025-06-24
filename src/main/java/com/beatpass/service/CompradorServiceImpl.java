@@ -3,7 +3,7 @@ package com.beatpass.service;
 import com.beatpass.dto.CompradorDTO;
 import com.beatpass.model.Comprador;
 import com.beatpass.repository.CompradorRepository;
-import com.beatpass.repository.CompradorRepositoryImpl;
+import jakarta.inject.Inject;
 import jakarta.persistence.TypedQuery;
 import java.util.List;
 import org.slf4j.Logger;
@@ -19,8 +19,9 @@ public class CompradorServiceImpl extends AbstractService implements CompradorSe
     private final CompradorRepository compradorRepository;
     private final CompradorMapper compradorMapper;
 
-    public CompradorServiceImpl() {
-        this.compradorRepository = new CompradorRepositoryImpl();
+    @Inject
+    public CompradorServiceImpl(CompradorRepository compradorRepository) {
+        this.compradorRepository = compradorRepository;
         this.compradorMapper = CompradorMapper.INSTANCE;
     }
 

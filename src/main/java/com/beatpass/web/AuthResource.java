@@ -4,10 +4,10 @@ import com.beatpass.dto.CredencialesDTO;
 import com.beatpass.dto.TokenDTO;
 import com.beatpass.model.Usuario;
 import com.beatpass.service.UsuarioService;
-import com.beatpass.service.UsuarioServiceImpl;
 import com.beatpass.util.JwtUtil;
 import com.beatpass.util.PasswordUtil;
 
+import jakarta.inject.Inject;
 import jakarta.validation.Valid;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
@@ -31,8 +31,9 @@ public class AuthResource {
     private final UsuarioService usuarioService;
     private final JwtUtil jwtUtil;
 
-    public AuthResource() {
-        this.usuarioService = new UsuarioServiceImpl();
+    @Inject
+    public AuthResource(UsuarioService usuarioService) {
+        this.usuarioService = usuarioService;
         this.jwtUtil = new JwtUtil();
     }
 

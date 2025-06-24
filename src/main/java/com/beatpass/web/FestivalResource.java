@@ -1,14 +1,14 @@
 package com.beatpass.web;
 
-import com.beatpass.dto.TipoEntradaDTO;
 import com.beatpass.dto.FestivalDTO;
+import com.beatpass.dto.TipoEntradaDTO;
 import com.beatpass.model.EstadoFestival;
-import com.beatpass.service.TipoEntradaServiceImpl;
 import com.beatpass.service.FestivalService;
-import com.beatpass.service.FestivalServiceImpl;
+import com.beatpass.service.TipoEntradaService;
 
 import jakarta.annotation.security.PermitAll;
 import jakarta.annotation.security.RolesAllowed;
+import jakarta.inject.Inject;
 import jakarta.validation.Valid;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.Context;
@@ -24,7 +24,6 @@ import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.Optional;
-import com.beatpass.service.TipoEntradaService;
 
 /**
  * Recurso JAX-RS para la gestión de Festivales (/api/festivales). Expone
@@ -45,19 +44,12 @@ public class FestivalResource {
     @Context
     private SecurityContext securityContext;
 
-    public FestivalResource() {
-        this.festivalService = new FestivalServiceImpl();
-        this.tipoEntradaService = new TipoEntradaServiceImpl();
+    @Inject
+    public FestivalResource(FestivalService festivalService, TipoEntradaService tipoEntradaService) {
+        this.festivalService = festivalService;
+        this.tipoEntradaService = tipoEntradaService;
     }
 
-    /**
-     * Endpoint público GET para obtener tipos de entrada de un festival (solo
-     * si está PUBLICADO).
-     *
-     * @param id ID del festival.
-     * @return 200 OK con lista de TipoEntradaDTO, 400 Bad Request, 404 Not
-     * Found, 500 Error.
-     */
     @GET
     @Path("/{id}/tipos-entrada")
     @PermitAll
@@ -71,13 +63,6 @@ public class FestivalResource {
         return Response.ok(tiposEntrada).build();
     }
 
-    /**
-     * Crea un nuevo festival. Requiere rol PROMOTOR. Estado inicial BORRADOR.
-     *
-     * @param festivalDTO DTO con datos del festival (nombre, fechas, etc.).
-     * @return 201 Created con DTO creado, 400 Bad Request, 401/403 Error, 500
-     * Error.
-     */
     @POST
     @RolesAllowed("PROMOTOR")
     public Response crearFestival(@Valid FestivalDTO festivalDTO) {
@@ -95,13 +80,6 @@ public class FestivalResource {
         return Response.created(location).entity(festivalCreado).build();
     }
 
-    /**
-     * Obtiene detalles de un festival por ID. Acceso público.
-     *
-     * @param id ID del festival.
-     * @return 200 OK con FestivalDTO, 400 Bad Request, 404 Not Found, 500
-     * Error.
-     */
     @GET
     @Path("/{id}")
     @PermitAll
@@ -116,14 +94,6 @@ public class FestivalResource {
                 .orElseThrow(() -> new NotFoundException("Festival no encontrado."));
     }
 
-    /**
-     * Actualiza un festival existente. Requiere rol PROMOTOR propietario o
-     * ADMIN.
-     *
-     * @param id ID del festival a actualizar.
-     * @param festivalDTO DTO con los nuevos datos.
-     * @return 200 OK con DTO actualizado, 400/401/403/404 Error, 500 Error.
-     */
     @PUT
     @Path("/{id}")
     @RolesAllowed({"ADMIN", "PROMOTOR"})
@@ -134,7 +104,6 @@ public class FestivalResource {
         if (id == null) {
             throw new BadRequestException("ID de festival inválido.");
         }
-        // Validaciones previas al servicio
         if (festivalDTO == null || festivalDTO.getNombre() == null || festivalDTO.getNombre().isBlank()
                 || festivalDTO.getFechaInicio() == null || festivalDTO.getFechaFin() == null
                 || festivalDTO.getFechaFin().isBefore(festivalDTO.getFechaInicio())) {
@@ -145,13 +114,6 @@ public class FestivalResource {
         return Response.ok(festivalActualizado).build();
     }
 
-    /**
-     * Elimina un festival existente. Requiere rol PROMOTOR propietario o ADMIN.
-     *
-     * @param id ID del festival a eliminar.
-     * @return 204 No Content, 400/401/403/404 Error, 409 Conflict (FKs), 500
-     * Error.
-     */
     @DELETE
     @Path("/{id}")
     @RolesAllowed({"ADMIN", "PROMOTOR"})
@@ -167,15 +129,6 @@ public class FestivalResource {
         return Response.noContent().build();
     }
 
-    /**
-     * Busca festivales PUBLICADOS dentro de un rango de fechas. Acceso público.
-     *
-     * @param fechaDesdeStr Fecha inicio (YYYY-MM-DD, opcional, default hoy).
-     * @param fechaHastaStr Fecha fin (YYYY-MM-DD, opcional, default hoy + 1
-     * año).
-     * @return 200 OK con lista de FestivalDTO, 400 Bad Request (fechas), 500
-     * Error.
-     */
     @GET
     @Path("/publicados")
     @PermitAll
@@ -200,12 +153,6 @@ public class FestivalResource {
         return Response.ok(festivales).build();
     }
 
-    /**
-     * Obtiene la lista de festivales propios del promotor autenticado. Requiere
-     * rol PROMOTOR.
-     *
-     * @return 200 OK con lista de FestivalDTO, 401/403 Error, 500 Error.
-     */
     @GET
     @Path("/mis-festivales")
     @RolesAllowed("PROMOTOR")
@@ -218,16 +165,6 @@ public class FestivalResource {
         return Response.ok(festivales).build();
     }
 
-    /**
-     * Cambia el estado de un festival propio. Requiere rol PROMOTOR o ADMIN y
-     * ser dueño. ¡ADVERTENCIA! La lógica actual del servicio permite al
-     * promotor cambiar a cualquier estado.
-     *
-     * @param id ID del festival.
-     * @param nuevoEstadoStr Nuevo estado (String).
-     * @return 200 OK con DTO actualizado, 400/401/403/404 Error, 409 Conflict
-     * (transición), 500 Error.
-     */
     @PUT
     @Path("/{id}/estado")
     @RolesAllowed({"ADMIN", "PROMOTOR"})
@@ -253,21 +190,5 @@ public class FestivalResource {
         FestivalDTO festivalActualizado = festivalService.cambiarEstadoFestival(id, nuevoEstado, idUsuarioActor);
         log.info("Estado festival ID {} cambiado a {} por usuario ID {}.", id, nuevoEstado, idUsuarioActor);
         return Response.ok(festivalActualizado).build();
-    }
-
-    // --- Métodos Auxiliares de Seguridad (Simulados/Placeholder) ---
-    /**
-     * Obtiene ID de usuario autenticado desde SecurityContext. Lanza
-     * excepciones JAX-RS si no autenticado o error.
-     */
-    private Integer obtenerIdUsuarioAutenticado() {
-        if (securityContext == null || securityContext.getUserPrincipal() == null) {
-            throw new NotAuthorizedException("No autenticado.", Response.status(Response.Status.UNAUTHORIZED).build());
-        }
-        try {
-            return Integer.parseInt(securityContext.getUserPrincipal().getName());
-        } catch (NumberFormatException e) {
-            throw new InternalServerErrorException("Error procesando identidad del usuario.");
-        }
     }
 }

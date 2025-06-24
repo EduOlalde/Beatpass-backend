@@ -4,9 +4,9 @@ import com.beatpass.dto.UsuarioCreacionDTO;
 import com.beatpass.dto.UsuarioDTO;
 import com.beatpass.model.RolUsuario;
 import com.beatpass.service.UsuarioService;
-import com.beatpass.service.UsuarioServiceImpl;
 
-import jakarta.annotation.security.RolesAllowed; // Importar esta anotación
+import jakarta.annotation.security.RolesAllowed;
+import jakarta.inject.Inject;
 import jakarta.validation.Valid;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.Context;
@@ -22,8 +22,8 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Recurso JAX-RS para la gestión de Usuarios (/api/usuarios). La mayoría de
- * operaciones requieren rol ADMIN.
+ * Recurso JAX-RS para la gestión de Usuarios (/api/usuarios). La mayoría de las
+ * operaciones requieren rol de Administrador.
  */
 @Path("/usuarios")
 @Produces(MediaType.APPLICATION_JSON)
@@ -39,21 +39,15 @@ public class UsuarioResource {
     @Context
     private SecurityContext securityContext;
 
-    public UsuarioResource() {
-        this.usuarioService = new UsuarioServiceImpl();
+    @Inject
+    public UsuarioResource(UsuarioService usuarioService) {
+        this.usuarioService = usuarioService;
     }
 
-    /**
-     * Crea un nuevo usuario (ADMIN, PROMOTOR o CAJERO). Requiere rol ADMIN.
-     *
-     * @param usuarioCreacionDTO DTO con datos del nuevo usuario.
-     * @return 201 Created con DTO creado, 400/401/403/409 Error, 500 Error.
-     */
     @POST
-    @RolesAllowed("ADMIN") // <--- Aplicamos la anotación aquí
+    @RolesAllowed("ADMIN")
     public Response crearUsuario(@Valid UsuarioCreacionDTO usuarioCreacionDTO) {
         log.info("POST /usuarios para email: {}", usuarioCreacionDTO != null ? usuarioCreacionDTO.getEmail() : "null");
-        // Se elimina la llamada a verificarAccesoAdmin() ya que @RolesAllowed se encarga
 
         if (usuarioCreacionDTO == null || usuarioCreacionDTO.getEmail() == null || usuarioCreacionDTO.getEmail().isBlank()
                 || usuarioCreacionDTO.getPassword() == null || usuarioCreacionDTO.getPassword().isEmpty()
@@ -71,26 +65,18 @@ public class UsuarioResource {
         return Response.created(location).entity(usuarioCreado).build();
     }
 
-    /**
-     * Obtiene información pública de un usuario por ID. Requiere rol ADMIN o
-     * ser el propio usuario.
-     *
-     * @param id ID del usuario.
-     * @return 200 OK con UsuarioDTO, 400/401/403/404 Error, 500 Error.
-     */
     @GET
     @Path("/{id}")
-    @RolesAllowed({"ADMIN", "PROMOTOR", "CAJERO"}) // <--- Todos los roles autenticados pueden acceder
+    @RolesAllowed({"ADMIN", "PROMOTOR", "CAJERO"})
     public Response obtenerUsuarioPorId(@PathParam("id") Integer id) {
         log.info("GET /usuarios/{}", id);
-        Integer idUsuarioAutenticado = Integer.parseInt(securityContext.getUserPrincipal().getName()); // Obtener ID del usuario autenticado
-        boolean esAdmin = securityContext.isUserInRole(RolUsuario.ADMIN.name()); // Verificar si es ADMIN
+        Integer idUsuarioAutenticado = Integer.parseInt(securityContext.getUserPrincipal().getName());
+        boolean esAdmin = securityContext.isUserInRole(RolUsuario.ADMIN.name());
 
         if (id == null) {
             throw new BadRequestException("ID de usuario inválido.");
         }
 
-        // Si no es ADMIN y el ID solicitado no es el propio, denegar acceso
         if (!esAdmin && !idUsuarioAutenticado.equals(id)) {
             log.warn("Acceso no autorizado a GET /usuarios/{} por usuario {}", id, idUsuarioAutenticado);
             throw new ForbiddenException("Acceso denegado. Solo puede ver su propio perfil o debe ser Administrador.");
@@ -102,17 +88,10 @@ public class UsuarioResource {
                 .orElseThrow(() -> new NotFoundException("Usuario no encontrado."));
     }
 
-    /**
-     * Obtiene lista de usuarios filtrada por rol. Requiere rol ADMIN.
-     *
-     * @param rolStr Rol a filtrar (QueryParam "rol", ej: "PROMOTOR").
-     * @return 200 OK con lista de UsuarioDTO, 400/401/403 Error, 500 Error.
-     */
     @GET
-    @RolesAllowed("ADMIN") // <--- Aplicamos la anotación aquí
+    @RolesAllowed("ADMIN")
     public Response obtenerUsuariosPorRol(@QueryParam("rol") String rolStr) {
         log.info("GET /usuarios?rol={}", rolStr);
-        // Se elimina la llamada a verificarAccesoAdmin()
 
         RolUsuario rol;
         try {
@@ -129,20 +108,11 @@ public class UsuarioResource {
         return Response.ok(usuarios).build();
     }
 
-    /**
-     * Actualiza el estado (activo/inactivo) de un usuario. Requiere rol ADMIN.
-     *
-     * @param id ID del usuario.
-     * @param activo Nuevo estado (QueryParam "activo", true/false).
-     * @return 200 OK con UsuarioDTO actualizado, 400/401/403/404 Error, 500
-     * Error.
-     */
     @PUT
     @Path("/{id}/estado")
-    @RolesAllowed("ADMIN") // <--- Aplicamos la anotación aquí
+    @RolesAllowed("ADMIN")
     public Response actualizarEstadoUsuario(@PathParam("id") Integer id, @QueryParam("activo") Boolean activo) {
         log.info("PUT /usuarios/{}/estado?activo={}", id, activo);
-        // Se elimina la llamada a verificarAccesoAdmin()
 
         if (id == null) {
             throw new BadRequestException("ID usuario inválido.");
@@ -156,25 +126,16 @@ public class UsuarioResource {
         return Response.ok(usuarioActualizado).build();
     }
 
-    /**
-     * Elimina un usuario. Requiere rol ADMIN. ¡Precaución!
-     *
-     * @param id ID del usuario a eliminar.
-     * @return 204 No Content, 400/401/403/404 Error, 409 Conflict (FKs), 500
-     * Error.
-     */
     @DELETE
     @Path("/{id}")
-    @RolesAllowed("ADMIN") // <--- Aplicamos la anotación aquí
+    @RolesAllowed("ADMIN")
     public Response eliminarUsuario(@PathParam("id") Integer id) {
         log.info("DELETE /usuarios/{}", id);
-        // Se elimina la llamada a verificarAccesoAdmin()
         if (id == null) {
             throw new BadRequestException("ID usuario inválido.");
         }
 
-        // Evitar que un admin se borre a sí mismo
-        Integer idAdminAutenticado = Integer.parseInt(securityContext.getUserPrincipal().getName()); // Obtener ID del usuario autenticado
+        Integer idAdminAutenticado = Integer.parseInt(securityContext.getUserPrincipal().getName());
         if (id.equals(idAdminAutenticado)) {
             throw new BadRequestException("Un administrador no puede eliminarse a sí mismo.");
         }
@@ -182,25 +143,5 @@ public class UsuarioResource {
         usuarioService.eliminarUsuario(id);
         log.info("Usuario ID {} eliminado.", id);
         return Response.noContent().build();
-    }
-
-    // --- Métodos Auxiliares ---
-    // Los métodos 'obtenerIdUsuarioAutenticado', 'esRol' y 'verificarAccesoAdmin'
-    // se vuelven redundantes para la autorización de rol gracias a @RolesAllowed,
-    // pero 'obtenerIdUsuarioAutenticado' todavía puede ser útil para obtener el ID.
-    // Los dejamos para compatibilidad con otros endpoints o si se requiere lógica de autorización más compleja (ej. "ser dueño").
-    /**
-     * Obtiene ID del usuario autenticado. Lanza excepción JAX-RS si no
-     * autenticado o error.
-     */
-    private Integer obtenerIdUsuarioAutenticado() {
-        if (securityContext == null || securityContext.getUserPrincipal() == null) {
-            throw new NotAuthorizedException("No autenticado.", Response.status(Response.Status.UNAUTHORIZED).build());
-        }
-        try {
-            return Integer.parseInt(securityContext.getUserPrincipal().getName());
-        } catch (NumberFormatException e) {
-            throw new InternalServerErrorException("Error procesando identidad.");
-        }
     }
 }

@@ -1,27 +1,24 @@
 package com.beatpass.web;
 
-import com.beatpass.service.VentaServiceImpl;
-import com.beatpass.service.EntradaServiceImpl;
+import com.beatpass.dto.*;
 import com.beatpass.service.EntradaService;
 import com.beatpass.service.VentaService;
-import com.beatpass.dto.CompraDTO;
-import com.beatpass.dto.ConfirmarCompraRequestDTO;
-import com.beatpass.dto.EntradaDTO;
-import com.beatpass.dto.IniciarCompraRequestDTO;
-import com.beatpass.dto.IniciarCompraResponseDTO;
-import com.beatpass.dto.NominacionRequestDTO;
-
+import jakarta.inject.Inject;
+import jakarta.validation.Valid;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.UriInfo;
-import jakarta.validation.Valid;
-import java.util.Optional;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Optional;
+
+/**
+ * Recurso JAX-RS para los endpoints de venta públicos. No requiere
+ * autenticación.
+ */
 @Path("/public/venta")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
@@ -35,20 +32,12 @@ public class PublicVentaResource {
     @Context
     private UriInfo uriInfo;
 
-    public PublicVentaResource() {
-        this.ventaService = new VentaServiceImpl();
-        this.entradaService = new EntradaServiceImpl();
+    @Inject
+    public PublicVentaResource(VentaService ventaService, EntradaService entradaService) {
+        this.ventaService = ventaService;
+        this.entradaService = entradaService;
     }
 
-    /**
-     * Endpoint POST para nominar una entrada públicamente. Recibe DTO JSON. No
-     * requiere autenticación, ya que es público.
-     *
-     * @param codigoQr Código QR de la entrada.
-     * @param nominacionRequest DTO con email, nombre y teléfono del asistente,
-     * y confirmación de email.
-     * @return 200 OK con la EntradaDTO nominada.
-     */
     @POST
     @Path("/nominar/{codigoQr}")
     public Response nominarEntrada(
@@ -118,15 +107,8 @@ public class PublicVentaResource {
         return Response.ok(compraConfirmada).build();
     }
 
-    /**
-     * Endpoint público GET para obtener los detalles de una entrada por su
-     * código QR.
-     *
-     * @param codigoQr Código QR de la entrada.
-     * @return 200 OK con EntradaDTO, 400 Bad Request, 404 Not Found.
-     */
     @GET
-    @Path("/entrada-qr/{codigoQr}") // NUEVA RUTA para obtener detalles de entrada por QR
+    @Path("/entrada-qr/{codigoQr}")
     public Response obtenerEntradaPorQr(@PathParam("codigoQr") String codigoQr) {
         String qrLog = (codigoQr != null && codigoQr.length() > 10) ? codigoQr.substring(0, 10) + "..." : codigoQr;
         log.info("GET /public/venta/entrada-qr/{} recibido", qrLog);
@@ -135,7 +117,7 @@ public class PublicVentaResource {
             throw new BadRequestException("Código QR de entrada obligatorio.");
         }
 
-        Optional<EntradaDTO> entradaOpt = entradaService.obtenerParaNominacionPublicaPorQr(codigoQr); // Reutiliza este servicio
+        Optional<EntradaDTO> entradaOpt = entradaService.obtenerParaNominacionPublicaPorQr(codigoQr);
 
         return entradaOpt
                 .map(dto -> Response.ok(dto).build())

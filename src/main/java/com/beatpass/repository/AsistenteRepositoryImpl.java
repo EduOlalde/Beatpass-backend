@@ -148,4 +148,31 @@ public class AsistenteRepositoryImpl implements AsistenteRepository {
             throw new PersistenceException("Error inesperado al eliminar Asistente", e);
         }
     }
+
+    @Override
+    public List<Object[]> findAsistenteDetailsByFestivalId(EntityManager em, Integer idFestival) {
+        log.debug("Buscando detalles de Asistentes para Festival ID: {}", idFestival);
+        if (idFestival == null) {
+            log.warn("Intento de buscar detalles de asistentes para un ID de festival nulo.");
+            return Collections.emptyList();
+        }
+        try {
+            String jpql = "SELECT DISTINCT a.idAsistente, a.nombre, a.email, a.telefono, a.fechaCreacion, f.nombre, p.codigoUid "
+                    + "FROM Asistente a "
+                    + "JOIN a.entradas ea "
+                    + "JOIN ea.compraEntrada ce "
+                    + "JOIN ce.tipoEntrada te "
+                    + "JOIN te.festival f "
+                    + "LEFT JOIN ea.pulseraAsociada p "
+                    + "WHERE f.idFestival = :festivalId "
+                    + "ORDER BY a.nombre, f.nombre";
+
+            TypedQuery<Object[]> query = em.createQuery(jpql, Object[].class);
+            query.setParameter("festivalId", idFestival);
+            return query.getResultList();
+        } catch (Exception e) {
+            log.error("Error buscando detalles de Asistentes para Festival ID {}: {}", idFestival, e.getMessage(), e);
+            return Collections.emptyList();
+        }
+    }
 }

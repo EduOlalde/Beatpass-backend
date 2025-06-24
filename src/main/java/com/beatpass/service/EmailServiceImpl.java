@@ -5,6 +5,7 @@ import com.beatpass.util.MailConfig;
 
 import jakarta.activation.DataHandler;
 import jakarta.activation.DataSource;
+import jakarta.inject.Inject; // AÑADIDO
 import jakarta.mail.*;
 import jakarta.mail.internet.InternetAddress;
 import jakarta.mail.internet.MimeBodyPart;
@@ -19,13 +20,18 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Properties;
 
+/**
+ * Implementación del servicio de envío de correos electrónicos. Orquesta la
+ * generación de contenido HTML, la creación de PDFs adjuntos y el envío.
+ */
 public class EmailServiceImpl implements EmailService {
 
     private static final Logger log = LoggerFactory.getLogger(EmailServiceImpl.class);
     private final PdfService pdfService;
 
-    public EmailServiceImpl() {
-        this.pdfService = new PdfServiceImpl();
+    @Inject
+    public EmailServiceImpl(PdfService pdfService) {
+        this.pdfService = pdfService;
     }
 
     @Override
@@ -40,11 +46,7 @@ public class EmailServiceImpl implements EmailService {
         String nombreArchivoPdf = "Entradas_" + nombreFestival.replaceAll("[^a-zA-Z0-9.-]", "_") + ".pdf";
 
         try {
-            if (pdfService != null) {
-                pdfBytes = pdfService.generarPdfMultiplesEntradas(entradasCompradas, nombreFestival);
-            } else {
-                log.warn("PdfService no está inicializado. No se generará PDF para email a {}", destinatarioEmail);
-            }
+            pdfBytes = pdfService.generarPdfMultiplesEntradas(entradasCompradas, nombreFestival);
         } catch (IOException e) {
             log.error("Error al generar PDF para email de compra a {}: {}", destinatarioEmail, e.getMessage(), e);
         }
@@ -69,11 +71,7 @@ public class EmailServiceImpl implements EmailService {
         String nombreArchivoPdf = "Tu_Entrada_" + entradaNominada.getNombreFestival().replaceAll("[^a-zA-Z0-9.-]", "_") + ".pdf";
 
         try {
-            if (pdfService != null) {
-                pdfBytes = pdfService.generarPdfMultiplesEntradas(List.of(entradaNominada), entradaNominada.getNombreFestival());
-            } else {
-                log.warn("PdfService no está inicializado. No se generará PDF para email a {}", destinatarioEmail);
-            }
+            pdfBytes = pdfService.generarPdfMultiplesEntradas(List.of(entradaNominada), entradaNominada.getNombreFestival());
         } catch (IOException e) {
             log.error("Error al generar PDF para email de nominación a {}: {}", destinatarioEmail, e.getMessage(), e);
         }
