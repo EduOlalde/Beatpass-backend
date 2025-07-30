@@ -18,7 +18,7 @@ public interface RecargaRepository {
      * @param recarga La entidad Recarga a guardar.
      * @return La entidad Recarga guardada con su ID.
      */
-    Recarga save(EntityManager em, Recarga recarga);
+    Recarga save(Recarga recarga);
 
     /**
      * Busca una recarga por su ID.
@@ -27,7 +27,7 @@ public interface RecargaRepository {
      * @param id El ID a buscar.
      * @return Un Optional con la Recarga si se encuentra, o vacío.
      */
-    Optional<Recarga> findById(EntityManager em, Integer id);
+    Optional<Recarga> findById(Integer id);
 
     /**
      * Busca todos los registros de recarga asociados a una PulseraNFC
@@ -37,6 +37,6 @@ public interface RecargaRepository {
      * @param idPulsera El ID de la PulseraNFC.
      * @return Una lista (posiblemente vacía) de Recargas.
      */
-    List<Recarga> findByPulseraId(EntityManager em, Integer idPulsera);
+    List<Recarga> findByPulseraId(Integer idPulsera);
 
 }

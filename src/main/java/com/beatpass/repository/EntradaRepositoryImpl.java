@@ -1,8 +1,10 @@
 package com.beatpass.repository;
 
 import com.beatpass.model.Entrada;
+import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.NoResultException;
+import jakarta.persistence.PersistenceContext;
 import jakarta.persistence.PersistenceException;
 import jakarta.persistence.TypedQuery;
 import java.util.Collections;
@@ -14,12 +16,15 @@ import org.slf4j.LoggerFactory;
 /**
  * Implementación de EntradaRepository usando JPA EntityManager.
  */
+@ApplicationScoped
 public class EntradaRepositoryImpl implements EntradaRepository {
 
+    @PersistenceContext(unitName = "beatpassPersistenceUnit")
+    private EntityManager em;
     private static final Logger log = LoggerFactory.getLogger(EntradaRepositoryImpl.class);
 
     @Override
-    public Entrada save(EntityManager em, Entrada entrada) {
+    public Entrada save(Entrada entrada) {
         if (entrada == null) {
             throw new IllegalArgumentException("La entidad Entrada no puede ser nula.");
         }
@@ -55,18 +60,28 @@ public class EntradaRepositoryImpl implements EntradaRepository {
         }
     }
 
+    private String getComprehensiveEntradaQuery() {
+        return "SELECT DISTINCT e FROM Entrada e "
+                + "LEFT JOIN FETCH e.compraEntrada "
+                + "LEFT JOIN FETCH e.compraEntrada.tipoEntrada "
+                + "LEFT JOIN FETCH e.compraEntrada.tipoEntrada.festival "
+                + "LEFT JOIN FETCH e.asistente "
+                + "LEFT JOIN FETCH e.pulseraAsociada ";
+    }
+
     @Override
-    public Optional<Entrada> findById(EntityManager em, Integer id) {
+    public Optional<Entrada> findById(Integer id) {
         log.debug("Buscando Entrada con ID: {}", id);
         if (id == null) {
             log.warn("Intento de buscar Entrada con ID nulo.");
             return Optional.empty();
         }
         try {
-            Entrada entrada = em.find(Entrada.class, id);
-            return Optional.ofNullable(entrada);
-        } catch (IllegalArgumentException e) {
-            log.error("Argumento ilegal al buscar Entrada por ID {}: {}", id, e.getMessage());
+            TypedQuery<Entrada> query = em.createQuery(getComprehensiveEntradaQuery() + "WHERE e.idEntrada = :id", Entrada.class);
+            query.setParameter("id", id);
+            return Optional.ofNullable(query.getSingleResult());
+        } catch (NoResultException e) {
+            log.trace("Entrada no encontrada con ID: {}", id);
             return Optional.empty();
         } catch (Exception e) {
             log.error("Error inesperado al buscar Entrada por ID {}: {}", id, e.getMessage(), e);
@@ -75,7 +90,7 @@ public class EntradaRepositoryImpl implements EntradaRepository {
     }
 
     @Override
-    public Optional<Entrada> findByCodigoQr(EntityManager em, String codigoQr) {
+    public Optional<Entrada> findByCodigoQr(String codigoQr) {
         String qrLog = (codigoQr != null) ? codigoQr.substring(0, Math.min(20, codigoQr.length())) + "..." : "null";
         log.debug("Buscando Entrada con QR: {}", qrLog);
         if (codigoQr == null || codigoQr.isBlank()) {
@@ -83,10 +98,9 @@ public class EntradaRepositoryImpl implements EntradaRepository {
             return Optional.empty();
         }
         try {
-            TypedQuery<Entrada> query = em.createQuery("SELECT ea FROM Entrada ea WHERE ea.codigoQr = :qr", Entrada.class);
+            TypedQuery<Entrada> query = em.createQuery(getComprehensiveEntradaQuery() + "WHERE e.codigoQr = :qr", Entrada.class);
             query.setParameter("qr", codigoQr);
-            Entrada entrada = query.getSingleResult();
-            return Optional.of(entrada);
+            return Optional.of(query.getSingleResult());
         } catch (NoResultException e) {
             log.trace("Entrada no encontrada con QR: {}", qrLog);
             return Optional.empty();
@@ -97,18 +111,16 @@ public class EntradaRepositoryImpl implements EntradaRepository {
     }
 
     @Override
-    public List<Entrada> findByCompraEntradaId(EntityManager em, Integer idCompraEntrada) {
+    public List<Entrada> findByCompraEntradaId(Integer idCompraEntrada) {
         log.debug("Buscando Entradas para CompraEntrada ID: {}", idCompraEntrada);
         if (idCompraEntrada == null) {
             log.warn("Intento de buscar entradas para un ID de CompraEntrada nulo.");
             return Collections.emptyList();
         }
         try {
-            TypedQuery<Entrada> query = em.createQuery("SELECT ea FROM Entrada ea WHERE ea.compraEntrada.idCompraEntrada = :ceId ORDER BY ea.idEntrada", Entrada.class);
+            TypedQuery<Entrada> query = em.createQuery(getComprehensiveEntradaQuery() + "WHERE e.compraEntrada.idCompraEntrada = :ceId ORDER BY e.idEntrada", Entrada.class);
             query.setParameter("ceId", idCompraEntrada);
-            List<Entrada> entradas = query.getResultList();
-            log.debug("Encontradas {} Entradas para CompraEntrada ID: {}", entradas.size(), idCompraEntrada);
-            return entradas;
+            return query.getResultList();
         } catch (Exception e) {
             log.error("Error buscando Entradas para CompraEntrada ID {}: {}", idCompraEntrada, e.getMessage(), e);
             return Collections.emptyList();
@@ -116,24 +128,17 @@ public class EntradaRepositoryImpl implements EntradaRepository {
     }
 
     @Override
-    public List<Entrada> findByFestivalId(EntityManager em, Integer idFestival) {
+    public List<Entrada> findByFestivalId(Integer idFestival) {
         log.debug("Buscando Entradas para Festival ID: {}", idFestival);
         if (idFestival == null) {
             log.warn("Intento de buscar entradas para un ID de festival nulo.");
             return Collections.emptyList();
         }
         try {
-            String jpql = "SELECT ea FROM Entrada ea "
-                    + "JOIN ea.compraEntrada ce "
-                    + "JOIN ce.tipoEntrada te "
-                    + "WHERE te.festival.idFestival = :festivalId "
-                    + "ORDER BY ea.idEntrada";
-
+            String jpql = getComprehensiveEntradaQuery() + "WHERE e.compraEntrada.tipoEntrada.festival.idFestival = :festivalId ORDER BY e.idEntrada";
             TypedQuery<Entrada> query = em.createQuery(jpql, Entrada.class);
             query.setParameter("festivalId", idFestival);
-            List<Entrada> entradas = query.getResultList();
-            log.debug("Encontradas {} Entradas para Festival ID: {}", entradas.size(), idFestival);
-            return entradas;
+            return query.getResultList();
         } catch (Exception e) {
             log.error("Error buscando Entradas para Festival ID {}: {}", idFestival, e.getMessage(), e);
             return Collections.emptyList();

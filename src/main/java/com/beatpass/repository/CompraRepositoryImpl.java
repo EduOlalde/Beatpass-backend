@@ -1,7 +1,10 @@
 package com.beatpass.repository;
 
 import com.beatpass.model.Compra;
+import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.persistence.EntityManager;
+import jakarta.persistence.NoResultException;
+import jakarta.persistence.PersistenceContext;
 import jakarta.persistence.PersistenceException;
 import jakarta.persistence.TypedQuery;
 import java.util.Collections;
@@ -13,12 +16,15 @@ import org.slf4j.LoggerFactory;
 /**
  * Implementación de CompraRepository usando JPA EntityManager.
  */
+@ApplicationScoped
 public class CompraRepositoryImpl implements CompraRepository {
 
+    @PersistenceContext(unitName = "beatpassPersistenceUnit")
+    private EntityManager em;
     private static final Logger log = LoggerFactory.getLogger(CompraRepositoryImpl.class);
 
     @Override
-    public Compra save(EntityManager em, Compra compra) {
+    public Compra save(Compra compra) {
         if (compra == null) {
             throw new IllegalArgumentException("La entidad Compra no puede ser nula.");
         }
@@ -41,17 +47,18 @@ public class CompraRepositoryImpl implements CompraRepository {
     }
 
     @Override
-    public Optional<Compra> findById(EntityManager em, Integer id) {
+    public Optional<Compra> findById(Integer id) {
         log.debug("Buscando Compra con ID: {}", id);
         if (id == null) {
             log.warn("Intento de buscar Compra con ID nulo.");
             return Optional.empty();
         }
         try {
-            Compra compra = em.find(Compra.class, id);
-            return Optional.ofNullable(compra);
-        } catch (IllegalArgumentException e) {
-            log.error("Argumento ilegal al buscar Compra por ID {}: {}", id, e.getMessage());
+            TypedQuery<Compra> query = em.createQuery(
+                    "SELECT c FROM Compra c LEFT JOIN FETCH c.comprador WHERE c.idCompra = :id", Compra.class);
+            query.setParameter("id", id);
+            return Optional.ofNullable(query.getSingleResult());
+        } catch (NoResultException e) {
             return Optional.empty();
         } catch (Exception e) {
             log.error("Error inesperado al buscar Compra por ID {}: {}", id, e.getMessage(), e);
@@ -60,7 +67,7 @@ public class CompraRepositoryImpl implements CompraRepository {
     }
 
     @Override
-    public List<Compra> findByCompradorId(EntityManager em, Integer idComprador) {
+    public List<Compra> findByCompradorId(Integer idComprador) {
         log.debug("Buscando Compras para Comprador ID: {}", idComprador);
         if (idComprador == null) {
             log.warn("Intento de buscar compras para un ID de comprador nulo.");
@@ -68,12 +75,10 @@ public class CompraRepositoryImpl implements CompraRepository {
         }
         try {
             TypedQuery<Compra> query = em.createQuery(
-                    "SELECT c FROM Compra c WHERE c.comprador.idComprador = :compradorId ORDER BY c.fechaCompra DESC",
+                    "SELECT c FROM Compra c LEFT JOIN FETCH c.comprador WHERE c.comprador.idComprador = :compradorId ORDER BY c.fechaCompra DESC",
                     Compra.class);
             query.setParameter("compradorId", idComprador);
-            List<Compra> compras = query.getResultList();
-            log.debug("Encontradas {} compras para Comprador ID: {}", compras.size(), idComprador);
-            return compras;
+            return query.getResultList();
         } catch (Exception e) {
             log.error("Error buscando Compras para Comprador ID {}: {}", idComprador, e.getMessage(), e);
             return Collections.emptyList();
@@ -81,24 +86,37 @@ public class CompraRepositoryImpl implements CompraRepository {
     }
 
     @Override
-    public List<Compra> findByFestivalId(EntityManager em, Integer idFestival) {
+    public List<Compra> findByFestivalId(Integer idFestival) {
         log.debug("Buscando Compras para Festival ID: {}", idFestival);
         if (idFestival == null) {
             log.warn("Intento de buscar compras para un ID de festival nulo.");
             return Collections.emptyList();
         }
         try {
-            String jpql = "SELECT DISTINCT c FROM Compra c "
-                    + "JOIN c.detallesCompra ce "
-                    + "JOIN ce.tipoEntrada e "
-                    + "WHERE e.festival.idFestival = :festivalId "
+            // MODIFIED: Final corrected query using a subquery and alias-free fetch joins.
+            String subquery = "SELECT DISTINCT c.idCompra FROM Compra c "
+                    + "JOIN c.detallesCompra cd "
+                    + "JOIN cd.tipoEntrada te "
+                    + "WHERE te.festival.idFestival = :festivalId";
+
+            List<Integer> compraIds = em.createQuery(subquery, Integer.class)
+                    .setParameter("festivalId", idFestival)
+                    .getResultList();
+
+            if (compraIds.isEmpty()) {
+                return Collections.emptyList();
+            }
+
+            String mainQuery = "SELECT DISTINCT c FROM Compra c "
+                    + "LEFT JOIN FETCH c.comprador "
+                    + "LEFT JOIN FETCH c.detallesCompra "
+                    + "WHERE c.idCompra IN (:compraIds) "
                     + "ORDER BY c.fechaCompra DESC";
 
-            TypedQuery<Compra> query = em.createQuery(jpql, Compra.class);
-            query.setParameter("festivalId", idFestival);
-            List<Compra> compras = query.getResultList();
-            log.debug("Encontradas {} compras para Festival ID: {}", compras.size(), idFestival);
-            return compras;
+            return em.createQuery(mainQuery, Compra.class)
+                    .setParameter("compraIds", compraIds)
+                    .getResultList();
+
         } catch (Exception e) {
             log.error("Error buscando Compras para Festival ID {}: {}", idFestival, e.getMessage(), e);
             return Collections.emptyList();

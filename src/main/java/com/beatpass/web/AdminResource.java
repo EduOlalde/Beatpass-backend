@@ -5,6 +5,7 @@ import com.beatpass.model.EstadoFestival;
 import com.beatpass.model.RolUsuario;
 import com.beatpass.service.*;
 import jakarta.annotation.security.RolesAllowed;
+import jakarta.enterprise.context.RequestScoped;
 import jakarta.inject.Inject;
 import jakarta.validation.Valid;
 import jakarta.ws.rs.*;
@@ -29,28 +30,31 @@ import java.util.Map;
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
 @RolesAllowed("ADMIN")
+@RequestScoped
 public class AdminResource {
 
     private static final Logger log = LoggerFactory.getLogger(AdminResource.class);
 
-    private final UsuarioService usuarioService;
-    private final FestivalService festivalService;
-    private final AsistenteService asistenteService;
-    private final PulseraNFCService pulseraNFCService;
-    private final CompradorService compradorService;
+    @Inject
+    private UsuarioService usuarioService;
+    @Inject
+    private FestivalService festivalService;
+    @Inject
+    private AsistenteService asistenteService;
+    @Inject
+    private PulseraNFCService pulseraNFCService;
+    @Inject
+    private CompradorService compradorService;
 
     @Context
     private UriInfo uriInfo;
     @Context
     private SecurityContext securityContext;
 
-    @Inject
-    public AdminResource(UsuarioService usuarioService, FestivalService festivalService, AsistenteService asistenteService, PulseraNFCService pulseraNFCService, CompradorService compradorService) {
-        this.usuarioService = usuarioService;
-        this.festivalService = festivalService;
-        this.asistenteService = asistenteService;
-        this.pulseraNFCService = pulseraNFCService;
-        this.compradorService = compradorService;
+    /**
+     * Constructor sin argumentos requerido para CDI.
+     */
+    public AdminResource() {
     }
 
     // --- Gestión de Usuarios ---
@@ -276,14 +280,14 @@ public class AdminResource {
     @Path("/asistentes/{idAsistente}")
     public Response actualizarAsistente(
             @PathParam("idAsistente") Integer idAsistente,
-            @Valid AsistenteDTO asistenteDTO) {
+            @Valid AsistenteUpdateDTO asistenteUpdateDTO) { // Use the new DTO
 
         log.info("PUT /admin/asistentes/{}", idAsistente);
         if (idAsistente == null) {
             throw new BadRequestException("ID Asistente no válido.");
         }
 
-        AsistenteDTO actualizado = asistenteService.actualizarAsistente(idAsistente, asistenteDTO);
+        AsistenteDTO actualizado = asistenteService.actualizarAsistente(idAsistente, asistenteUpdateDTO);
         return Response.ok(actualizado).build();
     }
 

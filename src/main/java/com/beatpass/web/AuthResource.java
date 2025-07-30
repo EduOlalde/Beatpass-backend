@@ -6,6 +6,7 @@ import com.beatpass.model.Usuario;
 import com.beatpass.service.UsuarioService;
 import com.beatpass.util.JwtUtil;
 import com.beatpass.util.PasswordUtil;
+import jakarta.enterprise.context.RequestScoped;
 
 import jakarta.inject.Inject;
 import jakarta.validation.Valid;
@@ -24,17 +25,20 @@ import java.util.Optional;
 @Path("/auth")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
+@RequestScoped
 public class AuthResource {
 
     private static final Logger log = LoggerFactory.getLogger(AuthResource.class);
 
-    private final UsuarioService usuarioService;
-    private final JwtUtil jwtUtil;
-
     @Inject
-    public AuthResource(UsuarioService usuarioService) {
-        this.usuarioService = usuarioService;
-        this.jwtUtil = new JwtUtil();
+    private UsuarioService usuarioService;
+
+    private final JwtUtil jwtUtil = new JwtUtil();
+
+    /**
+     * Constructor sin argumentos requerido para CDI.
+     */
+    public AuthResource() {
     }
 
     /**

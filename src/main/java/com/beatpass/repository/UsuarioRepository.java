@@ -19,7 +19,7 @@ public interface UsuarioRepository {
      * @param usuario El usuario a guardar.
      * @return La entidad Usuario guardada o actualizada.
      */
-    Usuario save(EntityManager em, Usuario usuario);
+    Usuario save(Usuario usuario);
 
     /**
      * Busca un Usuario por su ID.
@@ -28,7 +28,7 @@ public interface UsuarioRepository {
      * @param id El ID a buscar.
      * @return Un Optional con el Usuario si se encuentra, o vacío.
      */
-    Optional<Usuario> findById(EntityManager em, Integer id);
+    Optional<Usuario> findById(Integer id);
 
     /**
      * Busca un Usuario por su email (único).
@@ -37,7 +37,7 @@ public interface UsuarioRepository {
      * @param email El email a buscar.
      * @return Un Optional con el Usuario si se encuentra, o vacío.
      */
-    Optional<Usuario> findByEmail(EntityManager em, String email);
+    Optional<Usuario> findByEmail(String email);
 
     /**
      * Busca todos los usuarios. Usar con precaución.
@@ -54,7 +54,7 @@ public interface UsuarioRepository {
      * @param rol El RolUsuario a buscar.
      * @return Una lista (posiblemente vacía) de usuarios.
      */
-    List<Usuario> findByRol(EntityManager em, RolUsuario rol);
+    List<Usuario> findByRol(RolUsuario rol);
 
     /**
      * Elimina un usuario por su ID. Debe ejecutarse dentro de una transacción
@@ -64,6 +64,6 @@ public interface UsuarioRepository {
      * @param id El ID a eliminar.
      * @return true si se encontró y marcó para eliminar, false si no.
      */
-    boolean deleteById(EntityManager em, Integer id);
+    boolean deleteById(Integer id);
 
 }

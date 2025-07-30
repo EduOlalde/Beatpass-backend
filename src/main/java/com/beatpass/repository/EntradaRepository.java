@@ -18,7 +18,7 @@ public interface EntradaRepository {
      * @param entrada La entidad a guardar.
      * @return La entidad guardada o actualizada.
      */
-    Entrada save(EntityManager em, Entrada entrada);
+    Entrada save(Entrada entrada);
 
     /**
      * Busca una Entrada por su ID.
@@ -27,7 +27,7 @@ public interface EntradaRepository {
      * @param id El ID a buscar.
      * @return Un Optional con la Entrada si se encuentra, o vacío.
      */
-    Optional<Entrada> findById(EntityManager em, Integer id);
+    Optional<Entrada> findById(Integer id);
 
     /**
      * Busca una Entrada por su código QR (único).
@@ -36,7 +36,7 @@ public interface EntradaRepository {
      * @param codigoQr El código QR a buscar.
      * @return Un Optional con la Entrada si se encuentra, o vacío.
      */
-    Optional<Entrada> findByCodigoQr(EntityManager em, String codigoQr);
+    Optional<Entrada> findByCodigoQr(String codigoQr);
 
     /**
      * Busca todas las entradas generadas desde un CompraEntrada
@@ -46,7 +46,7 @@ public interface EntradaRepository {
      * @param idCompraEntrada El ID del CompraEntrada origen.
      * @return Una lista (posiblemente vacía) de Entrada.
      */
-    List<Entrada> findByCompraEntradaId(EntityManager em, Integer idCompraEntrada);
+    List<Entrada> findByCompraEntradaId(Integer idCompraEntrada);
 
     /**
      * Busca todas las entradas que pertenecen a un Festival
@@ -56,6 +56,6 @@ public interface EntradaRepository {
      * @param idFestival El ID del Festival.
      * @return Una lista (posiblemente vacía) de Entrada.
      */
-    List<Entrada> findByFestivalId(EntityManager em, Integer idFestival);
+    List<Entrada> findByFestivalId(Integer idFestival);
 
 }

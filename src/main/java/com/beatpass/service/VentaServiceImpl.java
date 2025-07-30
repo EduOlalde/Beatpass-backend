@@ -16,9 +16,12 @@ import com.stripe.exception.StripeException;
 import com.stripe.model.PaymentIntent;
 import com.stripe.param.PaymentIntentCreateParams;
 import com.stripe.param.PaymentIntentRetrieveParams;
+import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.LockModeType;
+import jakarta.persistence.PersistenceContext;
+import jakarta.transaction.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -31,107 +34,98 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 /**
- * Implementación del servicio para la gestión del proceso de venta.
+ * Implementación del servicio para la gestión del proceso de venta,
+ * refactorizada para usar CDI y JTA.
  */
-public class VentaServiceImpl extends AbstractService implements VentaService {
+@ApplicationScoped
+public class VentaServiceImpl implements VentaService {
 
     private static final Logger log = LoggerFactory.getLogger(VentaServiceImpl.class);
 
-    private final CompradorService compradorService;
-    private final TipoEntradaRepository tipoEntradaRepository;
-    private final CompraRepository compraRepository;
-    private final CompraEntradaRepository compraEntradaRepository;
-    private final EntradaRepository entradaRepository;
-    private final EmailService emailService;
-    private final CompraMapper compraMapper;
-    private final EntradaMapper entradaMapper;
+    @Inject
+    private CompradorService compradorService;
+    @Inject
+    private TipoEntradaRepository tipoEntradaRepository;
+    @Inject
+    private CompraRepository compraRepository;
+    @Inject
+    private CompraEntradaRepository compraEntradaRepository;
+    @Inject
+    private EntradaRepository entradaRepository;
+    @Inject
+    private EmailService emailService;
+    @Inject
+    private CompraMapper compraMapper;
+    @Inject
+    private EntradaMapper entradaMapper;
+
+    @PersistenceContext(unitName = "beatpassPersistenceUnit")
+    private EntityManager em;
 
     private static final String EXPECTED_CURRENCY = "eur";
 
-    @Inject
-    public VentaServiceImpl(CompradorService compradorService, TipoEntradaRepository tipoEntradaRepository, CompraRepository compraRepository, CompraEntradaRepository compraEntradaRepository, EntradaRepository entradaRepository, EmailService emailService) {
-        this.compradorService = compradorService;
-        this.tipoEntradaRepository = tipoEntradaRepository;
-        this.compraRepository = compraRepository;
-        this.compraEntradaRepository = compraEntradaRepository;
-        this.entradaRepository = entradaRepository;
-        this.emailService = emailService;
-        this.compraMapper = CompraMapper.INSTANCE;
-        this.entradaMapper = EntradaMapper.INSTANCE;
-    }
-
-    private record PurchaseConfirmationResult(
-            CompraDTO compraDTO,
-            List<EntradaDTO> entradasDTOs,
-            String festivalName) {
+    // Record interno para pasar los resultados de la transacción al paso de envío de email
+    private record PurchaseConfirmationResult(CompraDTO compraDTO, List<EntradaDTO> entradasDTOs, String festivalName) {
 
     }
 
     @Override
+    @Transactional(rollbackOn = {Exception.class})
     public CompraDTO confirmarVentaConPago(String emailComprador, String nombreComprador, String telefonoComprador, Integer idTipoEntrada, int cantidad, String paymentIntentId)
-            throws TipoEntradaNotFoundException, FestivalNoPublicadoException,
-            StockInsuficienteException, PagoInvalidoException, IllegalArgumentException {
+            throws TipoEntradaNotFoundException, FestivalNoPublicadoException, StockInsuficienteException, PagoInvalidoException, IllegalArgumentException {
 
         log.info("Service: Iniciando confirmación de venta - Comprador Email: {}, Entrada ID: {}, Cant: {}, PI: {}",
                 emailComprador, idTipoEntrada, cantidad, paymentIntentId);
 
         validarParametrosConfirmacion(emailComprador, nombreComprador, idTipoEntrada, cantidad, paymentIntentId);
 
+        // El comprador se obtiene o crea antes para tener sus datos disponibles después de la transacción
         Comprador compradorParaEmail = compradorService.obtenerOcrearCompradorPorEmail(emailComprador, nombreComprador, telefonoComprador);
 
-        PaymentIntent paymentIntent = verificarPagoStripe(paymentIntentId, 0);
+        // Verificamos el pago con Stripe ANTES de la transacción para fallar rápido
+        PaymentIntent paymentIntent = verificarPagoStripe(paymentIntentId);
 
-        PurchaseConfirmationResult result = executeTransactional(em -> {
-            Comprador compradorEnTx = em.find(Comprador.class, compradorParaEmail.getIdComprador());
-            if (compradorEnTx == null) {
-                throw new RuntimeException("Comprador no encontrado en el contexto transaccional.");
-            }
+        // --- INICIO DE LA LÓGICA TRANSACCIONAL ---
+        TipoEntrada tipoEntradaEnTx = tipoEntradaRepository.findById(idTipoEntrada)
+                .orElseThrow(() -> new TipoEntradaNotFoundException("Tipo de entrada no encontrado con ID: " + idTipoEntrada));
+        em.lock(tipoEntradaEnTx, LockModeType.PESSIMISTIC_WRITE); // Bloqueo para evitar sobreventa
 
-            TipoEntrada tipoEntradaEnTx = tipoEntradaRepository.findById(em, idTipoEntrada, LockModeType.PESSIMISTIC_WRITE)
-                    .orElseThrow(() -> new TipoEntradaNotFoundException("Tipo de entrada no encontrado con ID: " + idTipoEntrada));
+        validarFestivalParaCompra(tipoEntradaEnTx.getFestival());
 
-            Festival festivalEnTx = tipoEntradaEnTx.getFestival();
-            if (festivalEnTx == null) {
-                throw new IllegalStateException("Tipo de entrada ID " + idTipoEntrada + " sin festival asociado.");
-            }
-            if (festivalEnTx.getEstado() != EstadoFestival.PUBLICADO) {
-                throw new FestivalNoPublicadoException("Festival '" + festivalEnTx.getNombre() + "' no está publicado.");
-            }
+        BigDecimal totalEsperadoDecimalTx = tipoEntradaEnTx.getPrecio().multiply(new BigDecimal(cantidad));
+        long totalEsperadoCentimosTx = totalEsperadoDecimalTx.multiply(new BigDecimal(100)).longValueExact();
 
-            BigDecimal totalEsperadoDecimalTx = tipoEntradaEnTx.getPrecio().multiply(new BigDecimal(cantidad));
-            long totalEsperadoCentimosTx = totalEsperadoDecimalTx.multiply(new BigDecimal(100)).longValueExact();
+        if (paymentIntent.getAmount() == null || paymentIntent.getAmount() != totalEsperadoCentimosTx) {
+            throw new PagoInvalidoException("Monto del pago Stripe (" + paymentIntent.getAmount() + ") no coincide con el esperado (" + totalEsperadoCentimosTx + ").");
+        }
 
-            if (paymentIntent.getAmount() == null || paymentIntent.getAmount() != totalEsperadoCentimosTx) {
-                throw new PagoInvalidoException("Monto del pago Stripe (" + paymentIntent.getAmount() + ") no coincide con el esperado (" + totalEsperadoCentimosTx + ").");
-            }
+        if (tipoEntradaEnTx.getStock() == null || tipoEntradaEnTx.getStock() < cantidad) {
+            throw new StockInsuficienteException("Stock (" + tipoEntradaEnTx.getStock() + ") insuficiente para entrada '" + tipoEntradaEnTx.getTipo() + "'.");
+        }
 
-            if (tipoEntradaEnTx.getStock() == null || tipoEntradaEnTx.getStock() < cantidad) {
-                throw new StockInsuficienteException("Stock (" + tipoEntradaEnTx.getStock() + ") insuficiente para entrada '" + tipoEntradaEnTx.getTipo() + "'.");
-            }
+        Compra compra = crearYGuardarCompra(compradorParaEmail, totalEsperadoDecimalTx, paymentIntent);
+        CompraEntrada compraEntrada = crearYGuardarCompraEntrada(compra, tipoEntradaEnTx, cantidad);
 
-            Compra compra = crearYGuardarCompra(em, compradorEnTx, totalEsperadoDecimalTx, paymentIntent);
-            CompraEntrada compraEntrada = crearYGuardarCompraEntrada(em, compra, tipoEntradaEnTx, cantidad);
+        List<Entrada> entradasGeneradasPersistidas = generarYGuardarEntradasAsignadas(compraEntrada, cantidad);
+        actualizarStockEntrada(tipoEntradaEnTx, cantidad);
 
-            List<Entrada> entradasGeneradasPersistidas = new ArrayList<>();
-            generarYGuardarEntradasAsignadas(em, compraEntrada, cantidad, entradasGeneradasPersistidas);
-            actualizarStockEntrada(em, tipoEntradaEnTx, cantidad);
+        List<EntradaDTO> entradasCompradasDTOs = entradasGeneradasPersistidas.stream()
+                .map(entradaMapper::entradaToEntradaDTO)
+                .collect(Collectors.toList());
 
-            List<EntradaDTO> entradasCompradasDTOs = entradasGeneradasPersistidas.stream()
-                    .map(entradaMapper::entradaToEntradaDTO)
-                    .collect(Collectors.toList());
+        CompraDTO finalCompraDTO = compraMapper.compraToCompraDTO(compra);
+        finalCompraDTO.setEntradasGeneradas(entradasCompradasDTOs);
 
-            CompraDTO finalCompraDTO = compraMapper.compraToCompraDTO(compra);
-            finalCompraDTO.setEntradasGeneradas(entradasCompradasDTOs);
+        log.info("Venta confirmada y TX completada. Compra ID: {}, PI: {}", compra.getIdCompra(), paymentIntentId);
 
-            log.info("Venta confirmada and TX completed. Compra ID: {}, PI: {}", compra.getIdCompra(), paymentIntentId);
+        PurchaseConfirmationResult result = new PurchaseConfirmationResult(
+                finalCompraDTO,
+                entradasCompradasDTOs,
+                tipoEntradaEnTx.getFestival().getNombre()
+        );
+        // --- FIN DE LA LÓGICA TRANSACCIONAL ---
 
-            return new PurchaseConfirmationResult(
-                    finalCompraDTO,
-                    entradasCompradasDTOs,
-                    festivalEnTx.getNombre()
-            );
-        }, "confirmarVentaConPago " + paymentIntentId);
-
+        // El envío de email se realiza FUERA de la transacción, usando los datos recopilados
         emailService.enviarEmailEntradasCompradas(
                 compradorParaEmail.getEmail(),
                 compradorParaEmail.getNombre(),
@@ -151,21 +145,21 @@ public class VentaServiceImpl extends AbstractService implements VentaService {
             throw new IllegalArgumentException("ID entrada y cantidad > 0 son requeridos.");
         }
 
-        return executeRead(em -> {
-            TipoEntrada tipoEntrada = tipoEntradaRepository.findById(em, idTipoEntrada)
-                    .orElseThrow(() -> new TipoEntradaNotFoundException("Tipo de entrada no encontrado con ID: " + idTipoEntrada));
-            validarFestivalParaCompra(tipoEntrada.getFestival());
+        TipoEntrada tipoEntrada = tipoEntradaRepository.findById(idTipoEntrada)
+                .orElseThrow(() -> new TipoEntradaNotFoundException("Tipo de entrada no encontrado con ID: " + idTipoEntrada));
 
-            BigDecimal totalDecimal = tipoEntrada.getPrecio().multiply(new BigDecimal(cantidad));
-            long totalCentimos = totalDecimal.multiply(new BigDecimal(100)).longValueExact();
-            log.debug("Total calculado para {} entradas tipo '{}': {} {} ({} céntimos)",
-                    cantidad, tipoEntrada.getTipo(), totalDecimal, EXPECTED_CURRENCY.toUpperCase(), totalCentimos);
+        validarFestivalParaCompra(tipoEntrada.getFestival());
 
-            PaymentIntent paymentIntent = crearPaymentIntentStripe(totalCentimos);
-            return new IniciarCompraResponseDTO(paymentIntent.getClientSecret());
-        }, "iniciarProcesoPago " + idTipoEntrada);
+        BigDecimal totalDecimal = tipoEntrada.getPrecio().multiply(new BigDecimal(cantidad));
+        long totalCentimos = totalDecimal.multiply(new BigDecimal(100)).longValueExact();
+        log.debug("Total calculado para {} entradas tipo '{}': {} {} ({} céntimos)",
+                cantidad, tipoEntrada.getTipo(), totalDecimal, EXPECTED_CURRENCY.toUpperCase(), totalCentimos);
+
+        PaymentIntent paymentIntent = crearPaymentIntentStripe(totalCentimos);
+        return new IniciarCompraResponseDTO(paymentIntent.getClientSecret());
     }
 
+    // --- MÉTODOS PRIVADOS ORIGINALES PRESERVADOS Y ADAPTADOS (sin 'em' como parámetro) ---
     private void validarParametrosConfirmacion(String email, String nombre, Integer idTipoEntrada, int cantidad, String paymentIntentId) {
         if (email == null || email.isBlank() || nombre == null || nombre.isBlank() || idTipoEntrada == null) {
             throw new IllegalArgumentException("Email, nombre, idTipoEntrada son requeridos.");
@@ -178,7 +172,7 @@ public class VentaServiceImpl extends AbstractService implements VentaService {
         }
     }
 
-    private PaymentIntent verificarPagoStripe(String paymentIntentId, long totalEsperadoCentimos) throws PagoInvalidoException {
+    private PaymentIntent verificarPagoStripe(String paymentIntentId) throws PagoInvalidoException {
         log.debug("Verificando PaymentIntent de Stripe: {}", paymentIntentId);
         try {
             PaymentIntentRetrieveParams params = PaymentIntentRetrieveParams.builder().build();
@@ -196,7 +190,7 @@ public class VentaServiceImpl extends AbstractService implements VentaService {
         }
     }
 
-    private Compra crearYGuardarCompra(EntityManager em, Comprador comprador, BigDecimal total, PaymentIntent pi) {
+    private Compra crearYGuardarCompra(Comprador comprador, BigDecimal total, PaymentIntent pi) {
         Compra compra = new Compra();
         compra.setComprador(comprador);
         compra.setTotal(total);
@@ -205,33 +199,36 @@ public class VentaServiceImpl extends AbstractService implements VentaService {
         if (pi.getCreated() != null) {
             compra.setFechaPagoConfirmado(LocalDateTime.ofInstant(Instant.ofEpochSecond(pi.getCreated()), ZoneId.systemDefault()));
         }
-        return compraRepository.save(em, compra);
+        return compraRepository.save(compra);
     }
 
-    private CompraEntrada crearYGuardarCompraEntrada(EntityManager em, Compra compra, TipoEntrada tipoEntrada, int cantidad) {
+    private CompraEntrada crearYGuardarCompraEntrada(Compra compra, TipoEntrada tipoEntrada, int cantidad) {
         CompraEntrada compraEntrada = new CompraEntrada();
         compraEntrada.setCompra(compra);
         compraEntrada.setTipoEntrada(tipoEntrada);
         compraEntrada.setCantidad(cantidad);
         compraEntrada.setPrecioUnitario(tipoEntrada.getPrecio());
-        return compraEntradaRepository.save(em, compraEntrada);
+        compraEntradaRepository.save(compraEntrada);
+        return compraEntrada;
     }
 
-    private void generarYGuardarEntradasAsignadas(EntityManager em, CompraEntrada ce, int cantidad, List<Entrada> listaPersistida) {
+    private List<Entrada> generarYGuardarEntradasAsignadas(CompraEntrada ce, int cantidad) {
+        List<Entrada> listaPersistida = new ArrayList<>();
         for (int i = 0; i < cantidad; i++) {
             Entrada ea = new Entrada();
             ea.setCompraEntrada(ce);
             ea.setEstado(EstadoEntrada.ACTIVA);
             ea.setCodigoQr(QRCodeUtil.generarContenidoQrUnico());
-            listaPersistida.add(entradaRepository.save(em, ea));
+            listaPersistida.add(entradaRepository.save(ea));
         }
         log.debug("Generadas {} entradas para CompraEntrada ID: {}", cantidad, ce.getIdCompraEntrada());
+        return listaPersistida;
     }
 
-    private void actualizarStockEntrada(EntityManager em, TipoEntrada tipoEntrada, int cantidad) {
+    private void actualizarStockEntrada(TipoEntrada tipoEntrada, int cantidad) {
         int nuevoStock = tipoEntrada.getStock() - cantidad;
         tipoEntrada.setStock(nuevoStock);
-        tipoEntradaRepository.save(em, tipoEntrada);
+        tipoEntradaRepository.save(tipoEntrada);
         log.info("Stock actualizado para Entrada ID {}. Nuevo stock: {}", tipoEntrada.getIdTipoEntrada(), nuevoStock);
     }
 

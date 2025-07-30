@@ -1,7 +1,9 @@
 package com.beatpass.repository;
 
 import com.beatpass.model.Consumo;
+import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import jakarta.persistence.PersistenceException;
 import jakarta.persistence.TypedQuery;
 import java.util.Collections;
@@ -13,12 +15,15 @@ import org.slf4j.LoggerFactory;
 /**
  * Implementación de ConsumoRepository usando JPA EntityManager.
  */
+@ApplicationScoped
 public class ConsumoRepositoryImpl implements ConsumoRepository {
 
+    @PersistenceContext(unitName = "beatpassPersistenceUnit")
+    private EntityManager em;
     private static final Logger log = LoggerFactory.getLogger(ConsumoRepositoryImpl.class);
 
     @Override
-    public Consumo save(EntityManager em, Consumo consumo) {
+    public Consumo save(Consumo consumo) {
         if (consumo == null) {
             throw new IllegalArgumentException("La entidad Consumo no puede ser nula.");
         }
@@ -48,7 +53,7 @@ public class ConsumoRepositoryImpl implements ConsumoRepository {
     }
 
     @Override
-    public Optional<Consumo> findById(EntityManager em, Integer id) {
+    public Optional<Consumo> findById(Integer id) {
         log.debug("Buscando Consumo con ID: {}", id);
         if (id == null) {
             log.warn("Intento de buscar Consumo con ID nulo.");
@@ -67,7 +72,7 @@ public class ConsumoRepositoryImpl implements ConsumoRepository {
     }
 
     @Override
-    public List<Consumo> findByPulseraId(EntityManager em, Integer idPulsera) {
+    public List<Consumo> findByPulseraId(Integer idPulsera) {
         log.debug("Buscando Consumos para Pulsera ID: {}", idPulsera);
         if (idPulsera == null) {
             log.warn("Intento de buscar consumos para un ID de pulsera nulo.");
@@ -87,7 +92,7 @@ public class ConsumoRepositoryImpl implements ConsumoRepository {
     }
 
     @Override
-    public List<Consumo> findByFestivalId(EntityManager em, Integer idFestival) {
+    public List<Consumo> findByFestivalId(Integer idFestival) {
         log.debug("Buscando Consumos para Festival ID: {}", idFestival);
         if (idFestival == null) {
             log.warn("Intento de buscar consumos para un ID de festival nulo.");

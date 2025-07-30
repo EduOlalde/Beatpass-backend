@@ -40,10 +40,9 @@ public class FestivalDTO {
 
     private EstadoFestival estado;
 
-    @NotNull(message = "Se requiere el ID del promotor.")
     private Integer idPromotor;
 
-    private String nombrePromotor; // Informativo
+    private String nombrePromotor; 
 
     public FestivalDTO() {
     }

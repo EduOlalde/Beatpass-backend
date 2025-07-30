@@ -2,7 +2,10 @@ package com.beatpass.repository;
 
 import com.beatpass.model.EstadoFestival;
 import com.beatpass.model.Festival;
+import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.persistence.EntityManager;
+import jakarta.persistence.NoResultException;
+import jakarta.persistence.PersistenceContext;
 import jakarta.persistence.PersistenceException;
 import jakarta.persistence.TypedQuery;
 import java.time.LocalDate;
@@ -15,12 +18,15 @@ import org.slf4j.LoggerFactory;
 /**
  * Implementación de FestivalRepository usando JPA EntityManager.
  */
+@ApplicationScoped
 public class FestivalRepositoryImpl implements FestivalRepository {
 
+    @PersistenceContext(unitName = "beatpassPersistenceUnit")
+    private EntityManager em;
     private static final Logger log = LoggerFactory.getLogger(FestivalRepositoryImpl.class);
 
     @Override
-    public Festival save(EntityManager em, Festival festival) {
+    public Festival save(Festival festival) {
         if (festival == null) {
             throw new IllegalArgumentException("La entidad Festival no puede ser nula.");
         }
@@ -51,17 +57,19 @@ public class FestivalRepositoryImpl implements FestivalRepository {
     }
 
     @Override
-    public Optional<Festival> findById(EntityManager em, Integer id) {
+    public Optional<Festival> findById(Integer id) {
         log.debug("Buscando festival con ID: {}", id);
         if (id == null) {
             log.warn("Intento de buscar Festival con ID nulo.");
             return Optional.empty();
         }
         try {
-            Festival festival = em.find(Festival.class, id);
-            return Optional.ofNullable(festival);
-        } catch (IllegalArgumentException e) {
-            log.error("Argumento ilegal al buscar Festival por ID {}: {}", id, e.getMessage());
+            TypedQuery<Festival> query = em.createQuery(
+                    "SELECT f FROM Festival f LEFT JOIN FETCH f.promotor WHERE f.idFestival = :id", Festival.class);
+            query.setParameter("id", id);
+            return Optional.ofNullable(query.getSingleResult());
+        } catch (NoResultException e) {
+            log.trace("Festival no encontrado con ID: {}", id);
             return Optional.empty();
         } catch (Exception e) {
             log.error("Error inesperado al buscar Festival por ID {}: {}", id, e.getMessage(), e);
@@ -70,13 +78,13 @@ public class FestivalRepositoryImpl implements FestivalRepository {
     }
 
     @Override
-    public boolean deleteById(EntityManager em, Integer id) {
+    public boolean deleteById(Integer id) {
         log.debug("Intentando eliminar festival con ID: {}", id);
         if (id == null) {
             log.warn("Intento de eliminar Festival con ID nulo.");
             return false;
         }
-        Optional<Festival> festivalOpt = findById(em, id);
+        Optional<Festival> festivalOpt = findById(id);
         if (festivalOpt.isPresent()) {
             try {
                 em.remove(festivalOpt.get());
@@ -96,10 +104,11 @@ public class FestivalRepositoryImpl implements FestivalRepository {
     }
 
     @Override
-    public List<Festival> findAll(EntityManager em) {
+    public List<Festival> findAll() {
         log.debug("Buscando todos los festivales.");
         try {
-            TypedQuery<Festival> query = em.createQuery("SELECT f FROM Festival f ORDER BY f.nombre", Festival.class);
+            // MODIFIED: Added LEFT JOIN FETCH to eagerly load the promoter
+            TypedQuery<Festival> query = em.createQuery("SELECT f FROM Festival f LEFT JOIN FETCH f.promotor ORDER BY f.nombre", Festival.class);
             List<Festival> festivales = query.getResultList();
             log.debug("Encontrados {} festivales.", festivales.size());
             return festivales;
@@ -110,15 +119,16 @@ public class FestivalRepositoryImpl implements FestivalRepository {
     }
 
     @Override
-    public List<Festival> findByEstado(EntityManager em, EstadoFestival estado) {
+    public List<Festival> findByEstado(EstadoFestival estado) {
         log.debug("Buscando festivales con estado: {}", estado);
         if (estado == null) {
             log.warn("Intento de buscar festivales con estado nulo.");
             return Collections.emptyList();
         }
         try {
+            // MODIFIED: Added LEFT JOIN FETCH to eagerly load the promoter
             TypedQuery<Festival> query = em.createQuery(
-                    "SELECT f FROM Festival f WHERE f.estado = :estadoParam ORDER BY f.fechaInicio", Festival.class);
+                    "SELECT f FROM Festival f LEFT JOIN FETCH f.promotor WHERE f.estado = :estadoParam ORDER BY f.fechaInicio", Festival.class);
             query.setParameter("estadoParam", estado);
             List<Festival> festivales = query.getResultList();
             log.debug("Encontrados {} festivales con estado {}.", festivales.size(), estado);
@@ -130,7 +140,7 @@ public class FestivalRepositoryImpl implements FestivalRepository {
     }
 
     @Override
-    public List<Festival> findActivosEntreFechas(EntityManager em, LocalDate fechaDesde, LocalDate fechaHasta) {
+    public List<Festival> findActivosEntreFechas(LocalDate fechaDesde, LocalDate fechaHasta) {
         log.debug("Buscando festivales activos (PUBLICADO) entre {} y {}", fechaDesde, fechaHasta);
         if (fechaDesde == null || fechaHasta == null || fechaHasta.isBefore(fechaDesde)) {
             log.warn("Fechas inválidas para la búsqueda de festivales activos: desde={}, hasta={}", fechaDesde, fechaHasta);
@@ -155,7 +165,7 @@ public class FestivalRepositoryImpl implements FestivalRepository {
     }
 
     @Override
-    public List<Festival> findByPromotorId(EntityManager em, Integer idPromotor) {
+    public List<Festival> findByPromotorId(Integer idPromotor) {
         log.debug("Buscando festivales para el promotor ID: {}", idPromotor);
         if (idPromotor == null) {
             log.warn("Intento de buscar festivales para un ID de promotor nulo.");
@@ -163,7 +173,7 @@ public class FestivalRepositoryImpl implements FestivalRepository {
         }
         try {
             TypedQuery<Festival> query = em.createQuery(
-                    "SELECT f FROM Festival f WHERE f.promotor.idUsuario = :promotorId ORDER BY f.fechaInicio DESC",
+                    "SELECT f FROM Festival f LEFT JOIN FETCH f.promotor WHERE f.promotor.idUsuario = :promotorId ORDER BY f.fechaInicio DESC",
                     Festival.class);
             query.setParameter("promotorId", idPromotor);
             List<Festival> festivales = query.getResultList();

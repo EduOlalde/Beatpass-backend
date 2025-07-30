@@ -1,29 +1,32 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<persistence version="3.0" xmlns="https://jakarta.ee/xml/ns/persistence" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="https://jakarta.ee/xml/ns/persistence https://jakarta.ee/xml/ns/persistence/persistence_3_0.xsd">
-  <persistence-unit name="beatpassPersistenceUnit" transaction-type="RESOURCE_LOCAL">
-    <provider>org.hibernate.jpa.HibernatePersistenceProvider</provider>
-    <class>com.beatpass.model.Festival</class>
-    <class>com.beatpass.model.Compra</class>
-    <class>com.beatpass.model.Usuario</class>
-    <class>com.beatpass.model.Consumo</class>
-    <class>com.beatpass.model.Recarga</class>
-    <class>com.beatpass.model.Asistente</class>
-    <class>com.beatpass.model.EstadisticasFestival</class>
-    <class>com.beatpass.model.PulseraNFC</class>
-    <class>com.beatpass.model.CompraEntrada</class>
-    <class>com.beatpass.model.TipoEntrada</class>
-    <class>com.beatpass.model.Entrada</class>
-    <properties>
-      <property name="hibernate.connection.provider_class" value="org.hibernate.hikaricp.internal.HikariCPConnectionProvider"/>
-      <property name="hibernate.hikari.maximumPoolSize" value="10"/>
-      <property name="hibernate.hikari.minimumIdle" value="2"/>
-      <property name="hibernate.hikari.connectionTimeout" value="30000"/>
-      <property name="hibernate.hikari.idleTimeout" value="600000"/>
-      <property name="hibernate.hikari.maxLifetime" value="1800000"/>
-      <property name="hibernate.hikari.connectionTestQuery" value="SELECT 1"/>
-      <property name="hibernate.show_sql" value="false"/>
-      <property name="hibernate.format_sql" value="false"/>
-      <property name="hibernate.hbm2ddl.auto" value="validate"/>
-    </properties>
-  </persistence-unit>
+<persistence version="3.0"
+             xmlns="https://jakarta.ee/xml/ns/persistence"
+             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+             xsi:schemaLocation="https://jakarta.ee/xml/ns/persistence https://jakarta.ee/xml/ns/persistence/persistence_3_0.xsd">
+
+    <persistence-unit name="beatpassPersistenceUnit" transaction-type="JTA">
+        <jta-data-source>java:jboss/datasources/BeatpassDS</jta-data-source>
+
+        <class>com.beatpass.model.Asistente</class>
+        <class>com.beatpass.model.Comprador</class>
+        <class>com.beatpass.model.Compra</class>
+        <class>com.beatpass.model.CompraEntrada</class>
+        <class>com.beatpass.model.Consumo</class>
+        <class>com.beatpass.model.Entrada</class>
+        <class>com.beatpass.model.EstadisticasFestival</class>
+        <class>com.beatpass.model.Festival</class>
+        <class>com.beatpass.model.PulseraNFC</class>
+        <class>com.beatpass.model.Recarga</class>
+        <class>com.beatpass.model.TipoEntrada</class>
+        <class>com.beatpass.model.Usuario</class>
+        
+        <properties>
+            <property name="hibernate.dialect" value="org.hibernate.dialect.MariaDBDialect"/>
+            <property name="hibernate.hbm2ddl.auto" value="validate"/>
+            <property name="hibernate.show_sql" value="false"/>
+            <property name="hibernate.format_sql" value="false"/>
+            <property name="resteasy.preferJacksonOverJsonB" value="true"/>
+        </properties>
+        
+    </persistence-unit>
 </persistence>

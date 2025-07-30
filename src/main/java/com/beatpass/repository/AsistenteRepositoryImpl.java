@@ -1,8 +1,10 @@
 package com.beatpass.repository;
 
 import com.beatpass.model.Asistente;
+import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.NoResultException;
+import jakarta.persistence.PersistenceContext;
 import jakarta.persistence.PersistenceException;
 import jakarta.persistence.TypedQuery;
 import java.util.Collections;
@@ -14,12 +16,15 @@ import org.slf4j.LoggerFactory;
 /**
  * Implementación de AsistenteRepository usando JPA EntityManager.
  */
+@ApplicationScoped
 public class AsistenteRepositoryImpl implements AsistenteRepository {
 
+    @PersistenceContext(unitName = "beatpassPersistenceUnit")
+    private EntityManager em;
     private static final Logger log = LoggerFactory.getLogger(AsistenteRepositoryImpl.class);
 
     @Override
-    public Asistente save(EntityManager em, Asistente asistente) {
+    public Asistente save(Asistente asistente) {
         if (asistente == null) {
             throw new IllegalArgumentException("La entidad Asistente no puede ser nula.");
         }
@@ -48,7 +53,7 @@ public class AsistenteRepositoryImpl implements AsistenteRepository {
     }
 
     @Override
-    public Optional<Asistente> findById(EntityManager em, Integer id) {
+    public Optional<Asistente> findById(Integer id) {
         log.debug("Buscando Asistente con ID: {}", id);
         if (id == null) {
             log.warn("Intento de buscar Asistente con ID nulo.");
@@ -67,7 +72,7 @@ public class AsistenteRepositoryImpl implements AsistenteRepository {
     }
 
     @Override
-    public Optional<Asistente> findByEmail(EntityManager em, String email) {
+    public Optional<Asistente> findByEmail(String email) {
         log.debug("Buscando Asistente con email: {}", email);
         if (email == null || email.isBlank()) {
             log.warn("Intento de buscar Asistente con email nulo o vacío.");
@@ -89,7 +94,7 @@ public class AsistenteRepositoryImpl implements AsistenteRepository {
     }
 
     @Override
-    public List<Asistente> findAsistentesByFestivalId(EntityManager em, Integer idFestival) {
+    public List<Asistente> findAsistentesByFestivalId(Integer idFestival) {
         log.debug("Buscando Asistentes únicos para Festival ID: {}", idFestival);
         if (idFestival == null) {
             log.warn("Intento de buscar asistentes para un ID de festival nulo.");
@@ -115,7 +120,7 @@ public class AsistenteRepositoryImpl implements AsistenteRepository {
     }
 
     @Override
-    public List<Asistente> findAll(EntityManager em) {
+    public List<Asistente> findAll() {
         log.debug("Buscando todos los Asistentes");
         try {
             TypedQuery<Asistente> query = em.createQuery("SELECT a FROM Asistente a ORDER BY a.nombre", Asistente.class);
@@ -127,7 +132,7 @@ public class AsistenteRepositoryImpl implements AsistenteRepository {
     }
 
     @Override
-    public void delete(EntityManager em, Asistente asistente) {
+    public void delete(Asistente asistente) {
         if (asistente == null || asistente.getIdAsistente() == null) {
             throw new IllegalArgumentException("El asistente a eliminar no puede ser nulo y debe tener un ID.");
         }
@@ -150,7 +155,7 @@ public class AsistenteRepositoryImpl implements AsistenteRepository {
     }
 
     @Override
-    public List<Object[]> findAsistenteDetailsByFestivalId(EntityManager em, Integer idFestival) {
+    public List<Object[]> findAsistenteDetailsByFestivalId(Integer idFestival) {
         log.debug("Buscando detalles de Asistentes para Festival ID: {}", idFestival);
         if (idFestival == null) {
             log.warn("Intento de buscar detalles de asistentes para un ID de festival nulo.");
@@ -174,5 +179,13 @@ public class AsistenteRepositoryImpl implements AsistenteRepository {
             log.error("Error buscando detalles de Asistentes para Festival ID {}: {}", idFestival, e.getMessage(), e);
             return Collections.emptyList();
         }
+    }
+
+    @Override
+    public List<Asistente> searchByTerm(String searchTerm) {
+        String jpql = "SELECT a FROM Asistente a WHERE lower(a.nombre) LIKE :term OR lower(a.email) LIKE :term ORDER BY a.nombre";
+        TypedQuery<Asistente> query = em.createQuery(jpql, Asistente.class);
+        query.setParameter("term", "%" + searchTerm.toLowerCase() + "%");
+        return query.getResultList();
     }
 }

@@ -1,6 +1,7 @@
 package com.beatpass.service;
 
 import com.beatpass.dto.AsistenteDTO;
+import com.beatpass.dto.AsistenteUpdateDTO;
 import com.beatpass.exception.AsistenteNotFoundException;
 import com.beatpass.exception.FestivalNotFoundException;
 import com.beatpass.model.Asistente;
@@ -52,12 +53,12 @@ public interface AsistenteService {
      * modificable. Es transaccional.
      *
      * @param idAsistente ID del asistente a actualizar.
-     * @param asistenteDTO DTO con los nuevos datos (nombre obligatorio).
+     * @param asistenteUpdateDTO DTO con los nuevos datos (nombre obligatorio).
      * @return El AsistenteDTO actualizado.
      * @throws AsistenteNotFoundException Si no se encuentra el asistente.
      * @throws IllegalArgumentException Si faltan datos o son inválidos.
      */
-    AsistenteDTO actualizarAsistente(Integer idAsistente, AsistenteDTO asistenteDTO);
+    AsistenteDTO actualizarAsistente(Integer idAsistente, AsistenteUpdateDTO asistenteUpdateDTO);
 
     /**
      * Obtiene los asistentes únicos con entradas para un festival específico.

@@ -1,42 +1,31 @@
 package com.beatpass.service;
 
-import com.beatpass.repository.CompraRepository;
-import com.beatpass.repository.UsuarioRepository;
-import com.beatpass.repository.FestivalRepository;
 import com.beatpass.dto.CompraDTO;
 import com.beatpass.exception.FestivalNotFoundException;
-import com.beatpass.exception.UsuarioNotFoundException;
+import com.beatpass.mapper.CompraMapper;
 import com.beatpass.model.Compra;
-import com.beatpass.model.Festival;
-import com.beatpass.model.RolUsuario;
-import com.beatpass.model.Usuario;
+import com.beatpass.repository.CompraRepository;
+import com.beatpass.util.PermissionService;
+import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
-import jakarta.persistence.EntityManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import com.beatpass.mapper.CompraMapper;
 
 import java.util.List;
 
-/**
- * Implementación de CompraService.
- */
-public class CompraServiceImpl extends AbstractService implements CompraService {
+@ApplicationScoped
+public class CompraServiceImpl implements CompraService {
 
     private static final Logger log = LoggerFactory.getLogger(CompraServiceImpl.class);
 
-    private final CompraRepository compraRepository;
-    private final FestivalRepository festivalRepository;
-    private final UsuarioRepository usuarioRepository;
-    private final CompraMapper compraMapper;
+    @Inject
+    private CompraRepository compraRepository;
 
     @Inject
-    public CompraServiceImpl(CompraRepository compraRepository, FestivalRepository festivalRepository, UsuarioRepository usuarioRepository) {
-        this.compraRepository = compraRepository;
-        this.festivalRepository = festivalRepository;
-        this.usuarioRepository = usuarioRepository;
-        this.compraMapper = CompraMapper.INSTANCE;
-    }
+    private CompraMapper compraMapper;
+
+    @Inject
+    private PermissionService permissionService;
 
     @Override
     public List<CompraDTO> obtenerComprasPorFestival(Integer idFestival, Integer idActor) {
@@ -45,14 +34,12 @@ public class CompraServiceImpl extends AbstractService implements CompraService 
             throw new IllegalArgumentException("ID de festival e ID de actor son requeridos.");
         }
 
-        return executeRead(em -> {
-            Festival festival = festivalRepository.findById(em, idFestival)
-                    .orElseThrow(() -> new FestivalNotFoundException("Festival no encontrado con ID: " + idFestival));
-            verificarPermisoSobreFestival(em, festival.getIdFestival(), idActor);
+        // Delegamos la verificación de permisos al servicio especializado.
+        // Si el actor no tiene permiso, este método lanzará una excepción.
+        permissionService.verificarPermisoSobreFestival(idFestival, idActor);
 
-            List<Compra> compras = compraRepository.findByFestivalId(em, idFestival);
-            log.info("Encontradas {} compras para el festival ID {} (Actor {})", compras.size(), idFestival, idActor);
-            return compraMapper.toCompraDTOList(compras);
-        }, "obtenerComprasPorFestival " + idFestival);
+        List<Compra> compras = compraRepository.findByFestivalId(idFestival);
+        log.info("Encontradas {} compras para el festival ID {} (Actor {})", compras.size(), idFestival, idActor);
+        return compraMapper.toCompraDTOList(compras);
     }
 }

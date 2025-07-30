@@ -5,6 +5,7 @@ import com.beatpass.exception.PulseraNFCNotFoundException;
 import com.beatpass.service.PulseraNFCService;
 
 import jakarta.annotation.security.RolesAllowed;
+import jakarta.enterprise.context.RequestScoped;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.Context;
@@ -27,18 +28,21 @@ import java.util.Optional;
 @Path("/pos")
 @Produces(MediaType.APPLICATION_JSON)
 @RolesAllowed({"CAJERO", "ADMIN", "PROMOTOR"})
+@RequestScoped
 public class PuntoVentaResource {
 
     private static final Logger log = LoggerFactory.getLogger(PuntoVentaResource.class);
 
-    private final PulseraNFCService pulseraNFCService;
+    @Inject
+    private PulseraNFCService pulseraNFCService;
 
     @Context
     private SecurityContext securityContext;
 
-    @Inject
-    public PuntoVentaResource(PulseraNFCService pulseraNFCService) {
-        this.pulseraNFCService = pulseraNFCService;
+    /**
+     * Constructor sin argumentos requerido para CDI.
+     */
+    public PuntoVentaResource() {
     }
 
     @GET

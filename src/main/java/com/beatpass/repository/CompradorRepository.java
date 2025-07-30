@@ -1,7 +1,7 @@
 package com.beatpass.repository;
 
 import com.beatpass.model.Comprador;
-import jakarta.persistence.EntityManager;
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -9,9 +9,18 @@ import java.util.Optional;
  */
 public interface CompradorRepository {
 
-    Comprador save(EntityManager em, Comprador comprador);
+    Comprador save(Comprador comprador);
 
-    Optional<Comprador> findById(EntityManager em, Integer id);
+    Optional<Comprador> findById(Integer id);
 
-    Optional<Comprador> findByEmail(EntityManager em, String email);
+    Optional<Comprador> findByEmail(String email);
+
+    /**
+     * Busca compradores cuyo nombre o email coincidan con el término de
+     * búsqueda.
+     *
+     * @param searchTerm El término a buscar.
+     * @return Una lista de compradores que coinciden.
+     */
+    List<Comprador> searchByTerm(String searchTerm);
 }

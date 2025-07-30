@@ -19,7 +19,7 @@ public interface TipoEntradaRepository {
      * @param tipoEntrada La entidad TipoEntrada a guardar.
      * @return La entidad TipoEntrada guardada o actualizada.
      */
-    TipoEntrada save(EntityManager em, TipoEntrada tipoEntrada);
+    TipoEntrada save(TipoEntrada tipoEntrada);
 
     /**
      * Busca un tipo de entrada por su ID.
@@ -28,7 +28,7 @@ public interface TipoEntradaRepository {
      * @param id El ID a buscar.
      * @return Un Optional con la TipoEntrada si se encuentra, o vacío.
      */
-    Optional<TipoEntrada> findById(EntityManager em, Integer id);
+    Optional<TipoEntrada> findById(Integer id);
 
     /**
      * Busca un tipo de entrada por su ID con un modo de bloqueo específico.
@@ -39,7 +39,7 @@ public interface TipoEntradaRepository {
      * LockModeType.PESSIMISTIC_WRITE).
      * @return Un Optional con la TipoEntrada si se encuentra, o vacío.
      */
-    Optional<TipoEntrada> findById(EntityManager em, Integer id, LockModeType lockMode); // New method
+    Optional<TipoEntrada> findById(Integer id, LockModeType lockMode); // New method
 
     /**
      * Busca todos los tipos de entrada asociados a un Festival específico.
@@ -48,7 +48,7 @@ public interface TipoEntradaRepository {
      * @param idFestival El ID del Festival.
      * @return Una lista (posiblemente vacía) de Entradas.
      */
-    List<TipoEntrada> findByFestivalId(EntityManager em, Integer idFestival);
+    List<TipoEntrada> findByFestivalId(Integer idFestival);
 
     /**
      * Elimina un tipo de entrada por su ID. Debe ejecutarse dentro de una
@@ -59,6 +59,6 @@ public interface TipoEntradaRepository {
      * @return true si se encontró y marcó para eliminar, false si no se
      * encontró.
      */
-    boolean deleteById(EntityManager em, Integer id);
+    boolean deleteById(Integer id);
 
 }

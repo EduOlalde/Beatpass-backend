@@ -6,6 +6,7 @@ import com.beatpass.model.RolUsuario;
 import com.beatpass.service.UsuarioService;
 
 import jakarta.annotation.security.RolesAllowed;
+import jakarta.enterprise.context.RequestScoped;
 import jakarta.inject.Inject;
 import jakarta.validation.Valid;
 import jakarta.ws.rs.*;
@@ -28,20 +29,23 @@ import java.util.Optional;
 @Path("/usuarios")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
+@RequestScoped
 public class UsuarioResource {
 
     private static final Logger log = LoggerFactory.getLogger(UsuarioResource.class);
 
-    private final UsuarioService usuarioService;
+    @Inject
+    private UsuarioService usuarioService;
 
     @Context
     private UriInfo uriInfo;
     @Context
     private SecurityContext securityContext;
 
-    @Inject
-    public UsuarioResource(UsuarioService usuarioService) {
-        this.usuarioService = usuarioService;
+    /**
+     * Constructor sin argumentos requerido para CDI.
+     */
+    public UsuarioResource() {
     }
 
     @POST

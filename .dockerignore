@@ -1,7 +1,5 @@
 # .dockerignore
-/target/*
-# Include WAR for deployment
-!target/ROOT.war
+target/
 
 node_modules/
 .git/
@@ -11,3 +9,5 @@ node_modules/
 
 /recursos/*
 !recursos/server.xml
+!recursos/lib/
+!recursos/mariadb-module.xml

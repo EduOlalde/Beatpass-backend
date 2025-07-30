@@ -8,6 +8,7 @@ import com.beatpass.service.TipoEntradaService;
 
 import jakarta.annotation.security.PermitAll;
 import jakarta.annotation.security.RolesAllowed;
+import jakarta.enterprise.context.RequestScoped;
 import jakarta.inject.Inject;
 import jakarta.validation.Valid;
 import jakarta.ws.rs.*;
@@ -32,22 +33,25 @@ import java.util.Optional;
 @Path("/festivales")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
+@RequestScoped
 public class FestivalResource {
 
     private static final Logger log = LoggerFactory.getLogger(FestivalResource.class);
 
-    private final FestivalService festivalService;
-    private final TipoEntradaService tipoEntradaService;
+    @Inject
+    private FestivalService festivalService;
+    @Inject
+    private TipoEntradaService tipoEntradaService;
 
     @Context
     private UriInfo uriInfo;
     @Context
     private SecurityContext securityContext;
 
-    @Inject
-    public FestivalResource(FestivalService festivalService, TipoEntradaService tipoEntradaService) {
-        this.festivalService = festivalService;
-        this.tipoEntradaService = tipoEntradaService;
+    /**
+     * Constructor sin argumentos requerido para CDI.
+     */
+    public FestivalResource() {
     }
 
     @GET

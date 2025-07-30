@@ -1,7 +1,6 @@
 package com.beatpass.repository;
 
 import com.beatpass.model.Asistente;
-import jakarta.persistence.EntityManager;
 import java.util.List;
 import java.util.Optional;
 
@@ -15,54 +14,48 @@ public interface AsistenteRepository {
      * Guarda (crea o actualiza) una entidad Asistente. Debe ejecutarse dentro
      * de una transacción activa.
      *
-     * @param em El EntityManager activo y transaccional.
      * @param asistente La entidad Asistente a guardar.
      * @return La entidad Asistente guardada o actualizada.
      */
-    Asistente save(EntityManager em, Asistente asistente);
+    Asistente save(Asistente asistente);
 
     /**
      * Busca un Asistente por su ID.
      *
-     * @param em El EntityManager activo.
      * @param id El ID del asistente a buscar.
      * @return Un Optional con el Asistente si se encuentra, o vacío.
      */
-    Optional<Asistente> findById(EntityManager em, Integer id);
+    Optional<Asistente> findById(Integer id);
 
     /**
      * Busca un Asistente por su email (único).
      *
-     * @param em El EntityManager activo.
      * @param email El email del asistente a buscar.
      * @return Un Optional con el Asistente si se encuentra, o vacío.
      */
-    Optional<Asistente> findByEmail(EntityManager em, String email);
+    Optional<Asistente> findByEmail(String email);
 
     /**
      * Busca asistentes únicos que tienen entradas para un festival específico.
      *
-     * @param em El EntityManager activo.
      * @param idFestival El ID del festival.
      * @return Una lista (posiblemente vacía) de Asistentes únicos.
      */
-    List<Asistente> findAsistentesByFestivalId(EntityManager em, Integer idFestival);
+    List<Asistente> findAsistentesByFestivalId(Integer idFestival);
 
     /**
      * Busca todos los asistentes. Usar con precaución.
      *
-     * @param em El EntityManager activo.
      * @return Una lista con todos los asistentes.
      */
-    List<Asistente> findAll(EntityManager em);
+    List<Asistente> findAll();
 
     /**
      * Elimina un asistente. Debe ejecutarse dentro de una transacción activa.
      *
-     * @param em El EntityManager activo y transaccional.
      * @param asistente El asistente a eliminar.
      */
-    void delete(EntityManager em, Asistente asistente);
+    void delete(Asistente asistente);
 
     /**
      * Busca los detalles de los asistentes para un festival específico,
@@ -72,7 +65,6 @@ public interface AsistenteRepository {
      * resultados, uniendo Asistente, Entrada, Festival y PulseraNFC en una sola
      * llamada a la base de datos para evitar el problema N+1.
      *
-     * @param em El EntityManager activo.
      * @param idFestival El ID del festival para el cual se buscan los
      * asistentes.
      * @return Una lista de arrays de objetos (List<Object[]>), donde cada array
@@ -90,6 +82,8 @@ public interface AsistenteRepository {
      * null</li>
      * </ul>
      */
-    List<Object[]> findAsistenteDetailsByFestivalId(EntityManager em, Integer idFestival);
+    List<Object[]> findAsistenteDetailsByFestivalId(Integer idFestival);
+    
+    List<Asistente> searchByTerm(String searchTerm);
 
 }

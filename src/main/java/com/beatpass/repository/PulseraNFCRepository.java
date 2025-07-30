@@ -18,7 +18,7 @@ public interface PulseraNFCRepository {
      * @param pulsera La entidad PulseraNFC a guardar.
      * @return La entidad PulseraNFC guardada o actualizada.
      */
-    PulseraNFC save(EntityManager em, PulseraNFC pulsera);
+    PulseraNFC save(PulseraNFC pulsera);
 
     /**
      * Busca una PulseraNFC por su ID.
@@ -27,7 +27,7 @@ public interface PulseraNFCRepository {
      * @param id El ID a buscar.
      * @return Un Optional con la PulseraNFC si se encuentra, o vacío.
      */
-    Optional<PulseraNFC> findById(EntityManager em, Integer id);
+    Optional<PulseraNFC> findById(Integer id);
 
     /**
      * Busca una PulseraNFC por su código UID (único).
@@ -36,7 +36,7 @@ public interface PulseraNFCRepository {
      * @param codigoUid El código UID a buscar.
      * @return Un Optional con la PulseraNFC si se encuentra, o vacío.
      */
-    Optional<PulseraNFC> findByCodigoUid(EntityManager em, String codigoUid);
+    Optional<PulseraNFC> findByCodigoUid(String codigoUid);
 
     /**
      * Busca la PulseraNFC asociada a una Entrada específica.
@@ -45,7 +45,7 @@ public interface PulseraNFCRepository {
      * @param idEntrada El ID de la Entrada.
      * @return Un Optional con la PulseraNFC si se encuentra, o vacío.
      */
-    Optional<PulseraNFC> findByEntradaId(EntityManager em, Integer idEntrada);
+    Optional<PulseraNFC> findByEntradaId(Integer idEntrada);
 
     /**
      * Busca todas las pulseras asociadas a un Festival específico.
@@ -54,6 +54,6 @@ public interface PulseraNFCRepository {
      * @param idFestival El ID del Festival.
      * @return Una lista (posiblemente vacía) de PulseraNFC.
      */
-    List<PulseraNFC> findByFestivalId(EntityManager em, Integer idFestival);
+    List<PulseraNFC> findByFestivalId(Integer idFestival);
 
 }

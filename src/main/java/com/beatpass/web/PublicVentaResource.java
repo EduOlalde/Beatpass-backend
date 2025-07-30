@@ -3,6 +3,7 @@ package com.beatpass.web;
 import com.beatpass.dto.*;
 import com.beatpass.service.EntradaService;
 import com.beatpass.service.VentaService;
+import jakarta.enterprise.context.RequestScoped;
 import jakarta.inject.Inject;
 import jakarta.validation.Valid;
 import jakarta.ws.rs.*;
@@ -22,20 +23,23 @@ import java.util.Optional;
 @Path("/public/venta")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
+@RequestScoped
 public class PublicVentaResource {
 
     private static final Logger log = LoggerFactory.getLogger(PublicVentaResource.class);
 
-    private final VentaService ventaService;
-    private final EntradaService entradaService;
+    @Inject
+    private VentaService ventaService;
+    @Inject
+    private EntradaService entradaService;
 
     @Context
     private UriInfo uriInfo;
 
-    @Inject
-    public PublicVentaResource(VentaService ventaService, EntradaService entradaService) {
-        this.ventaService = ventaService;
-        this.entradaService = entradaService;
+    /**
+     * Constructor sin argumentos requerido para CDI.
+     */
+    public PublicVentaResource() {
     }
 
     @POST

@@ -1,8 +1,11 @@
 package com.beatpass.repository;
 
 import com.beatpass.model.TipoEntrada;
+import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.persistence.EntityManager;
-import jakarta.persistence.LockModeType; // Import LockModeType
+import jakarta.persistence.LockModeType;
+import jakarta.persistence.NoResultException;
+import jakarta.persistence.PersistenceContext;
 import jakarta.persistence.PersistenceException;
 import jakarta.persistence.TypedQuery;
 import java.util.Collections;
@@ -14,12 +17,15 @@ import org.slf4j.LoggerFactory;
 /**
  * Implementación de TipoEntradaRepository usando JPA EntityManager.
  */
+@ApplicationScoped
 public class TipoEntradaRepositoryImpl implements TipoEntradaRepository {
 
+    @PersistenceContext(unitName = "beatpassPersistenceUnit")
+    private EntityManager em;
     private static final Logger log = LoggerFactory.getLogger(TipoEntradaRepositoryImpl.class);
 
     @Override
-    public TipoEntrada save(EntityManager em, TipoEntrada tipoEntrada) {
+    public TipoEntrada save(TipoEntrada tipoEntrada) {
         if (tipoEntrada == null) {
             throw new IllegalArgumentException("La entidad Entrada no puede ser nula.");
         }
@@ -28,17 +34,17 @@ public class TipoEntradaRepositoryImpl implements TipoEntradaRepository {
         }
 
         String festivalIdStr = String.valueOf(tipoEntrada.getFestival().getIdFestival());
-        log.debug("Intentando guardar Entrada con ID: {} para Festival ID: {}", tipoEntrada.getIdTipoEntrada(), festivalIdStr);
+        log.debug("Intentando guardar Entrada dengan ID: {} untuk Festival ID: {}", tipoEntrada.getIdTipoEntrada(), festivalIdStr);
         try {
             if (tipoEntrada.getIdTipoEntrada() == null) {
                 log.trace("Persistiendo nueva Entrada...");
                 em.persist(tipoEntrada);
-                log.info("Nueva Entrada persistida con ID: {}", tipoEntrada.getIdTipoEntrada());
+                log.info("Nueva Entrada persistida dengan ID: {}", tipoEntrada.getIdTipoEntrada());
                 return tipoEntrada;
             } else {
-                log.trace("Actualizando Entrada con ID: {}", tipoEntrada.getIdTipoEntrada());
+                log.trace("Actualizando Entrada dengan ID: {}", tipoEntrada.getIdTipoEntrada());
                 TipoEntrada mergedEntrada = em.merge(tipoEntrada);
-                log.info("Entrada actualizada con ID: {}", mergedEntrada.getIdTipoEntrada());
+                log.info("Entrada actualizada dengan ID: {}", mergedEntrada.getIdTipoEntrada());
                 return mergedEntrada;
             }
         } catch (PersistenceException e) {
@@ -51,27 +57,29 @@ public class TipoEntradaRepositoryImpl implements TipoEntradaRepository {
     }
 
     @Override
-    public Optional<TipoEntrada> findById(EntityManager em, Integer id) {
-        return findById(em, id, null); 
+    public Optional<TipoEntrada> findById(Integer id) {
+        return findById(id, null);
     }
 
     @Override
-    public Optional<TipoEntrada> findById(EntityManager em, Integer id, LockModeType lockMode) { 
-        log.debug("Buscando Entrada con ID: {} (LockMode: {})", id, lockMode);
+    public Optional<TipoEntrada> findById(Integer id, LockModeType lockMode) {
+        log.debug("Buscando Entrada dengan ID: {} (LockMode: {})", id, lockMode);
         if (id == null) {
-            log.warn("Intento de buscar Entrada con ID nulo.");
+            log.warn("Intento de buscar Entrada dengan ID nulo.");
             return Optional.empty();
         }
         try {
-            TipoEntrada tipoEntrada;
+            String jpql = "SELECT te FROM TipoEntrada te LEFT JOIN FETCH te.festival WHERE te.idTipoEntrada = :id";
+            TypedQuery<TipoEntrada> query = em.createQuery(jpql, TipoEntrada.class);
+            query.setParameter("id", id);
+
             if (lockMode != null) {
-                tipoEntrada = em.find(TipoEntrada.class, id, lockMode);
-            } else {
-                tipoEntrada = em.find(TipoEntrada.class, id);
+                query.setLockMode(lockMode);
             }
-            return Optional.ofNullable(tipoEntrada);
-        } catch (IllegalArgumentException e) {
-            log.error("Argumento ilegal al buscar Entrada por ID {}: {}", id, e.getMessage());
+
+            return Optional.ofNullable(query.getSingleResult());
+        } catch (NoResultException e) {
+            log.trace("TipoEntrada tidak ditemukan dengan ID: {}", id);
             return Optional.empty();
         } catch (Exception e) {
             log.error("Error inesperado al buscar Entrada por ID {}: {}", id, e.getMessage(), e);
@@ -80,40 +88,37 @@ public class TipoEntradaRepositoryImpl implements TipoEntradaRepository {
     }
 
     @Override
-    public List<TipoEntrada> findByFestivalId(EntityManager em, Integer idFestival) {
-        log.debug("Buscando Tipos de Entrada para Festival ID: {}", idFestival);
+    public List<TipoEntrada> findByFestivalId(Integer idFestival) {
+        log.debug("Buscando Tipos de Entrada untuk Festival ID: {}", idFestival);
         if (idFestival == null) {
-            log.warn("Intento de buscar tipos de entrada para un ID de festival nulo.");
+            log.warn("Intento de buscar tipos de entrada untuk ID de festival nulo.");
             return Collections.emptyList();
         }
         try {
-            // CONSULTA CORREGIDA
             TypedQuery<TipoEntrada> query = em.createQuery(
-                    "SELECT te FROM TipoEntrada te WHERE te.festival.idFestival = :festivalId ORDER BY te.tipo",
+                    "SELECT te FROM TipoEntrada te LEFT JOIN FETCH te.festival WHERE te.festival.idFestival = :festivalId ORDER BY te.tipo",
                     TipoEntrada.class
             );
             query.setParameter("festivalId", idFestival);
-            List<TipoEntrada> tiposEntrada = query.getResultList();
-            log.debug("Encontrados {} Tipos de Entrada para Festival ID: {}", tiposEntrada.size(), idFestival);
-            return tiposEntrada;
+            return query.getResultList();
         } catch (Exception e) {
-            log.error("Error buscando Tipos de Entrada para Festival ID {}: {}", idFestival, e.getMessage(), e);
+            log.error("Error buscando Tipos de Entrada untuk Festival ID {}: {}", idFestival, e.getMessage(), e);
             return Collections.emptyList();
         }
     }
 
     @Override
-    public boolean deleteById(EntityManager em, Integer id) {
-        log.debug("Intentando eliminar Entrada con ID: {}", id);
+    public boolean deleteById(Integer id) {
+        log.debug("Intentando eliminar Entrada dengan ID: {}", id);
         if (id == null) {
-            log.warn("Intento de eliminar Entrada con ID nulo.");
+            log.warn("Intento de eliminar Entrada dengan ID nulo.");
             return false;
         }
-        Optional<TipoEntrada> tipoEntradaOpt = findById(em, id);
+        Optional<TipoEntrada> tipoEntradaOpt = findById(id);
         if (tipoEntradaOpt.isPresent()) {
             try {
                 em.remove(tipoEntradaOpt.get());
-                log.info("Entrada ID: {} marcada para eliminación.", id);
+                log.info("Entrada ID: {} marcado para eliminación.", id);
                 return true;
             } catch (PersistenceException e) {
                 log.error("Error de persistencia al eliminar Entrada ID {}: {}. Causa probable: existen detalles de compra asociados.",
@@ -124,7 +129,7 @@ public class TipoEntradaRepositoryImpl implements TipoEntradaRepository {
                 throw new PersistenceException("Error inesperado al eliminar Entrada", e);
             }
         } else {
-            log.warn("No se pudo eliminar. Entrada no encontrada con ID: {}", id);
+            log.warn("No se pudo eliminar. Entrada no encontrada dengan ID: {}", id);
             return false;
         }
     }

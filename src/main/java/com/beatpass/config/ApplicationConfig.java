@@ -1,44 +1,34 @@
 package com.beatpass.config;
 
-import org.glassfish.jersey.server.ResourceConfig;
-import com.beatpass.web.*;
-import com.beatpass.mapper.GenericExceptionMapper;
-import com.beatpass.security.AuthenticationFilter;
-import com.beatpass.security.CorsFilter;
-
 import jakarta.ws.rs.ApplicationPath;
+import jakarta.ws.rs.core.Application;
+import io.swagger.v3.oas.annotations.OpenAPIDefinition;
+import io.swagger.v3.oas.annotations.info.Info;
+import io.swagger.v3.oas.annotations.servers.Server;
 
 /**
- * Clase de configuración principal para la aplicación JAX-RS, utilizando
- * ResourceConfig de Jersey para una configuración programática más flexible y
- * potente.
+ * Clase de configuración principal para la aplicación JAX-RS.
  * <p>
  * Define la ruta base para todos los endpoints de la API REST ({@code /api})
- * mediante la anotación {@link ApplicationPath}.
+ * mediante la anotación {@link ApplicationPath}. Al extender {@link Application},
+ * WildFly escaneará y registrará automáticamente todos los recursos JAX-RS
+ * (clases con @Path) y proveedores (clases con @Provider).
  * </p>
  *
  * @author Eduardo Olalde
  */
 @ApplicationPath("/api")
-public class ApplicationConfig extends ResourceConfig {
+@OpenAPIDefinition(
+        info = @Info(
+                title = "Beatpass API",
+                version = "1.0.0",
+                description = "API RESTful para la gestión de venta de entradas para festivales."
+        ),
+        servers = {
+            @Server(url = "https://beatpass.onrender.com", description = "Servidor de Producción"),
+            @Server(url = "http://localhost:8080", description = "Servidor Local")
+        }
+)
+public class ApplicationConfig extends Application {
 
-    public ApplicationConfig() {
-        // Registrar Binder para la Inyección de Dependencias.
-        register(new DependencyBinder());
-
-        // Registrar clases de los recursos (endpoints)
-        register(AdminResource.class);
-        register(AuthResource.class);
-        register(FestivalResource.class);
-        register(PromotorResource.class);
-        register(PublicVentaResource.class);
-        register(PuntoVentaResource.class);
-        register(UsuarioResource.class);
-
-        // Registrar proveedores (filtros, mappers, etc.)
-        register(AuthenticationFilter.class);
-        register(CorsFilter.class);
-        register(GenericExceptionMapper.class);
-        register(ObjectMapperContextResolver.class);
-    }
 }

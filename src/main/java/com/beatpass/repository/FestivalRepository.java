@@ -20,7 +20,7 @@ public interface FestivalRepository {
      * @param festival El festival a guardar.
      * @return La entidad Festival guardada o actualizada.
      */
-    Festival save(EntityManager em, Festival festival);
+    Festival save(Festival festival);
 
     /**
      * Busca un Festival por su ID.
@@ -29,7 +29,7 @@ public interface FestivalRepository {
      * @param id El ID a buscar.
      * @return Un Optional con el Festival si se encuentra, o vacío.
      */
-    Optional<Festival> findById(EntityManager em, Integer id);
+    Optional<Festival> findById(Integer id);
 
     /**
      * Elimina un festival por su ID. Debe ejecutarse dentro de una transacción
@@ -39,7 +39,7 @@ public interface FestivalRepository {
      * @param id El ID a eliminar.
      * @return true si se encontró y marcó para eliminar, false si no.
      */
-    boolean deleteById(EntityManager em, Integer id);
+    boolean deleteById(Integer id);
 
     /**
      * Busca todos los festivales. Usar con precaución.
@@ -47,7 +47,7 @@ public interface FestivalRepository {
      * @param em El EntityManager activo.
      * @return Una lista con todos los festivales.
      */
-    List<Festival> findAll(EntityManager em);
+    List<Festival> findAll();
 
     /**
      * Busca todos los festivales en un estado específico.
@@ -56,7 +56,7 @@ public interface FestivalRepository {
      * @param estado El EstadoFestival a buscar.
      * @return Una lista (posiblemente vacía) de festivales.
      */
-    List<Festival> findByEstado(EntityManager em, EstadoFestival estado);
+    List<Festival> findByEstado(EstadoFestival estado);
 
     /**
      * Busca festivales activos (PUBLICADO) cuyo periodo se solapa con las
@@ -67,7 +67,7 @@ public interface FestivalRepository {
      * @param fechaHasta Fecha de fin del rango.
      * @return Una lista (posiblemente vacía) de festivales.
      */
-    List<Festival> findActivosEntreFechas(EntityManager em, LocalDate fechaDesde, LocalDate fechaHasta);
+    List<Festival> findActivosEntreFechas(LocalDate fechaDesde, LocalDate fechaHasta);
 
     /**
      * Busca todos los festivales gestionados por un Promotor específico.
@@ -76,6 +76,6 @@ public interface FestivalRepository {
      * @param idPromotor El ID del Promotor.
      * @return Una lista (posiblemente vacía) de festivales.
      */
-    List<Festival> findByPromotorId(EntityManager em, Integer idPromotor);
+    List<Festival> findByPromotorId(Integer idPromotor);
 
 }

@@ -4,6 +4,7 @@ import com.beatpass.dto.*;
 import com.beatpass.model.RolUsuario;
 import com.beatpass.service.*;
 import jakarta.annotation.security.RolesAllowed;
+import jakarta.enterprise.context.RequestScoped;
 import jakarta.inject.Inject;
 import jakarta.validation.Valid;
 import jakarta.ws.rs.*;
@@ -34,32 +35,36 @@ import java.util.Map;
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
 @RolesAllowed("PROMOTOR")
+@RequestScoped
 public class PromotorResource {
 
     private static final Logger log = LoggerFactory.getLogger(PromotorResource.class);
 
-    private final FestivalService festivalService;
-    private final UsuarioService usuarioService;
-    private final TipoEntradaService tipoEntradaService;
-    private final EntradaService entradaService;
-    private final AsistenteService asistenteService;
-    private final PulseraNFCService pulseraNFCService;
-    private final CompraService compraService;
+    @Inject
+    private FestivalService festivalService;
+    @Inject
+    private UsuarioService usuarioService;
+    @Inject
+    private TipoEntradaService tipoEntradaService;
+    @Inject
+    private EntradaService entradaService;
+    @Inject
+    private AsistenteService asistenteService;
+    @Inject
+    private PulseraNFCService pulseraNFCService;
+    @Inject
+    private CompraService compraService;
 
     @Context
     private UriInfo uriInfo;
     @Context
     private SecurityContext securityContext;
 
-    @Inject
-    public PromotorResource(FestivalService festivalService, UsuarioService usuarioService, TipoEntradaService tipoEntradaService, EntradaService entradaService, AsistenteService asistenteService, PulseraNFCService pulseraNFCService, CompraService compraService) {
-        this.festivalService = festivalService;
-        this.usuarioService = usuarioService;
-        this.tipoEntradaService = tipoEntradaService;
-        this.entradaService = entradaService;
-        this.asistenteService = asistenteService;
-        this.pulseraNFCService = pulseraNFCService;
-        this.compraService = compraService;
+    /**
+     * Constructor sin argumentos requerido para la inyección de dependencias de
+     * CDI.
+     */
+    public PromotorResource() {
     }
 
     @GET
@@ -155,7 +160,7 @@ public class PromotorResource {
     @Path("/tipos-entrada/{idTipoEntrada}")
     public Response actualizarTipoEntrada(
             @PathParam("idTipoEntrada") Integer idTipoEntrada,
-            @Valid TipoEntradaDTO tipoEntradaDTO) {
+            @Valid TipoEntradaUpdateDTO tipoEntradaUpdateDTO) { // Use the new DTO
 
         log.info("PUT /promotor/tipos-entrada/{} (actualizar) recibido", idTipoEntrada);
         Integer idPromotor = Integer.parseInt(securityContext.getUserPrincipal().getName());
@@ -163,7 +168,7 @@ public class PromotorResource {
             throw new BadRequestException("ID de tipo de entrada no válido.");
         }
 
-        TipoEntradaDTO actualizada = tipoEntradaService.actualizarTipoEntrada(idTipoEntrada, tipoEntradaDTO, idPromotor);
+        TipoEntradaDTO actualizada = tipoEntradaService.actualizarTipoEntrada(idTipoEntrada, tipoEntradaUpdateDTO, idPromotor);
 
         return Response.ok(actualizada).build();
     }

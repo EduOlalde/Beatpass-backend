@@ -2,8 +2,10 @@ package com.beatpass.repository;
 
 import com.beatpass.model.RolUsuario;
 import com.beatpass.model.Usuario;
+import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.NoResultException;
+import jakarta.persistence.PersistenceContext;
 import jakarta.persistence.PersistenceException;
 import jakarta.persistence.TypedQuery;
 import java.util.Collections;
@@ -15,12 +17,15 @@ import org.slf4j.LoggerFactory;
 /**
  * Implementación de UsuarioRepository usando JPA EntityManager.
  */
+@ApplicationScoped
 public class UsuarioRepositoryImpl implements UsuarioRepository {
 
+    @PersistenceContext(unitName = "beatpassPersistenceUnit")
+    private EntityManager em;
     private static final Logger log = LoggerFactory.getLogger(UsuarioRepositoryImpl.class);
 
     @Override
-    public Usuario save(EntityManager em, Usuario usuario) {
+    public Usuario save(Usuario usuario) {
         if (usuario == null) {
             throw new IllegalArgumentException("La entidad Usuario no puede ser nula.");
         }
@@ -53,7 +58,7 @@ public class UsuarioRepositoryImpl implements UsuarioRepository {
     }
 
     @Override
-    public Optional<Usuario> findById(EntityManager em, Integer id) {
+    public Optional<Usuario> findById(Integer id) {
         log.debug("Buscando usuario con ID: {}", id);
         if (id == null) {
             log.warn("Intento de buscar Usuario con ID nulo.");
@@ -72,7 +77,7 @@ public class UsuarioRepositoryImpl implements UsuarioRepository {
     }
 
     @Override
-    public Optional<Usuario> findByEmail(EntityManager em, String email) {
+    public Optional<Usuario> findByEmail(String email) {
         log.debug("Buscando usuario con email: {}", email);
         if (email == null || email.isBlank()) {
             log.warn("Intento de buscar Usuario con email nulo o vacío.");
@@ -108,7 +113,7 @@ public class UsuarioRepositoryImpl implements UsuarioRepository {
     }
 
     @Override
-    public List<Usuario> findByRol(EntityManager em, RolUsuario rol) {
+    public List<Usuario> findByRol(RolUsuario rol) {
         log.debug("Buscando usuarios con rol: {}", rol);
         if (rol == null) {
             log.warn("Intento de buscar usuarios con rol nulo.");
@@ -128,13 +133,13 @@ public class UsuarioRepositoryImpl implements UsuarioRepository {
     }
 
     @Override
-    public boolean deleteById(EntityManager em, Integer id) {
+    public boolean deleteById(Integer id) {
         log.debug("Intentando eliminar usuario con ID: {}", id);
         if (id == null) {
             log.warn("Intento de eliminar Usuario con ID nulo.");
             return false;
         }
-        Optional<Usuario> usuarioOpt = findById(em, id);
+        Optional<Usuario> usuarioOpt = findById(id);
         if (usuarioOpt.isPresent()) {
             try {
                 em.remove(usuarioOpt.get());
