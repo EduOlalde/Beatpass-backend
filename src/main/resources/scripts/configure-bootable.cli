@@ -1,9 +1,6 @@
 # Unbind the management interface so Render doesn't detect it
 /socket-binding-group=standard-sockets/socket-binding=management-http:undefine-attribute(name=interface)
 
-# Add the MariaDB JDBC driver
-/subsystem=datasources/jdbc-driver=mariadb:add(driver-name=mariadb,driver-module-name=org.mariadb)
-
 # Add the datasource
 data-source add --name=BeatpassDS --jndi-name=java:jboss/datasources/BeatpassDS --driver-name=mariadb --connection-url=${env.TFG_DB_URL} --user-name=${env.TFG_DB_USER} --password=${env.TFG_DB_PASSWORD} --validate-on-match=true --background-validation=false --valid-connection-checker-class-name=org.jboss.jca.adapters.jdbc.extensions.mysql.MySQLValidConnectionChecker --exception-sorter-class-name=org.jboss.jca.adapters.jdbc.extensions.mysql.MySQLExceptionSorter --enabled=true
 

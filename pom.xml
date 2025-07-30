@@ -220,13 +220,15 @@
                         <feature-pack>
                             <location>org.wildfly:wildfly-galleon-pack:32.0.1.Final</location>
                         </feature-pack>
+                        <feature-pack>
+                            <location>org.wildfly:wildfly-datasources-galleon-pack:4.0.0.Final</location>
+                        </feature-pack>
                     </feature-packs>
                     <layers>
                         <layer>cloud-server</layer>
+                        <layer>jpa</layer>
+                        <layer>mariadb-driver</layer>
                     </layers>
-                    <extra-server-content-dirs>
-                        <dir>${project.basedir}/src/main/resources/modules</dir>
-                    </extra-server-content-dirs>
                     <cli-sessions>
                         <cli-session>
                             <script-files>
@@ -240,33 +242,6 @@
                         <goals>
                             <goal>package</goal>
                         </goals>
-                    </execution>
-                </executions>
-            </plugin>
-
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-dependency-plugin</artifactId>
-                <version>3.6.1</version>
-                <executions>
-                    <execution>
-                        <id>copy-driver-to-module</id>
-                        <phase>prepare-package</phase>
-                        <goals>
-                            <goal>copy</goal>
-                        </goals>
-                        <configuration>
-                            <artifactItems>
-                                <artifactItem>
-                                    <groupId>org.mariadb.jdbc</groupId>
-                                    <artifactId>mariadb-java-client</artifactId>
-                                    <version>3.4.2</version>
-                                    <destFileName>mariadb-java-client-3.4.2.jar</destFileName>
-                                </artifactItem>
-                            </artifactItems>
-                            <outputDirectory>${project.basedir}/src/main/resources/modules/org/mariadb/main</outputDirectory>
-                            <overWriteIfNewer>true</overWriteIfNewer>
-                        </configuration>
                     </execution>
                 </executions>
             </plugin>

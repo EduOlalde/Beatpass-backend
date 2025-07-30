@@ -10,6 +10,7 @@ dist/
 .nb-gradle/
 .netbeans/
 *.orig
+*.env
 
 # Maven target directory
 /target/*

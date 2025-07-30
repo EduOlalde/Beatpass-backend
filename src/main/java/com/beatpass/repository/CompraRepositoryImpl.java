@@ -93,7 +93,6 @@ public class CompraRepositoryImpl implements CompraRepository {
             return Collections.emptyList();
         }
         try {
-            // MODIFIED: Final corrected query using a subquery and alias-free fetch joins.
             String subquery = "SELECT DISTINCT c.idCompra FROM Compra c "
                     + "JOIN c.detallesCompra cd "
                     + "JOIN cd.tipoEntrada te "
