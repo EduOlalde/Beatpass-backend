@@ -40,7 +40,6 @@ public class AsistenteDTO {
     public AsistenteDTO() {
     }
 
-    // --- Getters y Setters ---
     public Integer getIdAsistente() {
         return idAsistente;
     }
@@ -89,7 +88,6 @@ public class AsistenteDTO {
         this.festivalPulseraInfo = festivalPulseraInfo;
     }
 
-    // --- equals, hashCode y toString ---
     @Override
     public boolean equals(Object o) {
         if (this == o) {

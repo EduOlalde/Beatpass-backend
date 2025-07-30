@@ -39,12 +39,17 @@ public class PuntoVentaResource {
     @Context
     private SecurityContext securityContext;
 
-    /**
-     * Constructor sin argumentos requerido para CDI.
-     */
     public PuntoVentaResource() {
     }
 
+    /**
+     * Obtiene los datos completos de una pulsera NFC a partir de su código UID.
+     *
+     * @param codigoUid El código UID de la pulsera.
+     * @return Una respuesta HTTP 200 OK con los datos de la pulsera.
+     * @throws PulseraNFCNotFoundException si la pulsera no se encuentra o no
+     * hay permisos.
+     */
     @GET
     @Path("/pulseras/{codigoUid}")
     public Response obtenerDatosPulsera(@PathParam("codigoUid") String codigoUid) {
@@ -64,6 +69,17 @@ public class PuntoVentaResource {
                 .orElseThrow(() -> new PulseraNFCNotFoundException("Pulsera no encontrada o sin permiso: " + codigoUid));
     }
 
+    /**
+     * Registra una recarga de saldo en una pulsera NFC.
+     *
+     * @param codigoUid El UID de la pulsera a recargar.
+     * @param festivalId El ID del festival en el que se realiza la operación.
+     * @param monto El importe a recargar.
+     * @param metodoPago El método de pago utilizado (ej. "EFECTIVO",
+     * "TARJETA").
+     * @return Una respuesta HTTP 200 OK con los datos actualizados de la
+     * pulsera.
+     */
     @POST
     @Path("/pulseras/{codigoUid}/recargar")
     @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
@@ -89,6 +105,18 @@ public class PuntoVentaResource {
         return Response.ok(pulseraActualizada).build();
     }
 
+    /**
+     * Registra un consumo o gasto realizado con una pulsera NFC.
+     *
+     * @param codigoUid El UID de la pulsera con la que se paga.
+     * @param monto El importe del consumo.
+     * @param descripcion Una breve descripción del producto o servicio.
+     * @param idFestival El ID del festival donde se realiza el consumo.
+     * @param idPuntoVenta ID opcional del punto de venta que registra el
+     * consumo.
+     * @return Una respuesta HTTP 200 OK con los datos actualizados de la
+     * pulsera.
+     */
     @POST
     @Path("/pulseras/{codigoUid}/consumir")
     @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
@@ -115,6 +143,16 @@ public class PuntoVentaResource {
         return Response.ok(pulseraActualizada).build();
     }
 
+    /**
+     * Asocia una pulsera NFC a una entrada escaneando el QR de la entrada. Este
+     * proceso marca la entrada como 'USADA'.
+     *
+     * @param codigoQrEntrada El código QR de la entrada.
+     * @param codigoUidPulsera El UID de la pulsera a asociar.
+     * @param idFestival El ID del festival para validación de contexto.
+     * @return Una respuesta HTTP 200 OK con un mensaje de éxito y los datos de
+     * la pulsera.
+     */
     @POST
     @Path("/pulseras/asociar-pulsera")
     @Consumes(MediaType.APPLICATION_FORM_URLENCODED)

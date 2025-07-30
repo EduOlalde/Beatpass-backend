@@ -24,7 +24,6 @@ public class UsuarioDTO {
     public UsuarioDTO() {
     }
 
-    // --- Getters y Setters ---
     public Integer getIdUsuario() {
         return idUsuario;
     }
@@ -89,7 +88,6 @@ public class UsuarioDTO {
         this.fechaModificacion = fechaModificacion;
     }
 
-    // --- equals y hashCode ---
     @Override
     public boolean equals(Object o) {
         if (this == o) {
@@ -107,7 +105,6 @@ public class UsuarioDTO {
         return Objects.hash(idUsuario);
     }
 
-    // --- toString ---
     @Override
     public String toString() {
         return "UsuarioDTO{"

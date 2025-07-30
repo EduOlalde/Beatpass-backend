@@ -35,9 +35,6 @@ public class AuthResource {
 
     private final JwtUtil jwtUtil = new JwtUtil();
 
-    /**
-     * Constructor sin argumentos requerido para CDI.
-     */
     public AuthResource() {
     }
 

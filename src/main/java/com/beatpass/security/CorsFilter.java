@@ -14,6 +14,20 @@ import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Filtro JAX-RS para gestionar las políticas de Cross-Origin Resource Sharing
+ * (CORS).
+ * <p>
+ * Intercepta todas las peticiones para añadir las cabeceras CORS necesarias,
+ * permitiendo que el frontend (ej. una SPA en React) alojado en un origen
+ * diferente pueda comunicarse con la API.
+ * </p>
+ * <p>
+ * Gestiona las peticiones de "preflight" (OPTIONS) y añade la cabecera
+ * {@code Access-Control-Allow-Origin} a las respuestas de las peticiones
+ * reales.
+ * </p>
+ */
 @Provider
 @PreMatching
 public class CorsFilter implements ContainerRequestFilter, ContainerResponseFilter {
@@ -21,12 +35,6 @@ public class CorsFilter implements ContainerRequestFilter, ContainerResponseFilt
     private static final Logger log = LoggerFactory.getLogger(CorsFilter.class);
 
     private static final Set<String> ALLOWED_ORIGINS = new HashSet<>(Arrays.asList(
-            "http://localhost:3000",
-            "http://127.0.0.1:3000",
-            "http://localhost:5173",
-            "http://127.0.0.1:5173",
-            "http://localhost:5500", 
-            "http://127.0.0.1:5500",
             "https://eduolalde.github.io",
             "https://daaf292.github.io",
             "https://beatpass.onrender.com"

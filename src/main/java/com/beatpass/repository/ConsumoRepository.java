@@ -1,7 +1,6 @@
 package com.beatpass.repository;
 
 import com.beatpass.model.Consumo;
-import jakarta.persistence.EntityManager;
 import java.util.List;
 import java.util.Optional;
 
@@ -14,7 +13,6 @@ public interface ConsumoRepository {
      * Guarda un nuevo registro de consumo. Asume que no se actualizan. Debe
      * ejecutarse dentro de una transacción activa.
      *
-     * @param em El EntityManager activo y transaccional.
      * @param consumo La entidad Consumo a guardar.
      * @return La entidad Consumo guardada con su ID.
      */
@@ -23,7 +21,6 @@ public interface ConsumoRepository {
     /**
      * Busca un registro de consumo por su ID.
      *
-     * @param em El EntityManager activo.
      * @param id El ID del consumo a buscar.
      * @return Un Optional con el Consumo si se encuentra, o vacío.
      */
@@ -32,7 +29,6 @@ public interface ConsumoRepository {
     /**
      * Busca todos los consumos asociados a una PulseraNFC específica.
      *
-     * @param em El EntityManager activo.
      * @param idPulsera El ID de la PulseraNFC.
      * @return Una lista (posiblemente vacía) de Consumos.
      */
@@ -41,7 +37,6 @@ public interface ConsumoRepository {
     /**
      * Busca todos los consumos asociados a un Festival específico.
      *
-     * @param em El EntityManager activo.
      * @param idFestival El ID del Festival.
      * @return Una lista (posiblemente vacía) de Consumos.
      */

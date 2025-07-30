@@ -15,7 +15,6 @@ public interface UsuarioRepository {
      * Guarda (crea o actualiza) un Usuario. Debe ejecutarse dentro de una
      * transacción activa.
      *
-     * @param em El EntityManager activo y transaccional.
      * @param usuario El usuario a guardar.
      * @return La entidad Usuario guardada o actualizada.
      */
@@ -24,7 +23,6 @@ public interface UsuarioRepository {
     /**
      * Busca un Usuario por su ID.
      *
-     * @param em El EntityManager activo.
      * @param id El ID a buscar.
      * @return Un Optional con el Usuario si se encuentra, o vacío.
      */
@@ -33,7 +31,6 @@ public interface UsuarioRepository {
     /**
      * Busca un Usuario por su email (único).
      *
-     * @param em El EntityManager activo.
      * @param email El email a buscar.
      * @return Un Optional con el Usuario si se encuentra, o vacío.
      */
@@ -50,7 +47,6 @@ public interface UsuarioRepository {
     /**
      * Busca todos los usuarios con un rol específico.
      *
-     * @param em El EntityManager activo.
      * @param rol El RolUsuario a buscar.
      * @return Una lista (posiblemente vacía) de usuarios.
      */
@@ -60,7 +56,6 @@ public interface UsuarioRepository {
      * Elimina un usuario por su ID. Debe ejecutarse dentro de una transacción
      * activa. ¡Precaución con FKs!
      *
-     * @param em El EntityManager activo y transaccional.
      * @param id El ID a eliminar.
      * @return true si se encontró y marcó para eliminar, false si no.
      */

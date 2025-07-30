@@ -34,7 +34,6 @@ public class TipoEntradaDTO {
     public TipoEntradaDTO() {
     }
 
-    // --- Getters y Setters ---
     public Integer getIdTipoEntrada() {
         return idTipoEntrada;
     }
@@ -91,7 +90,6 @@ public class TipoEntradaDTO {
         this.requiereNominacion = requiereNominacion;
     }
 
-    // --- toString ---
     @Override
     public String toString() {
         return "EntradaDTO{"
@@ -103,7 +101,6 @@ public class TipoEntradaDTO {
                 + '}';
     }
 
-    // --- equals y hashCode ---
     @Override
     public boolean equals(Object o) {
         if (this == o) {

@@ -169,6 +169,16 @@ public class EntradaServiceImpl implements EntradaService {
     }
 
     // --- MÉTODOS PRIVADOS  ---
+    /**
+     * Envía un email de notificación al asistente recién nominado, si procede.
+     * Captura y registra cualquier excepción para no interrumpir el flujo
+     * principal.
+     *
+     * @param asistente El asistente al que se le enviará el correo.
+     * @param entradaDTO El DTO de la entrada nominada.
+     * @param metodoOrigen El nombre del método que invoca el envío para
+     * trazabilidad en logs.
+     */
     private void enviarEmailNominacionSiProcede(Asistente asistente, EntradaDTO entradaDTO, String metodoOrigen) {
         if (asistente == null || entradaDTO == null) {
             log.warn("Service - {}: No se enviará email de nominación por datos nulos.", metodoOrigen);
@@ -183,6 +193,15 @@ public class EntradaServiceImpl implements EntradaService {
         }
     }
 
+    /**
+     * Obtiene la entidad Festival a partir de una entidad Entrada, navegando a
+     * través de las relaciones.
+     *
+     * @param entrada La entrada de la cual obtener el festival.
+     * @return La entidad Festival asociada.
+     * @throws IllegalStateException si no se puede resolver el festival debido
+     * a inconsistencias en los datos.
+     */
     private Festival obtenerFestivalDesdeEntrada(Entrada entrada) {
         return Optional.ofNullable(entrada)
                 .map(Entrada::getCompraEntrada)
@@ -191,6 +210,14 @@ public class EntradaServiceImpl implements EntradaService {
                 .orElseThrow(() -> new IllegalStateException("Inconsistencia de datos: no se pudo obtener el festival desde la entrada ID " + (entrada != null ? entrada.getIdEntrada() : "null")));
     }
 
+    /**
+     * Obtiene la entidad TipoEntrada a partir de una entidad Entrada, navegando
+     * a través de las relaciones.
+     *
+     * @param entrada La entrada de la cual obtener el tipo de entrada.
+     * @return La entidad TipoEntrada asociada.
+     * @throws IllegalStateException si no se puede resolver el tipo de entrada.
+     */
     private TipoEntrada obtenerTipoEntradaDesdeEntrada(Entrada entrada) {
         return Optional.ofNullable(entrada)
                 .map(Entrada::getCompraEntrada)

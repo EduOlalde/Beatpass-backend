@@ -10,7 +10,6 @@ package com.beatpass.exception;
  * RuntimeException para evitar la necesidad de declaración 'throws' explícita
  * en cada nivel, pero debe ser capturada adecuadamente en las capas superiores.
  *
- * * @author Eduardo Olalde
  */
 public class PagoInvalidoException extends RuntimeException {
 

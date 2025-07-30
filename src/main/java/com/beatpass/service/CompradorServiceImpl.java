@@ -13,6 +13,10 @@ import org.slf4j.LoggerFactory;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * Implementación del servicio para la gestión de Compradores. Proporciona la
+ * lógica de negocio para obtener, crear y buscar entidades de tipo Comprador.
+ */
 @ApplicationScoped
 public class CompradorServiceImpl implements CompradorService {
 

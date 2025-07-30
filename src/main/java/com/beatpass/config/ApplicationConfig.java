@@ -15,7 +15,6 @@ import io.swagger.v3.oas.annotations.servers.Server;
  * (clases con @Path) y proveedores (clases con @Provider).
  * </p>
  *
- * @author Eduardo Olalde
  */
 @ApplicationPath("/api")
 @OpenAPIDefinition(

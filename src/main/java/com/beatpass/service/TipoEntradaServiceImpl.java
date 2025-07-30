@@ -156,7 +156,6 @@ public class TipoEntradaServiceImpl implements TipoEntradaService {
                 });
     }
 
-    // --- MÉTODO PRIVADO ORIGINAL PRESERVADO ---
     private void validarDatosEntradaDTO(TipoEntradaDTO dto) {
         if (dto.getTipo() == null || dto.getTipo().isBlank()
                 || dto.getPrecio() == null || dto.getPrecio().compareTo(BigDecimal.ZERO) < 0

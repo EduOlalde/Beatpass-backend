@@ -48,12 +48,16 @@ public class FestivalResource {
     @Context
     private SecurityContext securityContext;
 
-    /**
-     * Constructor sin argumentos requerido para CDI.
-     */
     public FestivalResource() {
     }
 
+    /**
+     * Obtiene los tipos de entrada disponibles para un festival público. No
+     * requiere autenticación.
+     *
+     * @param id El ID del festival.
+     * @return Una respuesta HTTP 200 OK con la lista de tipos de entrada.
+     */
     @GET
     @Path("/{id}/tipos-entrada")
     @PermitAll
@@ -67,6 +71,13 @@ public class FestivalResource {
         return Response.ok(tiposEntrada).build();
     }
 
+    /**
+     * Endpoint para que un promotor cree un nuevo festival.
+     *
+     * @param festivalDTO DTO con los datos del festival a crear.
+     * @return Una respuesta HTTP 201 Created con la ubicación y datos del nuevo
+     * festival.
+     */
     @POST
     @RolesAllowed("PROMOTOR")
     public Response crearFestival(@Valid FestivalDTO festivalDTO) {
@@ -84,6 +95,14 @@ public class FestivalResource {
         return Response.created(location).entity(festivalCreado).build();
     }
 
+    /**
+     * Obtiene la información pública de un festival por su ID. No requiere
+     * autenticación.
+     *
+     * @param id El ID del festival a buscar.
+     * @return Una respuesta HTTP 200 OK con los datos del festival.
+     * @throws NotFoundException si el festival no se encuentra.
+     */
     @GET
     @Path("/{id}")
     @PermitAll
@@ -98,6 +117,14 @@ public class FestivalResource {
                 .orElseThrow(() -> new NotFoundException("Festival no encontrado."));
     }
 
+    /**
+     * Endpoint para que un promotor o administrador actualice un festival
+     * existente.
+     *
+     * @param id El ID del festival a actualizar.
+     * @param festivalDTO DTO con los nuevos datos del festival.
+     * @return Una respuesta HTTP 200 OK con los datos del festival actualizado.
+     */
     @PUT
     @Path("/{id}")
     @RolesAllowed({"ADMIN", "PROMOTOR"})
@@ -118,6 +145,12 @@ public class FestivalResource {
         return Response.ok(festivalActualizado).build();
     }
 
+    /**
+     * Endpoint para que un promotor o administrador elimine un festival.
+     *
+     * @param id El ID del festival a eliminar.
+     * @return Una respuesta HTTP 204 No Content si la eliminación fue exitosa.
+     */
     @DELETE
     @Path("/{id}")
     @RolesAllowed({"ADMIN", "PROMOTOR"})
@@ -133,6 +166,14 @@ public class FestivalResource {
         return Response.noContent().build();
     }
 
+    /**
+     * Busca y devuelve una lista de festivales publicados dentro de un rango de
+     * fechas.
+     *
+     * @param fechaDesdeStr Fecha de inicio de la búsqueda (formato YYYY-MM-DD).
+     * @param fechaHastaStr Fecha de fin de la búsqueda (formato YYYY-MM-DD).
+     * @return Una respuesta HTTP 200 OK con la lista de festivales encontrados.
+     */
     @GET
     @Path("/publicados")
     @PermitAll
@@ -157,6 +198,12 @@ public class FestivalResource {
         return Response.ok(festivales).build();
     }
 
+    /**
+     * Endpoint para que un promotor obtenga la lista de sus propios festivales.
+     *
+     * @return Una respuesta HTTP 200 OK con la lista de festivales del promotor
+     * autenticado.
+     */
     @GET
     @Path("/mis-festivales")
     @RolesAllowed("PROMOTOR")
@@ -169,6 +216,13 @@ public class FestivalResource {
         return Response.ok(festivales).build();
     }
 
+    /**
+     * Cambia el estado de un festival. Requiere rol de Administrador.
+     *
+     * @param id El ID del festival a modificar.
+     * @param nuevoEstadoStr El nuevo estado como cadena (ej. "PUBLICADO").
+     * @return Una respuesta HTTP 200 OK con los datos del festival actualizado.
+     */
     @PUT
     @Path("/{id}/estado")
     @RolesAllowed({"ADMIN", "PROMOTOR"})

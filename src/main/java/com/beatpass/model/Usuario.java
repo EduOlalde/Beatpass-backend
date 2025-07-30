@@ -51,11 +51,11 @@ public class Usuario implements Serializable {
 
     @NotNull
     @Column(name = "estado", nullable = false, columnDefinition = "BOOLEAN DEFAULT TRUE")
-    private Boolean estado = true; // Activo por defecto
+    private Boolean estado = true; 
 
     @NotNull
     @Column(name = "cambio_password_requerido", nullable = false, columnDefinition = "BOOLEAN DEFAULT TRUE")
-    private Boolean cambioPasswordRequerido = true; // Requiere cambio por defecto
+    private Boolean cambioPasswordRequerido = true; 
 
     @Column(name = "fecha_creacion", columnDefinition = "DATETIME DEFAULT CURRENT_TIMESTAMP", insertable = false, updatable = false)
     private LocalDateTime fechaCreacion;
@@ -80,7 +80,6 @@ public class Usuario implements Serializable {
     public Usuario() {
     }
 
-    // --- Getters y Setters ---
     public Integer getIdUsuario() {
         return idUsuario;
     }
@@ -161,7 +160,6 @@ public class Usuario implements Serializable {
         this.recargasRealizadas = recargasRealizadas;
     }
 
-    // --- equals, hashCode y toString ---
     @Override
     public boolean equals(Object o) {
         if (this == o) {

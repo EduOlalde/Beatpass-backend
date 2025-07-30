@@ -18,7 +18,6 @@ public class AsistenteUpdateDTO {
     public AsistenteUpdateDTO() {
     }
 
-    // Getters y Setters
     public String getNombre() {
         return nombre;
     }

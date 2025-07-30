@@ -34,17 +34,17 @@ public class TipoEntradaRepositoryImpl implements TipoEntradaRepository {
         }
 
         String festivalIdStr = String.valueOf(tipoEntrada.getFestival().getIdFestival());
-        log.debug("Intentando guardar Entrada dengan ID: {} untuk Festival ID: {}", tipoEntrada.getIdTipoEntrada(), festivalIdStr);
+        log.debug("Intentando guardar Entrada con ID: {} para Festival ID: {}", tipoEntrada.getIdTipoEntrada(), festivalIdStr);
         try {
             if (tipoEntrada.getIdTipoEntrada() == null) {
                 log.trace("Persistiendo nueva Entrada...");
                 em.persist(tipoEntrada);
-                log.info("Nueva Entrada persistida dengan ID: {}", tipoEntrada.getIdTipoEntrada());
+                log.info("Nueva Entrada persistida con ID: {}", tipoEntrada.getIdTipoEntrada());
                 return tipoEntrada;
             } else {
-                log.trace("Actualizando Entrada dengan ID: {}", tipoEntrada.getIdTipoEntrada());
+                log.trace("Actualizando Entrada con ID: {}", tipoEntrada.getIdTipoEntrada());
                 TipoEntrada mergedEntrada = em.merge(tipoEntrada);
-                log.info("Entrada actualizada dengan ID: {}", mergedEntrada.getIdTipoEntrada());
+                log.info("Entrada actualizada con ID: {}", mergedEntrada.getIdTipoEntrada());
                 return mergedEntrada;
             }
         } catch (PersistenceException e) {
@@ -63,9 +63,9 @@ public class TipoEntradaRepositoryImpl implements TipoEntradaRepository {
 
     @Override
     public Optional<TipoEntrada> findById(Integer id, LockModeType lockMode) {
-        log.debug("Buscando Entrada dengan ID: {} (LockMode: {})", id, lockMode);
+        log.debug("Buscando Entrada con ID: {} (LockMode: {})", id, lockMode);
         if (id == null) {
-            log.warn("Intento de buscar Entrada dengan ID nulo.");
+            log.warn("Intento de buscar Entrada con ID nulo.");
             return Optional.empty();
         }
         try {
@@ -79,7 +79,7 @@ public class TipoEntradaRepositoryImpl implements TipoEntradaRepository {
 
             return Optional.ofNullable(query.getSingleResult());
         } catch (NoResultException e) {
-            log.trace("TipoEntrada tidak ditemukan dengan ID: {}", id);
+            log.trace("TipoEntrada tidak ditemukan con ID: {}", id);
             return Optional.empty();
         } catch (Exception e) {
             log.error("Error inesperado al buscar Entrada por ID {}: {}", id, e.getMessage(), e);
@@ -109,9 +109,9 @@ public class TipoEntradaRepositoryImpl implements TipoEntradaRepository {
 
     @Override
     public boolean deleteById(Integer id) {
-        log.debug("Intentando eliminar Entrada dengan ID: {}", id);
+        log.debug("Intentando eliminar Entrada con ID: {}", id);
         if (id == null) {
-            log.warn("Intento de eliminar Entrada dengan ID nulo.");
+            log.warn("Intento de eliminar Entrada con ID nulo.");
             return false;
         }
         Optional<TipoEntrada> tipoEntradaOpt = findById(id);
@@ -129,7 +129,7 @@ public class TipoEntradaRepositoryImpl implements TipoEntradaRepository {
                 throw new PersistenceException("Error inesperado al eliminar Entrada", e);
             }
         } else {
-            log.warn("No se pudo eliminar. Entrada no encontrada dengan ID: {}", id);
+            log.warn("No se pudo eliminar. Entrada no encontrada con ID: {}", id);
             return false;
         }
     }

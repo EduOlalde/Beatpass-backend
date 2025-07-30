@@ -12,7 +12,6 @@ import org.slf4j.LoggerFactory;
  * Provee una instancia personalizada de ObjectMapper para Jackson, configurada
  * para serializar y deserializar correctamente tipos de Java Time (JSR-310).
  *
- * @author Eduardo Olalde
  */
 @Provider // Indica a JAX-RS que esta clase es un proveedor (ej. un mapeador de contexto)
 public class ObjectMapperContextResolver implements ContextResolver<ObjectMapper> {

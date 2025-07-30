@@ -18,7 +18,6 @@ public class CambioPasswordRequestDTO {
     public CambioPasswordRequestDTO() {
     }
 
-    // Getters y Setters
     public String getNewPassword() {
         return newPassword;
     }

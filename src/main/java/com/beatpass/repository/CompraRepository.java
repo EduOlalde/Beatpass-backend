@@ -1,7 +1,6 @@
 package com.beatpass.repository;
 
 import com.beatpass.model.Compra;
-import jakarta.persistence.EntityManager;
 import java.util.List;
 import java.util.Optional;
 
@@ -14,7 +13,6 @@ public interface CompraRepository {
      * Guarda una nueva Compra. Asume que no se actualizan. Debe ejecutarse
      * dentro de una transacción activa.
      *
-     * @param em El EntityManager activo y transaccional.
      * @param compra La Compra a guardar.
      * @return La Compra guardada con su ID.
      */
@@ -23,7 +21,6 @@ public interface CompraRepository {
     /**
      * Busca una Compra por su ID.
      *
-     * @param em El EntityManager activo.
      * @param id El ID de la compra a buscar.
      * @return Un Optional con la Compra si se encuentra, o vacío.
      */
@@ -32,7 +29,6 @@ public interface CompraRepository {
     /**
      * Busca todas las compras realizadas por un Asistente específico.
      *
-     * @param em El EntityManager activo.
      * @param idComprador El ID del Asistente.
      * @return Una lista (posiblemente vacía) de Compras.
      */
@@ -41,7 +37,6 @@ public interface CompraRepository {
     /**
      * Busca todas las compras asociadas a un Festival específico.
      *
-     * @param em El EntityManager activo.
      * @param idFestival El ID del Festival.
      * @return Una lista (posiblemente vacía) de Compras únicas.
      */

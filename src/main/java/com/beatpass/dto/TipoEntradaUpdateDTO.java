@@ -25,7 +25,6 @@ public class TipoEntradaUpdateDTO {
 
     private Boolean requiereNominacion;
 
-    // Getters y Setters
     public String getTipo() {
         return tipo;
     }

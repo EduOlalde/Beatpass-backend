@@ -59,7 +59,6 @@ public class Asistente implements Serializable {
     public Asistente() {
     }
 
-    // --- Getters y Setters ---
     public Integer getIdAsistente() {
         return idAsistente;
     }
@@ -108,7 +107,6 @@ public class Asistente implements Serializable {
         this.entradas = entradas;
     }
 
-    // --- equals, hashCode y toString ---
     @Override
     public boolean equals(Object o) {
         if (this == o) {

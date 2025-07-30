@@ -201,7 +201,6 @@ public class PulseraNFCServiceImpl implements PulseraNFCService {
         return asociarPulsera(codigoUidPulsera, entrada, festival);
     }
 
-    // --- MÉTODOS PRIVADOS ORIGINALES PRESERVADOS ---
     private PulseraNFCDTO asociarPulsera(String codigoUid, Entrada entrada, Festival festival) {
         Optional<PulseraNFC> pulseraOpt = pulseraNFCRepository.findByCodigoUid(codigoUid);
         PulseraNFC pulsera;

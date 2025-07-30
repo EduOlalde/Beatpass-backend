@@ -123,7 +123,12 @@ public class AuthenticationFilter implements ContainerRequestFilter {
     }
 
     /**
-     * Comprueba si la ruta relativa coincide con algún prefijo excluido.
+     * Comprueba si la ruta relativa coincide con algún prefijo excluido de la
+     * autenticación JWT.
+     *
+     * @param relativePath La ruta de la petición a comprobar.
+     * @return {@code true} si la ruta debe ser excluida, {@code false} en caso
+     * contrario.
      */
     private boolean isPathExcluded(String relativePath) {
         if (relativePath == null) {
@@ -134,8 +139,13 @@ public class AuthenticationFilter implements ContainerRequestFilter {
     }
 
     /**
-     * Comprueba si la ruta relativa coincide con patrones GET públicos
-     * específicos.
+     * Comprueba si la ruta relativa coincide con patrones de expresiones
+     * regulares para endpoints GET públicos específicos que no requieren
+     * autenticación.
+     *
+     * @param relativePath La ruta de la petición a comprobar.
+     * @return {@code true} si la ruta es un GET público permitido,
+     * {@code false} de lo contrario.
      */
     private boolean isPublicGetPath(String relativePath) {
         if (relativePath == null) {
@@ -147,7 +157,13 @@ public class AuthenticationFilter implements ContainerRequestFilter {
     }
 
     /**
-     * Aborta la petición con 401 Unauthorized y cabecera WWW-Authenticate.
+     * Aborta la petición actual con una respuesta HTTP 401 Unauthorized.
+     * Incluye una cabecera {@code WWW-Authenticate} y un mensaje de error en
+     * JSON.
+     *
+     * @param requestContext El contexto de la petición a abortar.
+     * @param message El mensaje de error que se incluirá en el cuerpo de la
+     * respuesta.
      */
     private void abortUnauthorized(ContainerRequestContext requestContext, String message) {
         log.debug("Abortando petición con 401 Unauthorized. Mensaje: {}", message);

@@ -109,6 +109,7 @@ public class CompraRepositoryImpl implements CompraRepository {
             String mainQuery = "SELECT DISTINCT c FROM Compra c "
                     + "LEFT JOIN FETCH c.comprador "
                     + "LEFT JOIN FETCH c.detallesCompra "
+                    + "LEFT JOIN FETCH c.detallesCompra.tipoEntrada "
                     + "WHERE c.idCompra IN (:compraIds) "
                     + "ORDER BY c.fechaCompra DESC";
 

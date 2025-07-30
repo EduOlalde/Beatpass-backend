@@ -39,7 +39,6 @@ public class EntradaDTO {
     public EntradaDTO() {
     }
 
-    // --- Getters y Setters ---
     public Integer getIdEntrada() {
         return idEntrada;
     }
@@ -176,7 +175,6 @@ public class EntradaDTO {
         this.requiereNominacion = requiereNominacion;
     }
 
-    // --- equals y hashCode ---
     @Override
     public boolean equals(Object o) {
         if (this == o) {
@@ -194,7 +192,6 @@ public class EntradaDTO {
         return Objects.hash(idEntrada);
     }
 
-    // --- toString ---
     @Override
     public String toString() {
         return "EntradaDTO{"

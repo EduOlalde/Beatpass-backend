@@ -190,7 +190,15 @@ public class UsuarioServiceImpl implements UsuarioService {
         return usuarioMapper.usuarioToUsuarioDTO(usuario);
     }
 
-    // --- MÉTODOS PRIVADOS ORIGINALES PRESERVADOS ---
+    // --- MÉTODOS PRIVADOS ---
+    /**
+     * Valida que el DTO de creación de usuario contenga todos los campos
+     * obligatorios y cumpla con las restricciones básicas.
+     *
+     * @param dto El DTO a validar.
+     * @throws IllegalArgumentException si algún dato requerido falta o es
+     * inválido.
+     */
     private void validarUsuarioCreacionDTO(UsuarioCreacionDTO dto) {
         if (dto == null || dto.getEmail() == null || dto.getEmail().isBlank()
                 || dto.getPassword() == null || dto.getPassword().isEmpty()
@@ -202,6 +210,15 @@ public class UsuarioServiceImpl implements UsuarioService {
         }
     }
 
+    /**
+     * Valida los parámetros para una operación de cambio de contraseña.
+     *
+     * @param userId El ID del usuario.
+     * @param antigua La contraseña antigua.
+     * @param nueva La nueva contraseña.
+     * @throws IllegalArgumentException si algún parámetro es nulo, vacío o
+     * inválido.
+     */
     private void validarCambioPassword(Integer userId, String antigua, String nueva) {
         if (userId == null || antigua == null || antigua.isEmpty() || nueva == null || nueva.isEmpty()) {
             throw new IllegalArgumentException("ID usuario, contraseña antigua y nueva son obligatorios.");
@@ -214,6 +231,15 @@ public class UsuarioServiceImpl implements UsuarioService {
         }
     }
 
+    /**
+     * Valida los parámetros para una operación de establecimiento de nueva
+     * contraseña.
+     *
+     * @param userId El ID del usuario.
+     * @param nueva La nueva contraseña.
+     * @throws IllegalArgumentException si algún parámetro es nulo, vacío o
+     * inválido.
+     */
     private void validarPasswordNueva(Integer userId, String nueva) {
         if (userId == null || nueva == null || nueva.isEmpty()) {
             throw new IllegalArgumentException("ID usuario y nueva contraseña son obligatorios.");

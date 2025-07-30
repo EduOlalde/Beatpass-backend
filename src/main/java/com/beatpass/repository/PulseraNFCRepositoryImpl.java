@@ -57,7 +57,6 @@ public class PulseraNFCRepositoryImpl implements PulseraNFCRepository {
     }
 
     private String getComprehensivePulseraQuery() {
-        // CORRECTED: Removed aliases from JOIN FETCH statements for strict JPQL compliance.
         return "SELECT p FROM PulseraNFC p "
                 + "LEFT JOIN FETCH p.festival "
                 + "LEFT JOIN FETCH p.entrada "

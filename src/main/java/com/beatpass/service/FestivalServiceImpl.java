@@ -171,13 +171,28 @@ public class FestivalServiceImpl implements FestivalService {
         return festivalMapper.toFestivalDTOList(festivales);
     }
 
-    // --- MÉTODOS PRIVADOS ORIGINALES PRESERVADOS ---
+    // --- MÉTODOS PRIVADOS ---
+    /**
+     * Valida los campos básicos y obligatorios de un FestivalDTO.
+     *
+     * @param dto El DTO a validar.
+     * @throws IllegalArgumentException si el nombre está vacío o las fechas son
+     * nulas o inválidas (fecha de fin anterior a la de inicio).
+     */
     private void validarDatosBasicosFestivalDTO(FestivalDTO dto) {
         if (dto.getNombre() == null || dto.getNombre().isBlank() || dto.getFechaInicio() == null || dto.getFechaFin() == null || dto.getFechaFin().isBefore(dto.getFechaInicio())) {
             throw new IllegalArgumentException("Nombre y fechas válidas (inicio <= fin) son obligatorios.");
         }
     }
 
+    /**
+     * Valida si una transición de estado de un festival es permitida según las
+     * reglas de negocio.
+     *
+     * @param estadoActual El estado actual del festival.
+     * @param nuevoEstado El estado al que se desea cambiar.
+     * @throws IllegalStateException si la transición de estado no es válida.
+     */
     private void validarTransicionEstado(EstadoFestival estadoActual, EstadoFestival nuevoEstado) {
         if (estadoActual == nuevoEstado) {
             return;

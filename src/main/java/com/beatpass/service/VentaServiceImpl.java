@@ -64,7 +64,15 @@ public class VentaServiceImpl implements VentaService {
 
     private static final String EXPECTED_CURRENCY = "eur";
 
-    // Record interno para pasar los resultados de la transacción al paso de envío de email
+    /**
+     * Registro interno para encapsular los resultados de la transacción de
+     * compra y pasarlos de forma segura al paso de envío de correo, que se
+     * ejecuta fuera de la transacción.
+     *
+     * @param compraDTO DTO de la compra confirmada.
+     * @param entradasDTOs Lista de DTOs de las entradas generadas.
+     * @param festivalName Nombre del festival para el correo.
+     */
     private record PurchaseConfirmationResult(CompraDTO compraDTO, List<EntradaDTO> entradasDTOs, String festivalName) {
 
     }
@@ -79,16 +87,13 @@ public class VentaServiceImpl implements VentaService {
 
         validarParametrosConfirmacion(emailComprador, nombreComprador, idTipoEntrada, cantidad, paymentIntentId);
 
-        // El comprador se obtiene o crea antes para tener sus datos disponibles después de la transacción
         Comprador compradorParaEmail = compradorService.obtenerOcrearCompradorPorEmail(emailComprador, nombreComprador, telefonoComprador);
 
-        // Verificamos el pago con Stripe ANTES de la transacción para fallar rápido
         PaymentIntent paymentIntent = verificarPagoStripe(paymentIntentId);
 
-        // --- INICIO DE LA LÓGICA TRANSACCIONAL ---
         TipoEntrada tipoEntradaEnTx = tipoEntradaRepository.findById(idTipoEntrada)
                 .orElseThrow(() -> new TipoEntradaNotFoundException("Tipo de entrada no encontrado con ID: " + idTipoEntrada));
-        em.lock(tipoEntradaEnTx, LockModeType.PESSIMISTIC_WRITE); // Bloqueo para evitar sobreventa
+        em.lock(tipoEntradaEnTx, LockModeType.PESSIMISTIC_WRITE);
 
         validarFestivalParaCompra(tipoEntradaEnTx.getFestival());
 
@@ -123,9 +128,7 @@ public class VentaServiceImpl implements VentaService {
                 entradasCompradasDTOs,
                 tipoEntradaEnTx.getFestival().getNombre()
         );
-        // --- FIN DE LA LÓGICA TRANSACCIONAL ---
 
-        // El envío de email se realiza FUERA de la transacción, usando los datos recopilados
         emailService.enviarEmailEntradasCompradas(
                 compradorParaEmail.getEmail(),
                 compradorParaEmail.getNombre(),
@@ -159,7 +162,18 @@ public class VentaServiceImpl implements VentaService {
         return new IniciarCompraResponseDTO(paymentIntent.getClientSecret());
     }
 
-    // --- MÉTODOS PRIVADOS ORIGINALES PRESERVADOS Y ADAPTADOS (sin 'em' como parámetro) ---
+    // --- MÉTODOS PRIVADOS ---
+    /**
+     * Valida los parámetros de entrada para la confirmación de una venta.
+     *
+     * @param email Email del comprador.
+     * @param nombre Nombre del comprador.
+     * @param idTipoEntrada ID del tipo de entrada.
+     * @param cantidad Cantidad de entradas.
+     * @param paymentIntentId ID del Payment Intent de Stripe.
+     * @throws IllegalArgumentException si algún parámetro es nulo, vacío o
+     * inválido.
+     */
     private void validarParametrosConfirmacion(String email, String nombre, Integer idTipoEntrada, int cantidad, String paymentIntentId) {
         if (email == null || email.isBlank() || nombre == null || nombre.isBlank() || idTipoEntrada == null) {
             throw new IllegalArgumentException("Email, nombre, idTipoEntrada son requeridos.");
@@ -172,6 +186,15 @@ public class VentaServiceImpl implements VentaService {
         }
     }
 
+    /**
+     * Verifica el estado de un PaymentIntent de Stripe para asegurar que el
+     * pago fue exitoso.
+     *
+     * @param paymentIntentId El ID del PaymentIntent a verificar.
+     * @return El objeto PaymentIntent si el pago fue exitoso.
+     * @throws PagoInvalidoException si el pago no está en estado 'succeeded' o
+     * si hay un error al comunicarse con Stripe.
+     */
     private PaymentIntent verificarPagoStripe(String paymentIntentId) throws PagoInvalidoException {
         log.debug("Verificando PaymentIntent de Stripe: {}", paymentIntentId);
         try {
@@ -190,6 +213,14 @@ public class VentaServiceImpl implements VentaService {
         }
     }
 
+    /**
+     * Crea y persiste una nueva entidad Compra.
+     *
+     * @param comprador El comprador asociado.
+     * @param total El monto total de la compra.
+     * @param pi El PaymentIntent de Stripe verificado.
+     * @return La entidad Compra persistida.
+     */
     private Compra crearYGuardarCompra(Comprador comprador, BigDecimal total, PaymentIntent pi) {
         Compra compra = new Compra();
         compra.setComprador(comprador);
@@ -202,6 +233,15 @@ public class VentaServiceImpl implements VentaService {
         return compraRepository.save(compra);
     }
 
+    /**
+     * Crea y persiste una nueva entidad CompraEntrada (línea de detalle de la
+     * compra).
+     *
+     * @param compra La compra a la que pertenece el detalle.
+     * @param tipoEntrada El tipo de entrada comprado.
+     * @param cantidad La cantidad de entradas de este tipo.
+     * @return La entidad CompraEntrada persistida.
+     */
     private CompraEntrada crearYGuardarCompraEntrada(Compra compra, TipoEntrada tipoEntrada, int cantidad) {
         CompraEntrada compraEntrada = new CompraEntrada();
         compraEntrada.setCompra(compra);
@@ -212,6 +252,13 @@ public class VentaServiceImpl implements VentaService {
         return compraEntrada;
     }
 
+    /**
+     * Genera y persiste las entradas individuales para un detalle de compra.
+     *
+     * @param ce El detalle de compra del que se generan las entradas.
+     * @param cantidad La cantidad de entradas a generar.
+     * @return Una lista con las entidades Entrada persistidas.
+     */
     private List<Entrada> generarYGuardarEntradasAsignadas(CompraEntrada ce, int cantidad) {
         List<Entrada> listaPersistida = new ArrayList<>();
         for (int i = 0; i < cantidad; i++) {
@@ -225,6 +272,12 @@ public class VentaServiceImpl implements VentaService {
         return listaPersistida;
     }
 
+    /**
+     * Actualiza el stock de un tipo de entrada después de una venta.
+     *
+     * @param tipoEntrada El tipo de entrada cuyo stock se va a reducir.
+     * @param cantidad La cantidad vendida.
+     */
     private void actualizarStockEntrada(TipoEntrada tipoEntrada, int cantidad) {
         int nuevoStock = tipoEntrada.getStock() - cantidad;
         tipoEntrada.setStock(nuevoStock);
@@ -232,6 +285,15 @@ public class VentaServiceImpl implements VentaService {
         log.info("Stock actualizado para Entrada ID {}. Nuevo stock: {}", tipoEntrada.getIdTipoEntrada(), nuevoStock);
     }
 
+    /**
+     * Valida si un festival está en un estado válido para permitir la compra de
+     * entradas.
+     *
+     * @param festival El festival a validar.
+     * @throws FestivalNoPublicadoException si el festival no está en estado
+     * PUBLICADO.
+     * @throws IllegalStateException si el festival es nulo.
+     */
     private void validarFestivalParaCompra(Festival festival) {
         if (festival == null) {
             throw new IllegalStateException("Entrada sin festival asociado.");
@@ -241,6 +303,14 @@ public class VentaServiceImpl implements VentaService {
         }
     }
 
+    /**
+     * Crea un PaymentIntent en Stripe para iniciar un proceso de pago.
+     *
+     * @param totalCentimos El monto total a cobrar en céntimos.
+     * @return El objeto PaymentIntent creado por Stripe.
+     * @throws RuntimeException si hay un error al comunicarse con la API de
+     * Stripe.
+     */
     private PaymentIntent crearPaymentIntentStripe(long totalCentimos) {
         log.debug("Creando PaymentIntent en Stripe por {} céntimos...", totalCentimos);
         try {

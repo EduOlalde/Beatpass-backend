@@ -19,7 +19,6 @@ public class CompradorDTO {
     public CompradorDTO() {
     }
 
-    // Getters y Setters
     public Integer getIdComprador() {
         return idComprador;
     }

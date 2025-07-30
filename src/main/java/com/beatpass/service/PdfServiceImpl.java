@@ -50,7 +50,6 @@ public class PdfServiceImpl implements PdfService {
 
                     float currentY = PDRectangle.A4.getHeight() - margin;
 
-                    // Título del Festival
                     contentStream.beginText();
                     contentStream.setFont(fontBold, 18);
                     contentStream.newLineAtOffset(margin, currentY);
