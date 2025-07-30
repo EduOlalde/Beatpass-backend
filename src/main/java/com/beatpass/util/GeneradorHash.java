@@ -12,10 +12,8 @@ public class GeneradorHash {
         System.out.println("Generando hash para la contraseña: " + password);
 
         try {
-            // 2. Llama al método de tu utilidad para generar el hash
             String hashGenerado = PasswordUtil.hashPassword(password);
 
-            // 3. Imprime el hash resultante en la consola
             System.out.println("---------------------------------------------------------------");
             System.out.println("HASH GENERADO (BCrypt):");
             System.out.println(hashGenerado);

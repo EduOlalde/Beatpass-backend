@@ -2,16 +2,17 @@ package com.beatpass.service;
 
 import com.beatpass.dto.EntradaDTO;
 import com.beatpass.exception.EntradaNotFoundException;
-import com.beatpass.exception.FestivalNotFoundException;
-import com.beatpass.exception.UsuarioNotFoundException;
 import com.beatpass.mapper.EntradaMapper;
 import com.beatpass.model.*;
 import com.beatpass.repository.EntradaRepository;
-import com.beatpass.repository.FestivalRepository;
 import com.beatpass.repository.TipoEntradaRepository;
-import com.beatpass.repository.UsuarioRepository;
+import com.beatpass.util.PermissionService;
+import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
+import jakarta.persistence.EntityManager;
 import jakarta.persistence.LockModeType;
+import jakarta.persistence.PersistenceContext;
+import jakarta.transaction.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -20,91 +21,87 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Implementación del servicio para la gestión de entradas individuales.
+ * Implementación del servicio para la gestión de entradas individuales,
+ * refactorizada para usar CDI y JTA.
  */
-public class EntradaServiceImpl extends AbstractService implements EntradaService {
+@ApplicationScoped
+public class EntradaServiceImpl implements EntradaService {
 
     private static final Logger log = LoggerFactory.getLogger(EntradaServiceImpl.class);
 
-    private final EntradaRepository entradaRepository;
-    private final UsuarioRepository usuarioRepository;
-    private final FestivalRepository festivalRepository;
-    private final TipoEntradaRepository tipoEntradaRepository;
-    private final AsistenteService asistenteService;
-    private final EmailService emailService;
-    private final EntradaMapper entradaMapper;
-
     @Inject
-    public EntradaServiceImpl(EntradaRepository entradaRepository, UsuarioRepository usuarioRepository, FestivalRepository festivalRepository, TipoEntradaRepository tipoEntradaRepository, AsistenteService asistenteService, EmailService emailService) {
-        this.entradaRepository = entradaRepository;
-        this.usuarioRepository = usuarioRepository;
-        this.festivalRepository = festivalRepository;
-        this.tipoEntradaRepository = tipoEntradaRepository;
-        this.asistenteService = asistenteService;
-        this.emailService = emailService;
-        this.entradaMapper = EntradaMapper.INSTANCE;
-    }
+    private EntradaRepository entradaRepository;
+    @Inject
+    private TipoEntradaRepository tipoEntradaRepository;
+    @Inject
+    private AsistenteService asistenteService;
+    @Inject
+    private EmailService emailService;
+    @Inject
+    private PermissionService permissionService;
+    @Inject
+    private EntradaMapper entradaMapper;
+
+    @PersistenceContext(unitName = "beatpassPersistenceUnit")
+    private EntityManager em;
 
     @Override
-    public EntradaDTO nominarEntrada(Integer idEntrada, String emailAsistenteNominado, String nombreAsistenteNominado, String telefonoAsistente, Integer idPromotor) {
-        log.info("Service: Nominando entrada ID {} para asistente {} por Promotor ID {}", idEntrada, emailAsistenteNominado, idPromotor);
-        if (idEntrada == null || emailAsistenteNominado == null || emailAsistenteNominado.isBlank() || idPromotor == null) {
+    @Transactional
+    public EntradaDTO nominarEntrada(Integer idEntrada, String emailAsistente, String nombreAsistente, String telefonoAsistente, Integer idPromotor) {
+        log.info("Service: Nominando entrada ID {} para asistente {} por Promotor ID {}", idEntrada, emailAsistente, idPromotor);
+        if (idEntrada == null || emailAsistente == null || emailAsistente.isBlank() || idPromotor == null) {
             throw new IllegalArgumentException("ID de entrada, email de asistente y ID de promotor son requeridos.");
         }
 
-        EntradaDTO entradaNominadaDTO = executeTransactional(em -> {
-            Entrada entradaAActualizar = entradaRepository.findById(em, idEntrada)
-                    .orElseThrow(() -> new EntradaNotFoundException("Entrada no encontrada con ID: " + idEntrada));
+        Entrada entradaAActualizar = entradaRepository.findById(idEntrada)
+                .orElseThrow(() -> new EntradaNotFoundException("Entrada no encontrada con ID: " + idEntrada));
 
-            Festival festival = obtenerFestivalDesdeEntrada(entradaAActualizar);
-            verificarPermisoSobreFestival(em, festival.getIdFestival(), idPromotor);
+        Festival festival = obtenerFestivalDesdeEntrada(entradaAActualizar);
+        permissionService.verificarPermisoSobreFestival(festival.getIdFestival(), idPromotor);
 
-            if (entradaAActualizar.getAsistente() != null) {
-                throw new IllegalStateException("La entrada ID " + idEntrada + " ya está nominada.");
-            }
-            if (entradaAActualizar.getEstado() != EstadoEntrada.ACTIVA) {
-                throw new IllegalStateException("Solo se pueden nominar entradas en estado ACTIVA.");
-            }
+        if (entradaAActualizar.getAsistente() != null) {
+            throw new IllegalStateException("La entrada ID " + idEntrada + " ya está nominada.");
+        }
+        if (entradaAActualizar.getEstado() != EstadoEntrada.ACTIVA) {
+            throw new IllegalStateException("Solo se pueden nominar entradas en estado ACTIVA.");
+        }
 
-            Asistente asistenteNominado = asistenteService.obtenerOcrearAsistentePorEmail(emailAsistenteNominado, nombreAsistenteNominado, telefonoAsistente);
+        Asistente asistenteNominado = asistenteService.obtenerOcrearAsistentePorEmail(emailAsistente, nombreAsistente, telefonoAsistente);
+        entradaAActualizar.setAsistente(asistenteNominado);
+        entradaAActualizar.setFechaAsignacion(LocalDateTime.now());
 
-            entradaAActualizar.setAsistente(asistenteNominado);
-            entradaAActualizar.setFechaAsignacion(LocalDateTime.now());
+        EntradaDTO entradaNominadaDTO = entradaMapper.entradaToEntradaDTO(entradaRepository.save(entradaAActualizar));
 
-            return entradaMapper.entradaToEntradaDTO(entradaRepository.save(em, entradaAActualizar));
-        }, "nominarEntrada (por ID) " + idEntrada);
-
-        enviarEmailNominacionSiProcede(asistenteService.obtenerOcrearAsistentePorEmail(emailAsistenteNominado, nombreAsistenteNominado, telefonoAsistente), entradaNominadaDTO, "nominarEntrada (por ID)");
+        enviarEmailNominacionSiProcede(asistenteNominado, entradaNominadaDTO, "nominarEntrada (por ID)");
 
         return entradaNominadaDTO;
     }
 
     @Override
+    @Transactional
     public EntradaDTO nominarEntradaPorQr(String codigoQr, String emailAsistenteNominado, String nombreAsistenteNominado, String telefonoAsistenteNominado) {
         log.info("Service: Nominando entrada por QR para asistente {}", emailAsistenteNominado);
         if (codigoQr == null || codigoQr.isBlank() || emailAsistenteNominado == null || emailAsistenteNominado.isBlank() || nombreAsistenteNominado == null || nombreAsistenteNominado.isBlank()) {
             throw new IllegalArgumentException("Código QR, email y nombre del asistente son requeridos.");
         }
 
-        EntradaDTO entradaNominadaDTO = executeTransactional(em -> {
-            Entrada entradaAActualizar = entradaRepository.findByCodigoQr(em, codigoQr)
-                    .orElseThrow(() -> new EntradaNotFoundException("Entrada no encontrada con código QR proporcionado."));
+        Entrada entradaAActualizar = entradaRepository.findByCodigoQr(codigoQr)
+                .orElseThrow(() -> new EntradaNotFoundException("Entrada no encontrada con código QR proporcionado."));
 
-            if (entradaAActualizar.getAsistente() != null) {
-                throw new IllegalStateException("La entrada ya está nominada.");
-            }
-            if (entradaAActualizar.getEstado() != EstadoEntrada.ACTIVA) {
-                throw new IllegalStateException("Solo se pueden nominar entradas en estado ACTIVA.");
-            }
+        if (entradaAActualizar.getAsistente() != null) {
+            throw new IllegalStateException("La entrada ya está nominada.");
+        }
+        if (entradaAActualizar.getEstado() != EstadoEntrada.ACTIVA) {
+            throw new IllegalStateException("Solo se pueden nominar entradas en estado ACTIVA.");
+        }
 
-            Asistente asistenteNominado = asistenteService.obtenerOcrearAsistentePorEmail(emailAsistenteNominado, nombreAsistenteNominado, telefonoAsistenteNominado);
-            entradaAActualizar.setAsistente(asistenteNominado);
-            entradaAActualizar.setFechaAsignacion(LocalDateTime.now());
+        Asistente asistenteNominado = asistenteService.obtenerOcrearAsistentePorEmail(emailAsistenteNominado, nombreAsistenteNominado, telefonoAsistenteNominado);
+        entradaAActualizar.setAsistente(asistenteNominado);
+        entradaAActualizar.setFechaAsignacion(LocalDateTime.now());
 
-            return entradaMapper.entradaToEntradaDTO(entradaRepository.save(em, entradaAActualizar));
-        }, "nominarEntradaPorQr " + codigoQr);
+        EntradaDTO entradaNominadaDTO = entradaMapper.entradaToEntradaDTO(entradaRepository.save(entradaAActualizar));
 
-        enviarEmailNominacionSiProcede(asistenteService.obtenerOcrearAsistentePorEmail(emailAsistenteNominado, nombreAsistenteNominado, telefonoAsistenteNominado), entradaNominadaDTO, "nominarEntradaPorQr");
+        enviarEmailNominacionSiProcede(asistenteNominado, entradaNominadaDTO, "nominarEntradaPorQr");
 
         return entradaNominadaDTO;
     }
@@ -114,40 +111,37 @@ public class EntradaServiceImpl extends AbstractService implements EntradaServic
         if (idFestival == null || idPromotor == null) {
             throw new IllegalArgumentException("ID de festival e ID de promotor son requeridos.");
         }
-        return executeRead(em -> {
-            verificarPermisoSobreFestival(em, idFestival, idPromotor);
-            List<Entrada> entradas = entradaRepository.findByFestivalId(em, idFestival);
-            log.info("Encontradas {} entradas para festival ID {}", entradas.size(), idFestival);
-            return entradaMapper.toEntradaDTOList(entradas);
-        }, "obtenerEntradasPorFestival " + idFestival);
+        permissionService.verificarPermisoSobreFestival(idFestival, idPromotor);
+        List<Entrada> entradas = entradaRepository.findByFestivalId(idFestival);
+        log.info("Encontradas {} entradas para festival ID {}", entradas.size(), idFestival);
+        return entradaMapper.toEntradaDTOList(entradas);
     }
 
     @Override
+    @Transactional
     public void cancelarEntrada(Integer idEntrada, Integer idPromotor) {
         if (idEntrada == null || idPromotor == null) {
             throw new IllegalArgumentException("ID de entrada e ID de promotor son requeridos.");
         }
 
-        executeTransactional(em -> {
-            Entrada entrada = entradaRepository.findById(em, idEntrada)
-                    .orElseThrow(() -> new EntradaNotFoundException("Entrada no encontrada con ID: " + idEntrada));
+        Entrada entrada = entradaRepository.findById(idEntrada)
+                .orElseThrow(() -> new EntradaNotFoundException("Entrada no encontrada con ID: " + idEntrada));
 
-            verificarPermisoSobreFestival(em, obtenerFestivalDesdeEntrada(entrada).getIdFestival(), idPromotor);
+        permissionService.verificarPermisoSobreFestival(obtenerFestivalDesdeEntrada(entrada).getIdFestival(), idPromotor);
 
-            if (entrada.getEstado() != EstadoEntrada.ACTIVA) {
-                throw new IllegalStateException("Solo se pueden cancelar entradas en estado ACTIVA.");
-            }
+        if (entrada.getEstado() != EstadoEntrada.ACTIVA) {
+            throw new IllegalStateException("Solo se pueden cancelar entradas en estado ACTIVA.");
+        }
 
-            entrada.setEstado(EstadoEntrada.CANCELADA);
-            entradaRepository.save(em, entrada);
+        entrada.setEstado(EstadoEntrada.CANCELADA);
+        entradaRepository.save(entrada);
 
-            TipoEntrada tipoEntrada = obtenerTipoEntradaDesdeEntrada(entrada);
-            em.lock(tipoEntrada, LockModeType.PESSIMISTIC_WRITE);
-            tipoEntrada.setStock(tipoEntrada.getStock() + 1);
-            tipoEntradaRepository.save(em, tipoEntrada);
-            log.info("Stock incrementado para TipoEntrada ID {}. Nuevo stock: {}", tipoEntrada.getIdTipoEntrada(), tipoEntrada.getStock());
-            return null;
-        }, "cancelarEntrada " + idEntrada);
+        TipoEntrada tipoEntrada = obtenerTipoEntradaDesdeEntrada(entrada);
+        em.lock(tipoEntrada, LockModeType.PESSIMISTIC_WRITE); // Lógica de bloqueo pesimista preservada
+        tipoEntrada.setStock(tipoEntrada.getStock() + 1);
+        tipoEntradaRepository.save(tipoEntrada);
+
+        log.info("Stock incrementado para TipoEntrada ID {}. Nuevo stock: {}", tipoEntrada.getIdTipoEntrada(), tipoEntrada.getStock());
     }
 
     @Override
@@ -155,15 +149,14 @@ public class EntradaServiceImpl extends AbstractService implements EntradaServic
         if (idEntrada == null || idPromotor == null) {
             throw new IllegalArgumentException("IDs de entrada y promotor son requeridos.");
         }
-        return executeRead(em -> {
-            Optional<Entrada> entradaOpt = entradaRepository.findById(em, idEntrada);
-            if (entradaOpt.isEmpty()) {
-                return Optional.empty();
-            }
-            Entrada entrada = entradaOpt.get();
-            verificarPermisoSobreFestival(em, obtenerFestivalDesdeEntrada(entrada).getIdFestival(), idPromotor);
-            return Optional.of(entradaMapper.entradaToEntradaDTO(entrada));
-        }, "obtenerEntradaPorId " + idEntrada);
+
+        Optional<Entrada> entradaOpt = entradaRepository.findById(idEntrada);
+        if (entradaOpt.isEmpty()) {
+            return Optional.empty();
+        }
+        Entrada entrada = entradaOpt.get();
+        permissionService.verificarPermisoSobreFestival(obtenerFestivalDesdeEntrada(entrada).getIdFestival(), idPromotor);
+        return Optional.of(entradaMapper.entradaToEntradaDTO(entrada));
     }
 
     @Override
@@ -171,12 +164,21 @@ public class EntradaServiceImpl extends AbstractService implements EntradaServic
         if (codigoQr == null || codigoQr.isBlank()) {
             return Optional.empty();
         }
-        return executeRead(em
-                -> entradaRepository.findByCodigoQr(em, codigoQr).map(entradaMapper::entradaToEntradaDTO),
-                "obtenerParaNominacionPublicaPorQr " + codigoQr
-        );
+        return entradaRepository.findByCodigoQr(codigoQr)
+                .map(entradaMapper::entradaToEntradaDTO);
     }
 
+    // --- MÉTODOS PRIVADOS  ---
+    /**
+     * Envía un email de notificación al asistente recién nominado, si procede.
+     * Captura y registra cualquier excepción para no interrumpir el flujo
+     * principal.
+     *
+     * @param asistente El asistente al que se le enviará el correo.
+     * @param entradaDTO El DTO de la entrada nominada.
+     * @param metodoOrigen El nombre del método que invoca el envío para
+     * trazabilidad en logs.
+     */
     private void enviarEmailNominacionSiProcede(Asistente asistente, EntradaDTO entradaDTO, String metodoOrigen) {
         if (asistente == null || entradaDTO == null) {
             log.warn("Service - {}: No se enviará email de nominación por datos nulos.", metodoOrigen);
@@ -184,12 +186,22 @@ public class EntradaServiceImpl extends AbstractService implements EntradaServic
         }
         try {
             log.info("Service - {}: Enviando email de nominación a {}", metodoOrigen, asistente.getEmail());
+            // Asumiendo que la firma de este método fue actualizada para no requerir el EntityManager
             emailService.enviarEmailEntradaNominada(asistente.getEmail(), asistente.getNombre(), entradaDTO);
         } catch (Exception e) {
             log.error("Service - {}: Falló el envío de email para entrada ID {} a {}: {}", metodoOrigen, entradaDTO.getIdEntrada(), asistente.getEmail(), e.getMessage(), e);
         }
     }
 
+    /**
+     * Obtiene la entidad Festival a partir de una entidad Entrada, navegando a
+     * través de las relaciones.
+     *
+     * @param entrada La entrada de la cual obtener el festival.
+     * @return La entidad Festival asociada.
+     * @throws IllegalStateException si no se puede resolver el festival debido
+     * a inconsistencias en los datos.
+     */
     private Festival obtenerFestivalDesdeEntrada(Entrada entrada) {
         return Optional.ofNullable(entrada)
                 .map(Entrada::getCompraEntrada)
@@ -198,6 +210,14 @@ public class EntradaServiceImpl extends AbstractService implements EntradaServic
                 .orElseThrow(() -> new IllegalStateException("Inconsistencia de datos: no se pudo obtener el festival desde la entrada ID " + (entrada != null ? entrada.getIdEntrada() : "null")));
     }
 
+    /**
+     * Obtiene la entidad TipoEntrada a partir de una entidad Entrada, navegando
+     * a través de las relaciones.
+     *
+     * @param entrada La entrada de la cual obtener el tipo de entrada.
+     * @return La entidad TipoEntrada asociada.
+     * @throws IllegalStateException si no se puede resolver el tipo de entrada.
+     */
     private TipoEntrada obtenerTipoEntradaDesdeEntrada(Entrada entrada) {
         return Optional.ofNullable(entrada)
                 .map(Entrada::getCompraEntrada)

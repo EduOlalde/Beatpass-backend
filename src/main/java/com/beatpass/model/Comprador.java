@@ -54,7 +54,6 @@ public class Comprador implements Serializable {
     public Comprador() {
     }
 
-    // --- Getters y Setters ---
     public Integer getIdComprador() {
         return idComprador;
     }
@@ -111,7 +110,6 @@ public class Comprador implements Serializable {
         this.compras = compras;
     }
 
-    // --- equals, hashCode y toString ---
     @Override
     public boolean equals(Object o) {
         if (this == o) {

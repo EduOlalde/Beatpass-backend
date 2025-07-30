@@ -1,14 +1,14 @@
+# ----- Stage 1: The Build Stage -----
+FROM maven:3.9-eclipse-temurin-21 AS builder
+WORKDIR /app
+COPY pom.xml .
+COPY src ./src
+RUN mvn clean package -DskipTests
 
- FROM tomcat:10.1-jdk21
- 
-
- RUN rm -rf /usr/local/tomcat/webapps/*
- 
- COPY recursos/server.xml /usr/local/tomcat/conf/server.xml
- COPY target/ROOT.war /usr/local/tomcat/webapps/ROOT.war
- 
-
- EXPOSE 8080
- 
-
- # CMD ["catalina.sh", "run"]
+# ----- Stage 2: The Final Image -----
+FROM openjdk:21-jdk-slim
+WORKDIR /app
+COPY --from=builder /app/target/ROOT-bootable.jar app.jar
+EXPOSE 8080
+# Add the -b=0.0.0.0 argument here
+CMD ["java", "-jar", "app.jar", "-b=0.0.0.0"]

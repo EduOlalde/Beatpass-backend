@@ -56,7 +56,6 @@ public class Recarga implements Serializable {
     public Recarga() {
     }
 
-    // --- Getters y Setters ---
     public Integer getIdRecarga() {
         return idRecarga;
     }
@@ -105,7 +104,6 @@ public class Recarga implements Serializable {
         this.usuarioCajero = usuarioCajero;
     }
 
-    // --- equals, hashCode y toString ---
     @Override
     public boolean equals(Object o) {
         if (this == o) {

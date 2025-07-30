@@ -29,7 +29,7 @@ public class ConfirmarCompraRequestDTO {
     private String nombreComprador;
 
     @Size(max = 20, message = "El teléfono del comprador no puede exceder los 20 caracteres.")
-    private String telefonoComprador; // Opcional
+    private String telefonoComprador;
 
     @NotBlank(message = "El ID del Payment Intent es obligatorio.")
     private String paymentIntentId;
@@ -37,7 +37,6 @@ public class ConfirmarCompraRequestDTO {
     public ConfirmarCompraRequestDTO() {
     }
 
-    // Getters y Setters
     public Integer getIdEntrada() {
         return idEntrada;
     }

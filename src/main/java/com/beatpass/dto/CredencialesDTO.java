@@ -20,7 +20,6 @@ public class CredencialesDTO {
     public CredencialesDTO() {
     }
 
-    // --- Getters y Setters ---
     public String getEmail() {
         return email;
     }
@@ -37,7 +36,6 @@ public class CredencialesDTO {
         this.password = password;
     }
 
-    // --- toString ---
     @Override
     public String toString() {
         return "CredencialesDTO{"

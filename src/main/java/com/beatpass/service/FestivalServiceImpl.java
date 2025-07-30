@@ -10,7 +10,10 @@ import com.beatpass.model.RolUsuario;
 import com.beatpass.model.Usuario;
 import com.beatpass.repository.FestivalRepository;
 import com.beatpass.repository.UsuarioRepository;
+import com.beatpass.util.PermissionService;
+import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
+import jakarta.transaction.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -19,24 +22,25 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Implementación del servicio para la gestión de festivales.
+ * Implementación del servicio para la gestión de festivales, refactorizada para
+ * usar CDI y JTA.
  */
-public class FestivalServiceImpl extends AbstractService implements FestivalService {
+@ApplicationScoped
+public class FestivalServiceImpl implements FestivalService {
 
     private static final Logger log = LoggerFactory.getLogger(FestivalServiceImpl.class);
 
-    private final FestivalRepository festivalRepository;
-    private final UsuarioRepository usuarioRepository;
-    private final FestivalMapper festivalMapper;
-
     @Inject
-    public FestivalServiceImpl(FestivalRepository festivalRepository, UsuarioRepository usuarioRepository) {
-        this.festivalRepository = festivalRepository;
-        this.usuarioRepository = usuarioRepository;
-        this.festivalMapper = FestivalMapper.INSTANCE;
-    }
+    private FestivalRepository festivalRepository;
+    @Inject
+    private UsuarioRepository usuarioRepository;
+    @Inject
+    private PermissionService permissionService;
+    @Inject
+    private FestivalMapper festivalMapper;
 
     @Override
+    @Transactional
     public FestivalDTO crearFestival(FestivalDTO festivalDTO, Integer idPromotor) {
         log.info("Service: Creando festival '{}' para promotor ID: {}", festivalDTO.getNombre(), idPromotor);
         if (festivalDTO == null || idPromotor == null) {
@@ -44,19 +48,17 @@ public class FestivalServiceImpl extends AbstractService implements FestivalServ
         }
         validarDatosBasicosFestivalDTO(festivalDTO);
 
-        return executeTransactional(em -> {
-            Usuario promotor = usuarioRepository.findById(em, idPromotor)
-                    .filter(u -> u.getRol() == RolUsuario.PROMOTOR)
-                    .orElseThrow(() -> new UsuarioNotFoundException("Promotor no encontrado o inválido con ID: " + idPromotor));
+        Usuario promotor = usuarioRepository.findById(idPromotor)
+                .filter(u -> u.getRol() == RolUsuario.PROMOTOR)
+                .orElseThrow(() -> new UsuarioNotFoundException("Promotor no encontrado o inválido con ID: " + idPromotor));
 
-            Festival festival = festivalMapper.festivalDTOToFestival(festivalDTO);
-            festival.setPromotor(promotor);
-            festival.setEstado(EstadoFestival.BORRADOR);
+        Festival festival = festivalMapper.festivalDTOToFestival(festivalDTO);
+        festival.setPromotor(promotor);
+        festival.setEstado(EstadoFestival.BORRADOR);
 
-            festival = festivalRepository.save(em, festival);
-            log.info("Festival '{}' creado con ID: {}", festival.getNombre(), festival.getIdFestival());
-            return festivalMapper.festivalToFestivalDTO(festival);
-        }, "crearFestival");
+        festival = festivalRepository.save(festival);
+        log.info("Festival '{}' creado con ID: {}", festival.getNombre(), festival.getIdFestival());
+        return festivalMapper.festivalToFestivalDTO(festival);
     }
 
     @Override
@@ -64,10 +66,7 @@ public class FestivalServiceImpl extends AbstractService implements FestivalServ
         if (id == null) {
             return Optional.empty();
         }
-        return executeRead(em
-                -> festivalRepository.findById(em, id).map(festivalMapper::festivalToFestivalDTO),
-                "obtenerFestivalPorId (Público) " + id
-        );
+        return festivalRepository.findById(id).map(festivalMapper::festivalToFestivalDTO);
     }
 
     @Override
@@ -75,17 +74,14 @@ public class FestivalServiceImpl extends AbstractService implements FestivalServ
         if (id == null || idActor == null) {
             return Optional.empty();
         }
-        return executeRead(em -> {
-            Optional<Festival> festivalOpt = festivalRepository.findById(em, id);
-            if (festivalOpt.isPresent()) {
-                verificarPermisoSobreFestival(em, id, idActor);
-                return festivalOpt.map(festivalMapper::festivalToFestivalDTO);
-            }
-            return Optional.empty();
-        }, "obtenerFestivalPorId " + id + " por actor " + idActor);
+        return festivalRepository.findById(id).map(festival -> {
+            permissionService.verificarPermisoSobreFestival(id, idActor);
+            return festivalMapper.festivalToFestivalDTO(festival);
+        });
     }
 
     @Override
+    @Transactional
     public FestivalDTO actualizarFestival(Integer id, FestivalDTO festivalDTO, Integer idUsuarioActualizador) {
         log.info("Service: Actualizando festival ID: {} por Usuario ID: {}", id, idUsuarioActualizador);
         if (id == null || festivalDTO == null || idUsuarioActualizador == null) {
@@ -93,41 +89,36 @@ public class FestivalServiceImpl extends AbstractService implements FestivalServ
         }
         validarDatosBasicosFestivalDTO(festivalDTO);
 
-        return executeTransactional(em -> {
-            verificarPermisoSobreFestival(em, id, idUsuarioActualizador);
-            Festival festival = festivalRepository.findById(em, id)
-                    .orElseThrow(() -> new FestivalNotFoundException("Festival no encontrado con ID: " + id));
+        permissionService.verificarPermisoSobreFestival(id, idUsuarioActualizador);
+        Festival festival = festivalRepository.findById(id)
+                .orElseThrow(() -> new FestivalNotFoundException("Festival no encontrado con ID: " + id));
 
-            festivalMapper.updateFestivalFromDto(festivalDTO, festival);
-            festival = festivalRepository.save(em, festival);
-            log.info("Festival ID: {} actualizado correctamente.", id);
-            return festivalMapper.festivalToFestivalDTO(festival);
-        }, "actualizarFestival " + id);
+        festivalMapper.updateFestivalFromDto(festivalDTO, festival);
+        festival = festivalRepository.save(festival);
+        log.info("Festival ID: {} actualizado correctamente.", id);
+        return festivalMapper.festivalToFestivalDTO(festival);
     }
 
     @Override
+    @Transactional
     public void eliminarFestival(Integer id, Integer idUsuarioEliminador) {
         log.info("Service: Eliminando festival ID: {} por Usuario ID: {}", id, idUsuarioEliminador);
         if (id == null || idUsuarioEliminador == null) {
             throw new IllegalArgumentException("ID de festival y ID de usuario son requeridos.");
         }
 
-        executeTransactional(em -> {
-            verificarPermisoSobreFestival(em, id, idUsuarioEliminador);
-            if (!festivalRepository.deleteById(em, id)) {
-                throw new FestivalNotFoundException("No se pudo eliminar, festival no encontrado con ID: " + id);
-            }
-            log.info("Festival ID: {} eliminado.", id);
-            return null;
-        }, "eliminarFestival " + id);
+        permissionService.verificarPermisoSobreFestival(id, idUsuarioEliminador);
+        if (!festivalRepository.deleteById(id)) {
+            throw new FestivalNotFoundException("No se pudo eliminar, festival no encontrado con ID: " + id);
+        }
+        log.info("Festival ID: {} eliminado.", id);
     }
 
     @Override
     public List<FestivalDTO> buscarFestivalesPublicados(LocalDate fechaDesde, LocalDate fechaHasta) {
-        return executeRead(em -> {
-            List<Festival> festivales = festivalRepository.findActivosEntreFechas(em, fechaDesde, fechaHasta);
-            return festivalMapper.toFestivalDTOList(festivales);
-        }, "buscarFestivalesPublicados");
+        // La lógica de la consulta ahora reside en el repositorio
+        List<Festival> festivales = festivalRepository.findActivosEntreFechas(fechaDesde, fechaHasta);
+        return festivalMapper.toFestivalDTOList(festivales);
     }
 
     @Override
@@ -135,65 +126,73 @@ public class FestivalServiceImpl extends AbstractService implements FestivalServ
         if (idPromotor == null) {
             throw new IllegalArgumentException("El ID del promotor es requerido.");
         }
-        return executeRead(em -> {
-            List<Festival> festivales = festivalRepository.findByPromotorId(em, idPromotor);
-            return festivalMapper.toFestivalDTOList(festivales);
-        }, "obtenerFestivalesPorPromotor " + idPromotor);
+        List<Festival> festivales = festivalRepository.findByPromotorId(idPromotor);
+        return festivalMapper.toFestivalDTOList(festivales);
     }
 
     @Override
+    @Transactional
     public FestivalDTO cambiarEstadoFestival(Integer idFestival, EstadoFestival nuevoEstado, Integer idActor) {
         log.info("Service: Cambiando estado a {} para festival ID: {} por Actor ID: {}", nuevoEstado, idFestival, idActor);
         if (idFestival == null || nuevoEstado == null || idActor == null) {
             throw new IllegalArgumentException("ID de festival, nuevo estado y ID de actor son requeridos.");
         }
 
-        return executeTransactional(em -> {
-            Usuario actor = usuarioRepository.findById(em, idActor)
-                    .orElseThrow(() -> new UsuarioNotFoundException("Usuario actor no encontrado con ID: " + idActor));
-            if (actor.getRol() != RolUsuario.ADMIN) {
-                throw new SecurityException("Solo los administradores pueden cambiar el estado de un festival.");
-            }
+        Usuario actor = usuarioRepository.findById(idActor)
+                .orElseThrow(() -> new UsuarioNotFoundException("Usuario actor no encontrado con ID: " + idActor));
+        if (actor.getRol() != RolUsuario.ADMIN) {
+            throw new SecurityException("Solo los administradores pueden cambiar el estado de un festival.");
+        }
 
-            Festival festival = festivalRepository.findById(em, idFestival)
-                    .orElseThrow(() -> new FestivalNotFoundException("Festival no encontrado con ID: " + idFestival));
+        Festival festival = festivalRepository.findById(idFestival)
+                .orElseThrow(() -> new FestivalNotFoundException("Festival no encontrado con ID: " + idFestival));
 
-            validarTransicionEstado(festival.getEstado(), nuevoEstado);
-            if (festival.getEstado() == nuevoEstado) {
-                return festivalMapper.festivalToFestivalDTO(festival);
-            }
-
-            festival.setEstado(nuevoEstado);
-            festival = festivalRepository.save(em, festival);
-            log.info("Estado de festival ID: {} cambiado a {}", idFestival, nuevoEstado);
+        validarTransicionEstado(festival.getEstado(), nuevoEstado);
+        if (festival.getEstado() == nuevoEstado) {
             return festivalMapper.festivalToFestivalDTO(festival);
-        }, "cambiarEstadoFestival " + idFestival + " to " + nuevoEstado);
+        }
+
+        festival.setEstado(nuevoEstado);
+        festival = festivalRepository.save(festival);
+        log.info("Estado de festival ID: {} cambiado a {}", idFestival, nuevoEstado);
+        return festivalMapper.festivalToFestivalDTO(festival);
     }
 
     @Override
     public List<FestivalDTO> obtenerTodosLosFestivales() {
-        return executeRead(em
-                -> festivalMapper.toFestivalDTOList(festivalRepository.findAll(em)),
-                "obtenerTodosLosFestivales"
-        );
+        return festivalMapper.toFestivalDTOList(festivalRepository.findAll());
     }
 
     @Override
     public List<FestivalDTO> obtenerFestivalesPorEstado(EstadoFestival estado) {
-        return executeRead(em -> {
-            List<Festival> festivales = (estado == null)
-                    ? festivalRepository.findAll(em)
-                    : festivalRepository.findByEstado(em, estado);
-            return festivalMapper.toFestivalDTOList(festivales);
-        }, "obtenerFestivalesPorEstado " + (estado != null ? estado.name() : "ALL"));
+        List<Festival> festivales = (estado == null)
+                ? festivalRepository.findAll()
+                : festivalRepository.findByEstado(estado);
+        return festivalMapper.toFestivalDTOList(festivales);
     }
 
+    // --- MÉTODOS PRIVADOS ---
+    /**
+     * Valida los campos básicos y obligatorios de un FestivalDTO.
+     *
+     * @param dto El DTO a validar.
+     * @throws IllegalArgumentException si el nombre está vacío o las fechas son
+     * nulas o inválidas (fecha de fin anterior a la de inicio).
+     */
     private void validarDatosBasicosFestivalDTO(FestivalDTO dto) {
         if (dto.getNombre() == null || dto.getNombre().isBlank() || dto.getFechaInicio() == null || dto.getFechaFin() == null || dto.getFechaFin().isBefore(dto.getFechaInicio())) {
             throw new IllegalArgumentException("Nombre y fechas válidas (inicio <= fin) son obligatorios.");
         }
     }
 
+    /**
+     * Valida si una transición de estado de un festival es permitida según las
+     * reglas de negocio.
+     *
+     * @param estadoActual El estado actual del festival.
+     * @param nuevoEstado El estado al que se desea cambiar.
+     * @throws IllegalStateException si la transición de estado no es válida.
+     */
     private void validarTransicionEstado(EstadoFestival estadoActual, EstadoFestival nuevoEstado) {
         if (estadoActual == nuevoEstado) {
             return;

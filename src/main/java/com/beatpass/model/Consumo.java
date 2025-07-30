@@ -62,7 +62,6 @@ public class Consumo implements Serializable {
     public Consumo() {
     }
 
-    // --- Getters y Setters ---
     public Integer getIdConsumo() {
         return idConsumo;
     }
@@ -119,7 +118,6 @@ public class Consumo implements Serializable {
         this.festival = festival;
     }
 
-    // --- equals, hashCode y toString ---
     @Override
     public boolean equals(Object o) {
         if (this == o) {

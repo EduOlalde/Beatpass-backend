@@ -4,6 +4,7 @@ import com.beatpass.dto.*;
 import com.beatpass.model.RolUsuario;
 import com.beatpass.service.*;
 import jakarta.annotation.security.RolesAllowed;
+import jakarta.enterprise.context.RequestScoped;
 import jakarta.inject.Inject;
 import jakarta.validation.Valid;
 import jakarta.ws.rs.*;
@@ -28,40 +29,44 @@ import java.util.Map;
  * {@link SecurityContext}.
  * </p>
  *
- * @author Eduardo Olalde
  */
 @Path("/promotor")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
 @RolesAllowed("PROMOTOR")
+@RequestScoped
 public class PromotorResource {
 
     private static final Logger log = LoggerFactory.getLogger(PromotorResource.class);
 
-    private final FestivalService festivalService;
-    private final UsuarioService usuarioService;
-    private final TipoEntradaService tipoEntradaService;
-    private final EntradaService entradaService;
-    private final AsistenteService asistenteService;
-    private final PulseraNFCService pulseraNFCService;
-    private final CompraService compraService;
+    @Inject
+    private FestivalService festivalService;
+    @Inject
+    private UsuarioService usuarioService;
+    @Inject
+    private TipoEntradaService tipoEntradaService;
+    @Inject
+    private EntradaService entradaService;
+    @Inject
+    private AsistenteService asistenteService;
+    @Inject
+    private PulseraNFCService pulseraNFCService;
+    @Inject
+    private CompraService compraService;
 
     @Context
     private UriInfo uriInfo;
     @Context
     private SecurityContext securityContext;
 
-    @Inject
-    public PromotorResource(FestivalService festivalService, UsuarioService usuarioService, TipoEntradaService tipoEntradaService, EntradaService entradaService, AsistenteService asistenteService, PulseraNFCService pulseraNFCService, CompraService compraService) {
-        this.festivalService = festivalService;
-        this.usuarioService = usuarioService;
-        this.tipoEntradaService = tipoEntradaService;
-        this.entradaService = entradaService;
-        this.asistenteService = asistenteService;
-        this.pulseraNFCService = pulseraNFCService;
-        this.compraService = compraService;
+    public PromotorResource() {
     }
 
+    /**
+     * Obtiene la lista de festivales pertenecientes al promotor autenticado.
+     *
+     * @return Una respuesta HTTP 200 OK con la lista de sus festivales.
+     */
     @GET
     @Path("/festivales")
     public Response listarFestivales() {
@@ -74,6 +79,13 @@ public class PromotorResource {
         return Response.ok(listaFestivales).build();
     }
 
+    /**
+     * Crea un nuevo festival para el promotor autenticado.
+     *
+     * @param festivalDTO DTO con los datos del festival a crear.
+     * @return Una respuesta HTTP 201 Created con la ubicación y los datos del
+     * nuevo festival.
+     */
     @POST
     @Path("/festivales")
     public Response crearFestival(@Valid FestivalDTO festivalDTO) {
@@ -85,6 +97,13 @@ public class PromotorResource {
         return Response.created(location).entity(festivalCreado).build();
     }
 
+    /**
+     * Actualiza un festival existente perteneciente al promotor autenticado.
+     *
+     * @param idFestivalParam El ID del festival a actualizar.
+     * @param festivalDTO DTO con los nuevos datos del festival.
+     * @return Una respuesta HTTP 200 OK con los datos del festival actualizado.
+     */
     @PUT
     @Path("/festivales/{id}")
     public Response actualizarFestival(@PathParam("id") Integer idFestivalParam, @Valid FestivalDTO festivalDTO) {
@@ -99,6 +118,15 @@ public class PromotorResource {
         return Response.ok(festivalActualizado).build();
     }
 
+    /**
+     * Obtiene los detalles de un festival específico, verificando que el
+     * promotor autenticado tenga permiso para verlo.
+     *
+     * @param idFestivalParam El ID del festival a obtener.
+     * @return Una respuesta HTTP 200 OK con los datos del festival.
+     * @throws NotFoundException si el festival no se encuentra o el usuario no
+     * tiene permisos.
+     */
     @GET
     @Path("/festivales/{id}")
     @RolesAllowed({"ADMIN", "PROMOTOR"})
@@ -116,6 +144,13 @@ public class PromotorResource {
         return Response.ok(festival).build();
     }
 
+    /**
+     * Lista todos los tipos de entrada para un festival específico del
+     * promotor.
+     *
+     * @param idFestival El ID del festival.
+     * @return Una respuesta HTTP 200 OK con la lista de tipos de entrada.
+     */
     @GET
     @Path("/festivales/{idFestival}/tipos-entrada")
     @RolesAllowed({"ADMIN", "PROMOTOR"})
@@ -129,6 +164,15 @@ public class PromotorResource {
         return Response.ok(listaTiposEntrada).build();
     }
 
+    /**
+     * Crea un nuevo tipo de entrada para uno de los festivales del promotor.
+     *
+     * @param idFestival El ID del festival al que se añadirá el tipo de
+     * entrada.
+     * @param tipoEntradaDTO DTO con los datos del nuevo tipo de entrada.
+     * @return Una respuesta HTTP 201 Created con la ubicación y los datos del
+     * nuevo tipo de entrada.
+     */
     @POST
     @Path("/festivales/{idFestival}/tipos-entrada")
     public Response crearTipoEntrada(
@@ -151,11 +195,18 @@ public class PromotorResource {
         return Response.created(location).entity(tipoEntradaCreado).build();
     }
 
+    /**
+     * Actualiza un tipo de entrada existente.
+     *
+     * @param idTipoEntrada El ID del tipo de entrada a modificar.
+     * @param tipoEntradaUpdateDTO DTO con los nuevos datos.
+     * @return Una respuesta HTTP 200 OK con el tipo de entrada actualizado.
+     */
     @PUT
     @Path("/tipos-entrada/{idTipoEntrada}")
     public Response actualizarTipoEntrada(
             @PathParam("idTipoEntrada") Integer idTipoEntrada,
-            @Valid TipoEntradaDTO tipoEntradaDTO) {
+            @Valid TipoEntradaUpdateDTO tipoEntradaUpdateDTO) { 
 
         log.info("PUT /promotor/tipos-entrada/{} (actualizar) recibido", idTipoEntrada);
         Integer idPromotor = Integer.parseInt(securityContext.getUserPrincipal().getName());
@@ -163,11 +214,17 @@ public class PromotorResource {
             throw new BadRequestException("ID de tipo de entrada no válido.");
         }
 
-        TipoEntradaDTO actualizada = tipoEntradaService.actualizarTipoEntrada(idTipoEntrada, tipoEntradaDTO, idPromotor);
+        TipoEntradaDTO actualizada = tipoEntradaService.actualizarTipoEntrada(idTipoEntrada, tipoEntradaUpdateDTO, idPromotor);
 
         return Response.ok(actualizada).build();
     }
 
+    /**
+     * Elimina un tipo de entrada.
+     *
+     * @param idTipoEntrada El ID del tipo de entrada a eliminar.
+     * @return Una respuesta HTTP 204 No Content si la eliminación fue exitosa.
+     */
     @DELETE
     @Path("/tipos-entrada/{idTipoEntrada}")
     public Response eliminarTipoEntrada(@PathParam("idTipoEntrada") Integer idTipoEntrada) {
@@ -182,6 +239,13 @@ public class PromotorResource {
         return Response.noContent().build();
     }
 
+    /**
+     * Lista todas las entradas generadas para un festival específico del
+     * promotor.
+     *
+     * @param idFestival El ID del festival.
+     * @return Una respuesta HTTP 200 OK con la lista de entradas.
+     */
     @GET
     @Path("/festivales/{idFestival}/entradas")
     @RolesAllowed({"ADMIN", "PROMOTOR"})
@@ -197,6 +261,13 @@ public class PromotorResource {
         return Response.ok(listaEntradas).build();
     }
 
+    /**
+     * Nomina (asigna) una entrada a un asistente específico.
+     *
+     * @param idEntrada El ID de la entrada a nominar.
+     * @param nominacionRequest DTO con los datos del asistente.
+     * @return Una respuesta HTTP 200 OK con la entrada actualizada.
+     */
     @POST
     @Path("/entradas/{idEntrada}/nominar")
     public Response nominarEntrada(
@@ -221,6 +292,12 @@ public class PromotorResource {
         return Response.ok(entradaNominadaDTO).build();
     }
 
+    /**
+     * Cancela una entrada, devolviéndola al stock del tipo de entrada original.
+     *
+     * @param idEntrada El ID de la entrada a cancelar.
+     * @return Una respuesta HTTP 200 OK con un mensaje de confirmación.
+     */
     @POST
     @Path("/entradas/{idEntrada}/cancelar")
     public Response cancelarEntrada(@PathParam("idEntrada") Integer idEntrada) {
@@ -235,6 +312,13 @@ public class PromotorResource {
         return Response.ok(Map.of("message", "Entrada ID " + idEntrada + " cancelada correctamente.")).build();
     }
 
+    /**
+     * Asocia una pulsera NFC a una entrada específica.
+     *
+     * @param idEntrada El ID de la entrada a la que se asociará la pulsera.
+     * @param asociarPulseraRequest DTO con el UID de la pulsera.
+     * @return Una respuesta HTTP 200 OK con los datos de la pulsera asociada.
+     */
     @POST
     @Path("/entradas/{idEntrada}/asociar-pulsera")
     public Response asociarPulseraPromotor(
@@ -252,6 +336,12 @@ public class PromotorResource {
         return Response.ok(pulseraAsociada).build();
     }
 
+    /**
+     * Lista todos los asistentes de un festival específico del promotor.
+     *
+     * @param idFestival El ID del festival.
+     * @return Una respuesta HTTP 200 OK con la lista de asistentes.
+     */
     @GET
     @Path("/festivales/{idFestival}/asistentes")
     @RolesAllowed({"ADMIN", "PROMOTOR"})
@@ -267,6 +357,12 @@ public class PromotorResource {
         return Response.ok(listaAsistentes).build();
     }
 
+    /**
+     * Lista todas las compras de un festival específico del promotor.
+     *
+     * @param idFestival El ID del festival.
+     * @return Una respuesta HTTP 200 OK con la lista de compras.
+     */
     @GET
     @Path("/festivales/{idFestival}/compras")
     @RolesAllowed({"ADMIN", "PROMOTOR"})
@@ -282,6 +378,14 @@ public class PromotorResource {
         return Response.ok(listaCompras).build();
     }
 
+    /**
+     * Procesa el cambio de contraseña obligatorio que se solicita al usuario
+     * tras su primer inicio de sesión.
+     *
+     * @param cambioPasswordRequest DTO con la nueva contraseña y su
+     * confirmación.
+     * @return Una respuesta HTTP 200 OK con un mensaje de confirmación.
+     */
     @POST
     @Path("/cambiar-password-obligatorio")
     @RolesAllowed({"ADMIN", "PROMOTOR", "CAJERO"})
@@ -302,6 +406,12 @@ public class PromotorResource {
         return Response.ok(Map.of("message", "Contraseña actualizada correctamente.")).build();
     }
 
+    /**
+     * Lista todas las pulseras NFC asociadas a un festival específico.
+     *
+     * @param idFestival El ID del festival.
+     * @return Una respuesta HTTP 200 OK con la lista de pulseras.
+     */
     @GET
     @Path("/festivales/{idFestival}/pulseras")
     @RolesAllowed({"ADMIN", "PROMOTOR", "CAJERO"})

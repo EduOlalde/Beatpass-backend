@@ -6,6 +6,7 @@ import com.beatpass.model.RolUsuario;
 import com.beatpass.service.UsuarioService;
 
 import jakarta.annotation.security.RolesAllowed;
+import jakarta.enterprise.context.RequestScoped;
 import jakarta.inject.Inject;
 import jakarta.validation.Valid;
 import jakarta.ws.rs.*;
@@ -28,22 +29,29 @@ import java.util.Optional;
 @Path("/usuarios")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
+@RequestScoped
 public class UsuarioResource {
 
     private static final Logger log = LoggerFactory.getLogger(UsuarioResource.class);
 
-    private final UsuarioService usuarioService;
+    @Inject
+    private UsuarioService usuarioService;
 
     @Context
     private UriInfo uriInfo;
     @Context
     private SecurityContext securityContext;
 
-    @Inject
-    public UsuarioResource(UsuarioService usuarioService) {
-        this.usuarioService = usuarioService;
+    public UsuarioResource() {
     }
 
+    /**
+     * Crea un nuevo usuario. Esta operación está restringida a administradores.
+     *
+     * @param usuarioCreacionDTO DTO con los datos del usuario a crear.
+     * @return Una respuesta HTTP 201 Created con la ubicación y datos del nuevo
+     * usuario.
+     */
     @POST
     @RolesAllowed("ADMIN")
     public Response crearUsuario(@Valid UsuarioCreacionDTO usuarioCreacionDTO) {
@@ -65,6 +73,17 @@ public class UsuarioResource {
         return Response.created(location).entity(usuarioCreado).build();
     }
 
+    /**
+     * Obtiene los datos de un usuario por su ID. Los administradores pueden ver
+     * cualquier usuario, mientras que los demás solo pueden ver su propio
+     * perfil.
+     *
+     * @param id El ID del usuario a obtener.
+     * @return Una respuesta HTTP 200 OK con los datos del usuario.
+     * @throws ForbiddenException si un usuario no administrador intenta ver
+     * otro perfil.
+     * @throws NotFoundException si el usuario no se encuentra.
+     */
     @GET
     @Path("/{id}")
     @RolesAllowed({"ADMIN", "PROMOTOR", "CAJERO"})
@@ -88,6 +107,12 @@ public class UsuarioResource {
                 .orElseThrow(() -> new NotFoundException("Usuario no encontrado."));
     }
 
+    /**
+     * Obtiene una lista de usuarios filtrada por un rol específico.
+     *
+     * @param rolStr El rol por el cual filtrar ("ADMIN", "PROMOTOR", "CAJERO").
+     * @return Una respuesta HTTP 200 OK con la lista de usuarios.
+     */
     @GET
     @RolesAllowed("ADMIN")
     public Response obtenerUsuariosPorRol(@QueryParam("rol") String rolStr) {
@@ -108,6 +133,13 @@ public class UsuarioResource {
         return Response.ok(usuarios).build();
     }
 
+    /**
+     * Actualiza el estado de activación de un usuario (activo/inactivo).
+     *
+     * @param id El ID del usuario a modificar.
+     * @param activo El nuevo estado (true para activar, false para desactivar).
+     * @return Una respuesta HTTP 200 OK con los datos del usuario actualizado.
+     */
     @PUT
     @Path("/{id}/estado")
     @RolesAllowed("ADMIN")
@@ -126,6 +158,12 @@ public class UsuarioResource {
         return Response.ok(usuarioActualizado).build();
     }
 
+    /**
+     * Elimina un usuario. Un administrador no puede eliminarse a sí mismo.
+     *
+     * @param id El ID del usuario a eliminar.
+     * @return Una respuesta HTTP 204 No Content si la eliminación fue exitosa.
+     */
     @DELETE
     @Path("/{id}")
     @RolesAllowed("ADMIN")

@@ -25,12 +25,11 @@ public class NominacionRequestDTO {
     @NotBlank(message = "La confirmación del email es obligatoria.")
     @Email(message = "El formato del email de confirmación no es válido.")
     @Size(max = 100, message = "El email de confirmación no puede exceder los 100 caracteres.")
-    private String confirmEmailNominado; // <--- CAMBIO: Nuevo campo para la confirmación del email
+    private String confirmEmailNominado; 
 
     public NominacionRequestDTO() {
     }
 
-    // Getters y Setters
     public String getEmailAsistente() {
         return emailAsistente;
     }

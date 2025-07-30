@@ -66,7 +66,7 @@ public class JwtUtil {
                 .setSubject(userId)
                 .claim(ROLE_CLAIM_NAME, role)
                 .claim("name", userName)
-                .claim(PWD_CHANGE_CLAIM_NAME, passwordChangeRequired) // --- CAMBIO: Añadimos el nuevo claim al token ---
+                .claim(PWD_CHANGE_CLAIM_NAME, passwordChangeRequired) 
                 .setIssuedAt(now)
                 .setExpiration(expiryDate)
                 .signWith(key, SignatureAlgorithm.HS256)

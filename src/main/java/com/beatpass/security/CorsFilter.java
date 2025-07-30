@@ -14,6 +14,20 @@ import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Filtro JAX-RS para gestionar las políticas de Cross-Origin Resource Sharing
+ * (CORS).
+ * <p>
+ * Intercepta todas las peticiones para añadir las cabeceras CORS necesarias,
+ * permitiendo que el frontend (ej. una SPA en React) alojado en un origen
+ * diferente pueda comunicarse con la API.
+ * </p>
+ * <p>
+ * Gestiona las peticiones de "preflight" (OPTIONS) y añade la cabecera
+ * {@code Access-Control-Allow-Origin} a las respuestas de las peticiones
+ * reales.
+ * </p>
+ */
 @Provider
 @PreMatching
 public class CorsFilter implements ContainerRequestFilter, ContainerResponseFilter {

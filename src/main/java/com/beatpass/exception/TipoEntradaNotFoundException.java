@@ -9,7 +9,6 @@ package com.beatpass.exception;
  * @see com.beatpass.model.Entrada
  * @see com.beatpass.service.EntradaService
  * @see com.beatpass.service.VentaService
- * @author Eduardo Olalde
  */
 public class TipoEntradaNotFoundException extends RuntimeException {
 

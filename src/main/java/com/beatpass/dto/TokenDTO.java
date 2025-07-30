@@ -39,7 +39,6 @@ public class TokenDTO {
         this.cambioPasswordRequerido = cambioPasswordRequerido;
     }
 
-    // --- Getters y Setters ---
     public String getToken() {
         return token;
     }

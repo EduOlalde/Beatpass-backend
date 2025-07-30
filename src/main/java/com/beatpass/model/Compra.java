@@ -70,7 +70,6 @@ public class Compra implements Serializable {
     public Compra() {
     }
 
-    // --- Getters y Setters ---
     public Integer getIdCompra() {
         return idCompra;
     }
@@ -135,7 +134,6 @@ public class Compra implements Serializable {
         this.fechaPagoConfirmado = fechaPagoConfirmado;
     }
 
-    // --- equals, hashCode y toString ---
     @Override
     public boolean equals(Object o) {
         if (this == o) {

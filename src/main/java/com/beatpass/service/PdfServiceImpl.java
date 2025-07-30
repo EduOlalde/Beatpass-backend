@@ -1,6 +1,7 @@
 package com.beatpass.service;
 
 import com.beatpass.dto.EntradaDTO;
+import jakarta.enterprise.context.ApplicationScoped;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.PDPageContentStream;
@@ -20,6 +21,7 @@ import java.util.List;
  * Implementación del servicio de generación de documentos PDF. Utiliza Apache
  * PDFBox.
  */
+@ApplicationScoped
 public class PdfServiceImpl implements PdfService {
 
     private static final Logger log = LoggerFactory.getLogger(PdfServiceImpl.class);
@@ -48,7 +50,6 @@ public class PdfServiceImpl implements PdfService {
 
                     float currentY = PDRectangle.A4.getHeight() - margin;
 
-                    // Título del Festival
                     contentStream.beginText();
                     contentStream.setFont(fontBold, 18);
                     contentStream.newLineAtOffset(margin, currentY);

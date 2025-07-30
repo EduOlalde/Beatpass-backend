@@ -1,7 +1,9 @@
 package com.beatpass.repository;
 
 import com.beatpass.model.CompraEntrada;
+import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import jakarta.persistence.PersistenceException;
 import jakarta.persistence.TypedQuery;
 import java.util.Collections;
@@ -13,12 +15,15 @@ import org.slf4j.LoggerFactory;
 /**
  * Implementación de CompraEntradaRepository usando JPA EntityManager.
  */
+@ApplicationScoped
 public class CompraEntradaRepositoryImpl implements CompraEntradaRepository {
 
+    @PersistenceContext(unitName = "beatpassPersistenceUnit")
+    private EntityManager em;
     private static final Logger log = LoggerFactory.getLogger(CompraEntradaRepositoryImpl.class);
 
     @Override
-    public CompraEntrada save(EntityManager em, CompraEntrada compraEntrada) {
+    public CompraEntrada save(CompraEntrada compraEntrada) {
         if (compraEntrada == null) {
             throw new IllegalArgumentException("La entidad CompraEntrada no puede ser nula.");
         }
@@ -45,7 +50,7 @@ public class CompraEntradaRepositoryImpl implements CompraEntradaRepository {
     }
 
     @Override
-    public Optional<CompraEntrada> findById(EntityManager em, Integer id) {
+    public Optional<CompraEntrada> findById(Integer id) {
         log.debug("Buscando CompraEntrada con ID: {}", id);
         if (id == null) {
             log.warn("Intento de buscar CompraEntrada con ID nulo.");
@@ -64,7 +69,7 @@ public class CompraEntradaRepositoryImpl implements CompraEntradaRepository {
     }
 
     @Override
-    public List<CompraEntrada> findByCompraId(EntityManager em, Integer idCompra) {
+    public List<CompraEntrada> findByCompraId(Integer idCompra) {
         log.debug("Buscando CompraEntradas para Compra ID: {}", idCompra);
         if (idCompra == null) {
             log.warn("Intento de buscar detalles para un ID de compra nulo.");

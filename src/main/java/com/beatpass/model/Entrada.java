@@ -75,7 +75,6 @@ public class Entrada implements Serializable {
     public Entrada() {
     }
 
-    // --- Getters y Setters ---
     public Integer getIdEntrada() {
         return idEntrada;
     }
@@ -148,7 +147,6 @@ public class Entrada implements Serializable {
         this.pulseraAsociada = pulseraAsociada;
     }
 
-    // --- equals, hashCode y toString ---
     @Override
     public boolean equals(Object o) {
         if (this == o) {

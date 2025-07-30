@@ -5,6 +5,7 @@ import com.beatpass.model.EstadoFestival;
 import com.beatpass.model.RolUsuario;
 import com.beatpass.service.*;
 import jakarta.annotation.security.RolesAllowed;
+import jakarta.enterprise.context.RequestScoped;
 import jakarta.inject.Inject;
 import jakarta.validation.Valid;
 import jakarta.ws.rs.*;
@@ -29,43 +30,58 @@ import java.util.Map;
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
 @RolesAllowed("ADMIN")
+@RequestScoped
 public class AdminResource {
 
     private static final Logger log = LoggerFactory.getLogger(AdminResource.class);
 
-    private final UsuarioService usuarioService;
-    private final FestivalService festivalService;
-    private final AsistenteService asistenteService;
-    private final PulseraNFCService pulseraNFCService;
-    private final CompradorService compradorService;
+    @Inject
+    private UsuarioService usuarioService;
+    @Inject
+    private FestivalService festivalService;
+    @Inject
+    private AsistenteService asistenteService;
+    @Inject
+    private PulseraNFCService pulseraNFCService;
+    @Inject
+    private CompradorService compradorService;
 
     @Context
     private UriInfo uriInfo;
     @Context
     private SecurityContext securityContext;
 
-    @Inject
-    public AdminResource(UsuarioService usuarioService, FestivalService festivalService, AsistenteService asistenteService, PulseraNFCService pulseraNFCService, CompradorService compradorService) {
-        this.usuarioService = usuarioService;
-        this.festivalService = festivalService;
-        this.asistenteService = asistenteService;
-        this.pulseraNFCService = pulseraNFCService;
-        this.compradorService = compradorService;
+    public AdminResource() {
     }
 
     // --- Gestión de Usuarios ---
+    /**
+     * Obtiene una lista de todos los usuarios con el rol de ADMIN.
+     *
+     * @return Una respuesta HTTP 200 OK con la lista de administradores.
+     */
     @GET
     @Path("/admins")
     public Response listarAdmins() {
         return listarUsuariosPorRol(RolUsuario.ADMIN);
     }
 
+    /**
+     * Obtiene una lista de todos los usuarios con el rol de PROMOTOR.
+     *
+     * @return Una respuesta HTTP 200 OK con la lista de promotores.
+     */
     @GET
     @Path("/promotores")
     public Response listarPromotores() {
         return listarUsuariosPorRol(RolUsuario.PROMOTOR);
     }
 
+    /**
+     * Obtiene una lista de todos los usuarios con el rol de CAJERO.
+     *
+     * @return Una respuesta HTTP 200 OK con la lista de cajeros.
+     */
     @GET
     @Path("/cajeros")
     public Response listarCajeros() {
@@ -78,6 +94,13 @@ public class AdminResource {
         return Response.ok(listaUsuarios).build();
     }
 
+    /**
+     * Obtiene un usuario específico por su ID.
+     *
+     * @param idUsuario El ID del usuario a buscar.
+     * @return Una respuesta HTTP 200 OK con los datos del usuario.
+     * @throws NotFoundException si el usuario no se encuentra.
+     */
     @GET
     @Path("/usuarios/{idUsuario}")
     public Response obtenerUsuarioPorId(@PathParam("idUsuario") Integer idUsuario) {
@@ -91,6 +114,13 @@ public class AdminResource {
         return Response.ok(usuario).build();
     }
 
+    /**
+     * Lista clientes (Compradores o Asistentes) con una opción de búsqueda.
+     *
+     * @param tab Indica si se listan "compradores" o "asistentes".
+     * @param searchTerm Término opcional para filtrar por nombre o email.
+     * @return Una respuesta HTTP 200 OK con los datos solicitados.
+     */
     @GET
     @Path("/clientes")
     public Response listarClientes(@QueryParam("tab") String tab, @QueryParam("buscar") String searchTerm) {
@@ -108,6 +138,13 @@ public class AdminResource {
         return Response.ok(data).build();
     }
 
+    /**
+     * Crea un nuevo usuario en el sistema (ADMIN, PROMOTOR, o CAJERO).
+     *
+     * @param usuarioCreacionDTO DTO con los datos del nuevo usuario.
+     * @return Una respuesta HTTP 201 Created con la ubicación y datos del nuevo
+     * usuario.
+     */
     @POST
     @Path("/usuarios")
     public Response crearUsuario(@Valid UsuarioCreacionDTO usuarioCreacionDTO) {
@@ -118,6 +155,13 @@ public class AdminResource {
         return Response.created(location).entity(creado).build();
     }
 
+    /**
+     * Actualiza el nombre de un usuario existente.
+     *
+     * @param idUsuario El ID del usuario a modificar.
+     * @param updateRequest DTO con el nuevo nombre.
+     * @return Una respuesta HTTP 200 OK con los datos del usuario actualizado.
+     */
     @PUT
     @Path("/usuarios/{idUsuario}")
     public Response actualizarNombreUsuario(
@@ -135,6 +179,14 @@ public class AdminResource {
         return Response.ok(actualizado).build();
     }
 
+    /**
+     * Cambia el estado (activo/inactivo) de un usuario.
+     *
+     * @param idUsuario El ID del usuario a modificar.
+     * @param estadoUpdate DTO que contiene el nuevo estado como 'true' o
+     * 'false'.
+     * @return Una respuesta HTTP 200 OK con los datos del usuario actualizado.
+     */
     @PUT
     @Path("/usuarios/{idUsuario}/estado")
     public Response cambiarEstadoUsuario(
@@ -157,6 +209,13 @@ public class AdminResource {
         return Response.ok(actualizado).build();
     }
 
+    /**
+     * Elimina un usuario del sistema. Un administrador no puede eliminarse a sí
+     * mismo.
+     *
+     * @param idUsuario El ID del usuario a eliminar.
+     * @return Una respuesta HTTP 204 No Content si la eliminación fue exitosa.
+     */
     @DELETE
     @Path("/usuarios/{idUsuario}")
     public Response eliminarUsuario(@PathParam("idUsuario") Integer idUsuario) {
@@ -173,6 +232,14 @@ public class AdminResource {
     }
 
     // --- Gestión de Festivales ---
+    /**
+     * Crea un nuevo festival y lo asigna a un promotor existente.
+     *
+     * @param festivalCreacionRequest DTO con los detalles del festival y el ID
+     * del promotor.
+     * @return Una respuesta HTTP 201 Created con la ubicación y datos del nuevo
+     * festival.
+     */
     @POST
     @Path("/festivales")
     public Response crearFestivalAdmin(
@@ -194,6 +261,14 @@ public class AdminResource {
         return Response.created(location).entity(creado).build();
     }
 
+    /**
+     * Obtiene una lista de todos los festivales, con opción de filtrar por
+     * estado.
+     *
+     * @param estadoFilter Estado opcional para filtrar los resultados
+     * (BORRADOR, PUBLICADO, etc.).
+     * @return Una respuesta HTTP 200 OK con la lista de festivales.
+     */
     @GET
     @Path("/festivales")
     public Response listarTodosFestivales(@QueryParam("estado") String estadoFilter) {
@@ -214,6 +289,12 @@ public class AdminResource {
         return Response.ok(listaFestivales).build();
     }
 
+    /**
+     * Cambia el estado de un festival a PUBLICADO.
+     *
+     * @param idFestival El ID del festival a publicar.
+     * @return Una respuesta HTTP 200 OK con los datos del festival actualizado.
+     */
     @PUT
     @Path("/festivales/{idFestival}/confirmar")
     public Response confirmarFestival(@PathParam("idFestival") Integer idFestival) {
@@ -227,6 +308,14 @@ public class AdminResource {
         return Response.ok(confirmado).build();
     }
 
+    /**
+     * Cambia el estado de un festival a un estado específico (BORRADOR,
+     * PUBLICADO, CANCELADO, FINALIZADO).
+     *
+     * @param idFestival El ID del festival a modificar.
+     * @param estadoUpdate DTO que contiene el nuevo estado.
+     * @return Una respuesta HTTP 200 OK con los datos del festival actualizado.
+     */
     @PUT
     @Path("/festivales/{idFestival}/estado")
     public Response cambiarEstadoFestivalAdmin(
@@ -251,6 +340,12 @@ public class AdminResource {
     }
 
     // --- Gestión de Asistentes ---
+    /**
+     * Obtiene una lista de todos los asistentes, con opción de búsqueda.
+     *
+     * @param searchTerm Término opcional para filtrar por nombre o email.
+     * @return Una respuesta HTTP 200 OK con la lista de asistentes.
+     */
     @GET
     @Path("/asistentes")
     public Response listarAsistentes(@QueryParam("buscar") String searchTerm) {
@@ -259,6 +354,13 @@ public class AdminResource {
         return Response.ok(listaAsistentes).build();
     }
 
+    /**
+     * Obtiene los detalles de un asistente específico.
+     *
+     * @param idAsistente El ID del asistente a buscar.
+     * @return Una respuesta HTTP 200 OK con los datos del asistente.
+     * @throws NotFoundException si el asistente no se encuentra.
+     */
     @GET
     @Path("/asistentes/{idAsistente}")
     public Response verDetalleAsistente(@PathParam("idAsistente") Integer idAsistente) {
@@ -272,22 +374,37 @@ public class AdminResource {
         return Response.ok(asistente).build();
     }
 
+    /**
+     * Actualiza los datos (nombre y teléfono) de un asistente.
+     *
+     * @param idAsistente El ID del asistente a modificar.
+     * @param asistenteUpdateDTO DTO con los nuevos datos.
+     * @return Una respuesta HTTP 200 OK con los datos del asistente
+     * actualizado.
+     */
     @PUT
     @Path("/asistentes/{idAsistente}")
     public Response actualizarAsistente(
             @PathParam("idAsistente") Integer idAsistente,
-            @Valid AsistenteDTO asistenteDTO) {
+            @Valid AsistenteUpdateDTO asistenteUpdateDTO) { 
 
         log.info("PUT /admin/asistentes/{}", idAsistente);
         if (idAsistente == null) {
             throw new BadRequestException("ID Asistente no válido.");
         }
 
-        AsistenteDTO actualizado = asistenteService.actualizarAsistente(idAsistente, asistenteDTO);
+        AsistenteDTO actualizado = asistenteService.actualizarAsistente(idAsistente, asistenteUpdateDTO);
         return Response.ok(actualizado).build();
     }
 
     // --- Gestión de Pulseras NFC ---
+    /**
+     * Obtiene una lista de todas las pulseras NFC asociadas a un festival
+     * específico.
+     *
+     * @param idFestival El ID del festival.
+     * @return Una respuesta HTTP 200 OK con la lista de pulseras.
+     */
     @GET
     @Path("/festivales/{idFestival}/pulseras-nfc")
     public Response listarPulserasPorFestivalAdmin(@PathParam("idFestival") Integer idFestival) {

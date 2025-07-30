@@ -16,13 +16,11 @@ public class CompraDTO {
     private LocalDateTime fechaCompra;
     private BigDecimal total;
 
-    // Información del Comprador
     private Integer idComprador;
     private String nombreComprador;
     private String emailComprador;
 
-    // Información resumida de las entradas compradas
-    private List<String> resumenEntradas; // Ej: ["2 x General", "1 x VIP"]
+    private List<String> resumenEntradas;
 
     /**
      * Lista de DTOs de las entradas individuales generadas para esta compra. Se
@@ -30,15 +28,13 @@ public class CompraDTO {
      */
     private List<EntradaDTO> entradasGeneradas;
 
-    // --- Campos de Pago (Stripe) ---
     private String stripePaymentIntentId;
-    private String estadoPago; // Ej: "PAGADO"
+    private String estadoPago;
     private LocalDateTime fechaPagoConfirmado;
 
     public CompraDTO() {
     }
 
-    // --- Getters y Setters ---
     public Integer getIdCompra() {
         return idCompra;
     }
@@ -127,7 +123,6 @@ public class CompraDTO {
         this.fechaPagoConfirmado = fechaPagoConfirmado;
     }
 
-    // --- equals, hashCode y toString ---
     @Override
     public boolean equals(Object o) {
         if (this == o) {

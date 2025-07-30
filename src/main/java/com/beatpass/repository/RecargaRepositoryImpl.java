@@ -1,7 +1,9 @@
 package com.beatpass.repository;
 
 import com.beatpass.model.Recarga;
+import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import jakarta.persistence.PersistenceException;
 import jakarta.persistence.TypedQuery;
 import java.util.Collections;
@@ -13,12 +15,15 @@ import org.slf4j.LoggerFactory;
 /**
  * Implementación de RecargaRepository usando JPA EntityManager.
  */
+@ApplicationScoped
 public class RecargaRepositoryImpl implements RecargaRepository {
 
+    @PersistenceContext(unitName = "beatpassPersistenceUnit")
+    private EntityManager em;
     private static final Logger log = LoggerFactory.getLogger(RecargaRepositoryImpl.class);
 
     @Override
-    public Recarga save(EntityManager em, Recarga recarga) {
+    public Recarga save(Recarga recarga) {
         if (recarga == null) {
             throw new IllegalArgumentException("La entidad Recarga no puede ser nula.");
         }
@@ -44,7 +49,7 @@ public class RecargaRepositoryImpl implements RecargaRepository {
     }
 
     @Override
-    public Optional<Recarga> findById(EntityManager em, Integer id) {
+    public Optional<Recarga> findById(Integer id) {
         log.debug("Buscando Recarga ID: {}", id);
         if (id == null) {
             log.warn("Intento de buscar Recarga con ID nulo.");
@@ -63,7 +68,7 @@ public class RecargaRepositoryImpl implements RecargaRepository {
     }
 
     @Override
-    public List<Recarga> findByPulseraId(EntityManager em, Integer idPulsera) {
+    public List<Recarga> findByPulseraId(Integer idPulsera) {
         log.debug("Buscando Recargas para Pulsera ID: {}", idPulsera);
         if (idPulsera == null) {
             log.warn("Intento de buscar recargas para un ID de pulsera nulo.");

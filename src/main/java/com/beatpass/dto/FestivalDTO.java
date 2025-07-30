@@ -40,15 +40,13 @@ public class FestivalDTO {
 
     private EstadoFestival estado;
 
-    @NotNull(message = "Se requiere el ID del promotor.")
     private Integer idPromotor;
 
-    private String nombrePromotor; // Informativo
+    private String nombrePromotor; 
 
     public FestivalDTO() {
     }
 
-    // --- Getters y Setters ---
     public Integer getIdFestival() {
         return idFestival;
     }
@@ -137,7 +135,6 @@ public class FestivalDTO {
         this.nombrePromotor = nombrePromotor;
     }
 
-    // --- equals y hashCode ---
     @Override
     public boolean equals(Object o) {
         if (this == o) {
@@ -155,7 +152,6 @@ public class FestivalDTO {
         return Objects.hash(idFestival);
     }
 
-    // --- toString ---
     @Override
     public String toString() {
         return "FestivalDTO{"

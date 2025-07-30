@@ -9,7 +9,10 @@ import com.beatpass.mapper.UsuarioMapper;
 import com.beatpass.model.RolUsuario;
 import com.beatpass.model.Usuario;
 import com.beatpass.repository.UsuarioRepository;
+import com.beatpass.util.PasswordUtil;
+import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
+import jakarta.transaction.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -17,39 +20,37 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Implementación del servicio para la gestión de usuarios.
+ * Implementación del servicio para la gestión de usuarios, refactorizada para
+ * usar CDI y JTA.
  */
-public class UsuarioServiceImpl extends AbstractService implements UsuarioService {
+@ApplicationScoped
+public class UsuarioServiceImpl implements UsuarioService {
 
     private static final Logger log = LoggerFactory.getLogger(UsuarioServiceImpl.class);
-    private final UsuarioRepository usuarioRepository;
-    private final UsuarioMapper usuarioMapper;
 
     @Inject
-    public UsuarioServiceImpl(UsuarioRepository usuarioRepository) {
-        this.usuarioRepository = usuarioRepository;
-        this.usuarioMapper = UsuarioMapper.INSTANCE;
-    }
+    private UsuarioRepository usuarioRepository;
+    @Inject
+    private UsuarioMapper usuarioMapper;
 
     @Override
+    @Transactional
     public UsuarioDTO crearUsuario(UsuarioCreacionDTO ucDTO) {
         log.info("Service: Iniciando creación de usuario con email: {}", ucDTO != null ? ucDTO.getEmail() : "null");
         validarUsuarioCreacionDTO(ucDTO);
 
-        return executeTransactional(em -> {
-            if (usuarioRepository.findByEmail(em, ucDTO.getEmail()).isPresent()) {
-                throw new EmailExistenteException("El email '" + ucDTO.getEmail() + "' ya está registrado.");
-            }
+        if (usuarioRepository.findByEmail(ucDTO.getEmail()).isPresent()) {
+            throw new EmailExistenteException("El email '" + ucDTO.getEmail() + "' ya está registrado.");
+        }
 
-            Usuario usuario = usuarioMapper.usuarioCreacionDTOToUsuario(ucDTO);
-            usuario.setEstado(true);
-            usuario.setCambioPasswordRequerido(true);
-            usuario.setPassword(com.beatpass.util.PasswordUtil.hashPassword(ucDTO.getPassword()));
+        Usuario usuario = usuarioMapper.usuarioCreacionDTOToUsuario(ucDTO);
+        usuario.setEstado(true);
+        usuario.setCambioPasswordRequerido(true);
+        usuario.setPassword(PasswordUtil.hashPassword(ucDTO.getPassword()));
 
-            usuario = usuarioRepository.save(em, usuario);
-            log.info("Usuario creado exitosamente con ID: {} y email: {}", usuario.getIdUsuario(), usuario.getEmail());
-            return usuarioMapper.usuarioToUsuarioDTO(usuario);
-        }, "crear usuario con email " + (ucDTO != null ? ucDTO.getEmail() : "null"));
+        usuario = usuarioRepository.save(usuario);
+        log.info("Usuario creado exitosamente con ID: {} y email: {}", usuario.getIdUsuario(), usuario.getEmail());
+        return usuarioMapper.usuarioToUsuarioDTO(usuario);
     }
 
     @Override
@@ -58,9 +59,7 @@ public class UsuarioServiceImpl extends AbstractService implements UsuarioServic
         if (id == null) {
             return Optional.empty();
         }
-        return executeRead(em -> {
-            return usuarioRepository.findById(em, id).map(usuarioMapper::usuarioToUsuarioDTO);
-        }, "obtener usuario (DTO) por ID " + id);
+        return usuarioRepository.findById(id).map(usuarioMapper::usuarioToUsuarioDTO);
     }
 
     @Override
@@ -69,9 +68,7 @@ public class UsuarioServiceImpl extends AbstractService implements UsuarioServic
         if (email == null || email.isBlank()) {
             return Optional.empty();
         }
-        return executeRead(em -> {
-            return usuarioRepository.findByEmail(em, email).map(usuarioMapper::usuarioToUsuarioDTO);
-        }, "obtener usuario (DTO) por email " + email);
+        return usuarioRepository.findByEmail(email).map(usuarioMapper::usuarioToUsuarioDTO);
     }
 
     @Override
@@ -80,9 +77,7 @@ public class UsuarioServiceImpl extends AbstractService implements UsuarioServic
         if (email == null || email.isBlank()) {
             return Optional.empty();
         }
-        return executeRead(em -> {
-            return usuarioRepository.findByEmail(em, email);
-        }, "obtener entidad usuario por email para auth " + email);
+        return usuarioRepository.findByEmail(email);
     }
 
     @Override
@@ -91,118 +86,119 @@ public class UsuarioServiceImpl extends AbstractService implements UsuarioServic
         if (rol == null) {
             throw new IllegalArgumentException("El rol no puede ser nulo.");
         }
-        return executeRead(em -> {
-            List<Usuario> usuarios = usuarioRepository.findByRol(em, rol);
-            log.info("Encontrados {} usuarios con rol {}", usuarios.size(), rol);
-            return usuarioMapper.toUsuarioDTOList(usuarios);
-        }, "obtener usuarios por rol " + rol);
+        List<Usuario> usuarios = usuarioRepository.findByRol(rol);
+        log.info("Encontrados {} usuarios con rol {}", usuarios.size(), rol);
+        return usuarioMapper.toUsuarioDTOList(usuarios);
     }
 
     @Override
+    @Transactional
     public UsuarioDTO actualizarEstadoUsuario(Integer id, boolean nuevoEstado) {
         log.info("Service: Iniciando actualización de estado a {} para usuario ID: {}", nuevoEstado, id);
         if (id == null) {
             throw new IllegalArgumentException("ID de usuario es requerido.");
         }
 
-        return executeTransactional(em -> {
-            Usuario usuario = usuarioRepository.findById(em, id)
-                    .orElseThrow(() -> new UsuarioNotFoundException("Usuario no encontrado con ID: " + id));
+        Usuario usuario = usuarioRepository.findById(id)
+                .orElseThrow(() -> new UsuarioNotFoundException("Usuario no encontrado con ID: " + id));
 
-            if (usuario.getEstado().equals(nuevoEstado)) {
-                log.info("El estado del usuario ID {} ya es {}. No se requiere actualización.", id, nuevoEstado);
-                return usuarioMapper.usuarioToUsuarioDTO(usuario);
-            }
-
-            usuario.setEstado(nuevoEstado);
-            usuario = usuarioRepository.save(em, usuario);
-            log.info("Estado de usuario ID: {} actualizado a {} correctamente.", id, nuevoEstado);
+        if (usuario.getEstado().equals(nuevoEstado)) {
+            log.info("El estado del usuario ID {} ya es {}. No se requiere actualización.", id, nuevoEstado);
             return usuarioMapper.usuarioToUsuarioDTO(usuario);
-        }, "actualizar estado usuario ID " + id);
+        }
+
+        usuario.setEstado(nuevoEstado);
+        usuario = usuarioRepository.save(usuario);
+        log.info("Estado de usuario ID: {} actualizado a {} correctamente.", id, nuevoEstado);
+        return usuarioMapper.usuarioToUsuarioDTO(usuario);
     }
 
     @Override
+    @Transactional
     public void eliminarUsuario(Integer id) {
         log.info("Service: Iniciando eliminación de usuario ID: {}", id);
         if (id == null) {
             throw new IllegalArgumentException("ID de usuario es requerido.");
         }
 
-        executeTransactional(em -> {
-            boolean eliminado = usuarioRepository.deleteById(em, id);
-            if (!eliminado) {
-                log.warn("deleteById devolvió false para usuario ID {} sin lanzar excepción.", id);
-                throw new RuntimeException("No se pudo completar la eliminación del usuario ID: " + id);
-            }
-            log.info("Usuario ID: {} eliminado correctamente.", id);
-            return null;
-        }, "eliminar usuario ID " + id);
+        boolean eliminado = usuarioRepository.deleteById(id);
+        if (!eliminado) {
+            // Esta excepción es genérica porque un 'delete' puede fallar por muchas razones
+            // (ej. concurrencia, fallo de BD). El repositorio ya loggea si no lo encuentra.
+            throw new RuntimeException("No se pudo completar la eliminación del usuario ID: " + id);
+        }
+        log.info("Usuario ID: {} eliminado correctamente.", id);
     }
 
     @Override
+    @Transactional
     public void cambiarPassword(Integer userId, String passwordAntigua, String passwordNueva) {
         log.info("Service: Iniciando cambio de contraseña para usuario ID: {}", userId);
         validarCambioPassword(userId, passwordAntigua, passwordNueva);
 
-        executeTransactional(em -> {
-            Usuario usuario = usuarioRepository.findById(em, userId)
-                    .orElseThrow(() -> new UsuarioNotFoundException("Usuario no encontrado con ID: " + userId));
+        Usuario usuario = usuarioRepository.findById(userId)
+                .orElseThrow(() -> new UsuarioNotFoundException("Usuario no encontrado con ID: " + userId));
 
-            if (!com.beatpass.util.PasswordUtil.checkPassword(passwordAntigua, usuario.getPassword())) {
-                throw new PasswordIncorrectoException("La contraseña actual introducida es incorrecta.");
-            }
+        if (!PasswordUtil.checkPassword(passwordAntigua, usuario.getPassword())) {
+            throw new PasswordIncorrectoException("La contraseña actual introducida es incorrecta.");
+        }
 
-            usuario.setPassword(com.beatpass.util.PasswordUtil.hashPassword(passwordNueva));
-            usuario.setCambioPasswordRequerido(false);
-            usuarioRepository.save(em, usuario);
-            log.info("Contraseña cambiada exitosamente para usuario ID: {}", userId);
-            return null;
-        }, "cambiar contraseña para usuario ID " + userId);
+        usuario.setPassword(PasswordUtil.hashPassword(passwordNueva));
+        usuario.setCambioPasswordRequerido(false);
+        usuarioRepository.save(usuario);
+        log.info("Contraseña cambiada exitosamente para usuario ID: {}", userId);
     }
 
     @Override
+    @Transactional
     public void cambiarPasswordYMarcarActualizada(Integer userId, String passwordNueva) {
         log.info("Service: Iniciando cambio de contraseña obligatorio para usuario ID: {}", userId);
         validarPasswordNueva(userId, passwordNueva);
 
-        executeTransactional(em -> {
-            Usuario usuario = usuarioRepository.findById(em, userId)
-                    .orElseThrow(() -> new UsuarioNotFoundException("Usuario no encontrado con ID: " + userId));
+        Usuario usuario = usuarioRepository.findById(userId)
+                .orElseThrow(() -> new UsuarioNotFoundException("Usuario no encontrado con ID: " + userId));
 
-            usuario.setPassword(com.beatpass.util.PasswordUtil.hashPassword(passwordNueva));
-            usuario.setCambioPasswordRequerido(false);
-            usuarioRepository.save(em, usuario);
-            log.info("Contraseña cambiada (obligatorio) exitosamente para usuario ID: {}", userId);
-            return null;
-        }, "cambiar contraseña obligatoria para usuario ID " + userId);
+        usuario.setPassword(PasswordUtil.hashPassword(passwordNueva));
+        usuario.setCambioPasswordRequerido(false);
+        usuarioRepository.save(usuario);
+        log.info("Contraseña cambiada (obligatorio) exitosamente para usuario ID: {}", userId);
     }
 
     @Override
+    @Transactional
     public UsuarioDTO actualizarNombreUsuario(Integer id, String nuevoNombre) {
         log.info("Service: Iniciando actualización de nombre a '{}' para usuario ID: {}", nuevoNombre, id);
         if (id == null || nuevoNombre == null || nuevoNombre.isBlank()) {
             throw new IllegalArgumentException("ID y nuevo nombre (no vacío) son requeridos.");
         }
 
-        return executeTransactional(em -> {
-            Usuario usuario = usuarioRepository.findById(em, id)
-                    .orElseThrow(() -> new UsuarioNotFoundException("Usuario no encontrado con ID: " + id));
+        Usuario usuario = usuarioRepository.findById(id)
+                .orElseThrow(() -> new UsuarioNotFoundException("Usuario no encontrado con ID: " + id));
 
-            if (usuario.getNombre().equals(nuevoNombre.trim())) {
-                log.info("El nombre del usuario ID {} ya es '{}'. No se requiere actualización.", id, nuevoNombre);
-                return usuarioMapper.usuarioToUsuarioDTO(usuario);
-            }
-
-            UsuarioDTO tempDto = new UsuarioDTO();
-            tempDto.setNombre(nuevoNombre.trim());
-            usuarioMapper.updateUsuarioFromDto(tempDto, usuario);
-
-            usuario = usuarioRepository.save(em, usuario);
-            log.info("Nombre de usuario ID: {} actualizado a '{}' correctamente.", id, nuevoNombre);
+        if (usuario.getNombre().equals(nuevoNombre.trim())) {
+            log.info("El nombre del usuario ID {} ya es '{}'. No se requiere actualización.", id, nuevoNombre);
             return usuarioMapper.usuarioToUsuarioDTO(usuario);
-        }, "actualizar nombre usuario ID " + id);
+        }
+
+        // Usamos el mapper para actualizar solo los campos permitidos del DTO
+        UsuarioDTO tempDto = new UsuarioDTO();
+        tempDto.setNombre(nuevoNombre.trim());
+        usuarioMapper.updateUsuarioFromDto(tempDto, usuario);
+
+        usuario = usuarioRepository.save(usuario);
+        log.info("Nombre de usuario ID: {} actualizado a '{}' correctamente.", id, nuevoNombre);
+        return usuarioMapper.usuarioToUsuarioDTO(usuario);
     }
 
+    // --- MÉTODOS PRIVADOS ---
+    /**
+     * Valida que el DTO de creación de usuario contenga todos los campos
+     * obligatorios y cumpla con las restricciones básicas.
+     *
+     * @param dto El DTO a validar.
+     * @throws IllegalArgumentException si algún dato requerido falta o es
+     * inválido.
+     */
     private void validarUsuarioCreacionDTO(UsuarioCreacionDTO dto) {
         if (dto == null || dto.getEmail() == null || dto.getEmail().isBlank()
                 || dto.getPassword() == null || dto.getPassword().isEmpty()
@@ -214,6 +210,15 @@ public class UsuarioServiceImpl extends AbstractService implements UsuarioServic
         }
     }
 
+    /**
+     * Valida los parámetros para una operación de cambio de contraseña.
+     *
+     * @param userId El ID del usuario.
+     * @param antigua La contraseña antigua.
+     * @param nueva La nueva contraseña.
+     * @throws IllegalArgumentException si algún parámetro es nulo, vacío o
+     * inválido.
+     */
     private void validarCambioPassword(Integer userId, String antigua, String nueva) {
         if (userId == null || antigua == null || antigua.isEmpty() || nueva == null || nueva.isEmpty()) {
             throw new IllegalArgumentException("ID usuario, contraseña antigua y nueva son obligatorios.");
@@ -226,6 +231,15 @@ public class UsuarioServiceImpl extends AbstractService implements UsuarioServic
         }
     }
 
+    /**
+     * Valida los parámetros para una operación de establecimiento de nueva
+     * contraseña.
+     *
+     * @param userId El ID del usuario.
+     * @param nueva La nueva contraseña.
+     * @throws IllegalArgumentException si algún parámetro es nulo, vacío o
+     * inválido.
+     */
     private void validarPasswordNueva(Integer userId, String nueva) {
         if (userId == null || nueva == null || nueva.isEmpty()) {
             throw new IllegalArgumentException("ID usuario y nueva contraseña son obligatorios.");

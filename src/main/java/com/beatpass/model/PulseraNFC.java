@@ -92,7 +92,6 @@ public class PulseraNFC implements Serializable {
     public PulseraNFC() {
     }
 
-    // --- Getters y Setters ---
     public Integer getIdPulsera() {
         return idPulsera;
     }
@@ -173,7 +172,6 @@ public class PulseraNFC implements Serializable {
         this.consumos = consumos;
     }
 
-    // --- equals, hashCode y toString ---
     @Override
     public boolean equals(Object o) {
         if (this == o) {
@@ -209,7 +207,7 @@ public class PulseraNFC implements Serializable {
                 + ", idEntrada=" + (entrada != null ? entrada.getIdEntrada() : "null")
                 + ", idFestival=" + (festival != null ? festival.getIdFestival() : "null")
                 + ", fechaAsociacion=" + fechaAsociacion
-                + // <-- Añadido al toString
+                + 
                 '}';
     }
 }

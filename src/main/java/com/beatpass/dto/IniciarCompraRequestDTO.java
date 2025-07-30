@@ -15,7 +15,6 @@ public class IniciarCompraRequestDTO {
     @Min(value = 1, message = "La cantidad debe ser al menos 1.")
     private Integer cantidad;
 
-    // Getters y Setters
     public Integer getIdEntrada() {
         return idEntrada;
     }

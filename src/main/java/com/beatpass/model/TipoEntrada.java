@@ -67,8 +67,7 @@ public class TipoEntrada implements Serializable {
 
     /**
      * Detalles de compra donde aparece este tipo de entrada. Relación uno a
-     * muchos. Cascade ALL, Fetch LAZY, orphanRemoval true. ¡Precaución con
-     * Cascade ALL!
+     * muchos. Cascade ALL, Fetch LAZY, orphanRemoval true. 
      */
     @OneToMany(mappedBy = "tipoEntrada", cascade = CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = true)
     private Set<CompraEntrada> comprasDondeAparece = new HashSet<>();
@@ -76,7 +75,6 @@ public class TipoEntrada implements Serializable {
     public TipoEntrada() {
     }
 
-    // --- Getters y Setters ---
     public Integer getIdTipoEntrada() {
         return idTipoEntrada;
     }
@@ -149,7 +147,6 @@ public class TipoEntrada implements Serializable {
         this.requiereNominacion = requiereNominacion;
     }
 
-    // --- equals, hashCode y toString ---
     @Override
     public boolean equals(Object o) {
         if (this == o) {

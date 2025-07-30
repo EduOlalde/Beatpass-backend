@@ -31,7 +31,6 @@ public class UsuarioCreacionDTO {
     public UsuarioCreacionDTO() {
     }
 
-    // --- Getters y Setters ---
     public String getNombre() {
         return nombre;
     }
@@ -64,7 +63,6 @@ public class UsuarioCreacionDTO {
         this.rol = rol;
     }
 
-    // --- toString ---
     @Override
     public String toString() {
         return "UsuarioCreacionDTO{"

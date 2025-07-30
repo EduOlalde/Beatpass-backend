@@ -63,7 +63,6 @@ public class CompraEntrada implements Serializable {
     public CompraEntrada() {
     }
 
-    // --- Getters y Setters ---
     public Integer getIdCompraEntrada() {
         return idCompraEntrada;
     }
@@ -112,7 +111,6 @@ public class CompraEntrada implements Serializable {
         this.entradasGeneradas = entradasGeneradas;
     }
 
-    // --- equals, hashCode y toString ---
     @Override
     public boolean equals(Object o) {
         if (this == o) {

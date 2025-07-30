@@ -99,7 +99,6 @@ public class Festival implements Serializable {
     public Festival() {
     }
 
-    // --- Getters y Setters ---
     public Integer getIdFestival() {
         return idFestival;
     }
@@ -211,11 +210,10 @@ public class Festival implements Serializable {
     public void setEstadisticas(EstadisticasFestival estadisticas) {
         this.estadisticas = estadisticas;
         if (estadisticas != null) {
-            estadisticas.setFestival(this); // Mantener bidireccionalidad
+            estadisticas.setFestival(this); 
         }
     }
 
-    // --- equals, hashCode y toString ---
     @Override
     public boolean equals(Object o) {
         if (this == o) {

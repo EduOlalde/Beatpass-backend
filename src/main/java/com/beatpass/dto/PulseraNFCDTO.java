@@ -30,7 +30,6 @@ public class PulseraNFCDTO {
     public PulseraNFCDTO() {
     }
 
-    // --- Getters y Setters ---
     public Integer getIdPulsera() {
         return idPulsera;
     }
@@ -135,7 +134,6 @@ public class PulseraNFCDTO {
         this.nombreFestival = nombreFestival;
     }
 
-    // --- equals y hashCode ---
     @Override
     public boolean equals(Object o) {
         if (this == o) {
@@ -153,7 +151,6 @@ public class PulseraNFCDTO {
         return Objects.hash(idPulsera);
     }
 
-    // --- toString ---
     @Override
     public String toString() {
         return "PulseraNFCDTO{"

@@ -5,7 +5,8 @@ import com.beatpass.util.MailConfig;
 
 import jakarta.activation.DataHandler;
 import jakarta.activation.DataSource;
-import jakarta.inject.Inject; // AÑADIDO
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
 import jakarta.mail.*;
 import jakarta.mail.internet.InternetAddress;
 import jakarta.mail.internet.MimeBodyPart;
@@ -24,6 +25,7 @@ import java.util.Properties;
  * Implementación del servicio de envío de correos electrónicos. Orquesta la
  * generación de contenido HTML, la creación de PDFs adjuntos y el envío.
  */
+@ApplicationScoped
 public class EmailServiceImpl implements EmailService {
 
     private static final Logger log = LoggerFactory.getLogger(EmailServiceImpl.class);

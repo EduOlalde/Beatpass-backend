@@ -8,7 +8,6 @@ package com.beatpass.exception;
  * @see
  * com.beatpass.service.UsuarioService#cambiarPassword(Integer,
  * String, String)
- * @author Eduardo Olalde
  */
 public class PasswordIncorrectoException extends RuntimeException {
 

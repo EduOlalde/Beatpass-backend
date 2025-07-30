@@ -1,6 +1,7 @@
 package com.beatpass.service;
 
 import com.beatpass.dto.TipoEntradaDTO;
+import com.beatpass.dto.TipoEntradaUpdateDTO;
 import com.beatpass.exception.TipoEntradaNotFoundException;
 import com.beatpass.exception.FestivalNotFoundException;
 import com.beatpass.exception.UsuarioNotFoundException;
@@ -58,15 +59,11 @@ public interface TipoEntradaService {
      * Es transaccional.
      *
      * @param idEntrada ID de la entrada a actualizar.
-     * @param tipoEntradaDTO DTO con los nuevos datos.
+     * @param tipoEntradaUpdateDTO DTO con los nuevos datos.
      * @param idPromotor ID del promotor que realiza la acción.
      * @return El TipoEntradaDTO actualizado.
-     * @throws TipoEntradaNotFoundException si la entrada no existe.
-     * @throws UsuarioNotFoundException si el promotor no existe.
-     * @throws SecurityException si el promotor no tiene permisos.
-     * @throws IllegalArgumentException si los datos son inválidos.
      */
-    TipoEntradaDTO actualizarTipoEntrada(Integer idEntrada, TipoEntradaDTO tipoEntradaDTO, Integer idPromotor);
+    TipoEntradaDTO actualizarTipoEntrada(Integer idEntrada, TipoEntradaUpdateDTO tipoEntradaUpdateDTO, Integer idPromotor);
 
     /**
      * Elimina un tipo de entrada. Verifica permisos del promotor. Es
@@ -88,7 +85,8 @@ public interface TipoEntradaService {
      *
      * @param idEntrada ID de la entrada a buscar.
      * @param idPromotor ID del promotor solicitante.
-     * @return Optional con TipoEntradaDTO si se encuentra y hay permisos, o vacío.
+     * @return Optional con TipoEntradaDTO si se encuentra y hay permisos, o
+     * vacío.
      * @throws UsuarioNotFoundException si el promotor no existe.
      * @throws IllegalArgumentException si los IDs son nulos.
      */

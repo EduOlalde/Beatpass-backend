@@ -54,7 +54,6 @@ public class EstadisticasFestival implements Serializable {
     public EstadisticasFestival() {
     }
 
-    // --- Getters y Setters ---
     public Integer getIdFestival() {
         return idFestival;
     }
@@ -118,11 +117,10 @@ public class EstadisticasFestival implements Serializable {
     public void setFestival(Festival festival) {
         this.festival = festival;
         if (festival != null) {
-            this.idFestival = festival.getIdFestival(); // Sincronizar ID
+            this.idFestival = festival.getIdFestival();
         }
     }
 
-    // --- equals, hashCode y toString ---
     @Override
     public boolean equals(Object o) {
         if (this == o) {
